@@ -1,0 +1,53 @@
+{
+  "name": "@call-e/openagent",
+  "version": "0.2.1",
+  "description": "Self-contained OpenClaw tool plugin for OpenAgent with brokered web login.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CALLE-AI/call-e-integrations.git",
+    "directory": "packages/openclaw-plugin"
+  },
+  "homepage": "https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/openclaw-plugin",
+  "bugs": {
+    "url": "https://github.com/CALLE-AI/call-e-integrations/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "README.md",
+    "index.js",
+    "lib",
+    "openclaw.plugin.json"
+  ],
+  "keywords": [
+    "openclaw",
+    "plugin",
+    "openagent",
+    "mcp",
+    "voice-call"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node --test ./test/*.test.js",
+    "check": "node ../../scripts/check-runtime-syntax.mjs index.js lib/brokered-auth.js lib/mcp-http.js lib/plugin-config.js",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.js"
+    ],
+    "compat": {
+      "pluginApi": ">=2026.4.5",
+      "minGatewayVersion": "2026.4.5"
+    },
+    "build": {
+      "openclawVersion": "2026.4.5",
+      "pluginSdkVersion": "2026.4.5"
+    }
+  }
+}

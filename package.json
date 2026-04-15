@@ -1,0 +1,23 @@
+{
+  "name": "call-e-integrations",
+  "private": true,
+  "packageManager": "pnpm@10.18.3",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=10.18.3"
+  },
+  "scripts": {
+    "test": "pnpm -r --filter ./packages/* run test",
+    "check": "pnpm run check:versions && pnpm -r --filter ./packages/* run check",
+    "check:versions": "node ./scripts/check-manifest-versions.mjs",
+    "pack:dry-run": "pnpm --filter @call-e/openagent run pack:dry-run",
+    "changeset": "changeset",
+    "version-packages": "changeset version && node ./scripts/sync-plugin-manifest-version.mjs",
+    "publish-packages": "pnpm -r --filter @call-e/openagent publish --access public --no-git-checks",
+    "release": "pnpm run version-packages"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^0.6.0",
+    "@changesets/cli": "^2.30.0"
+  }
+}

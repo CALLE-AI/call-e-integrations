@@ -1,0 +1,89 @@
+{
+  "id": "calle",
+  "name": "calle",
+  "description": "Self-contained OpenClaw tool plugin for OpenAgent with brokered web login.",
+  "version": "0.2.1",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "baseUrl": {
+        "type": "string",
+        "title": "OpenAgent base URL",
+        "description": "Base URL for the deployed OpenAgent service. Defaults to https://seleven-mcp-sg.airudder.com."
+      },
+      "brokerBaseUrl": {
+        "type": "string",
+        "title": "Broker base URL",
+        "description": "Optional override for the broker login API host. Defaults to baseUrl."
+      },
+      "serverUrl": {
+        "type": "string",
+        "title": "Remote MCP URL",
+        "description": "Optional override for the remote MCP endpoint. Defaults to <baseUrl>/mcp/<channel>."
+      },
+      "authBaseUrl": {
+        "type": "string",
+        "title": "OAuth auth base URL",
+        "description": "Optional override for the OAuth auth host. Defaults to baseUrl."
+      },
+      "channel": {
+        "type": "string",
+        "title": "MCP channel",
+        "description": "Remote MCP channel name.",
+        "default": "openagent_auth"
+      },
+      "cacheRoot": {
+        "type": "string",
+        "title": "Token cache root",
+        "description": "Optional cache root for locally stored brokered OAuth tokens. Defaults to the Gateway user's home directory under .calle-mcp/openclaw-brokered-auth."
+      },
+      "scope": {
+        "type": "string",
+        "title": "OAuth scope",
+        "description": "OAuth scopes requested during browser login.",
+        "default": "openid email profile"
+      },
+      "clientName": {
+        "type": "string",
+        "title": "OAuth client name",
+        "description": "Display name shown to the broker login flow.",
+        "default": "calle Login"
+      },
+      "timeoutSeconds": {
+        "type": "number",
+        "title": "HTTP timeout seconds",
+        "description": "Timeout used when the plugin calls broker APIs or the remote MCP endpoint.",
+        "default": 15
+      },
+      "minTtlSeconds": {
+        "type": "integer",
+        "title": "Minimum token TTL seconds",
+        "description": "Minimum remaining token lifetime required before the cached token is reused.",
+        "default": 300
+      }
+    }
+  },
+  "uiHints": {
+    "baseUrl": {
+      "label": "OpenAgent base URL",
+      "placeholder": "https://seleven-mcp-sg.airudder.com"
+    },
+    "brokerBaseUrl": {
+      "label": "Broker base URL",
+      "placeholder": "https://your-domain"
+    },
+    "serverUrl": {
+      "label": "Remote MCP URL",
+      "placeholder": "https://your-domain/mcp/openagent_auth"
+    },
+    "authBaseUrl": {
+      "label": "OAuth auth base URL",
+      "placeholder": "https://your-domain"
+    },
+    "cacheRoot": {
+      "label": "Token cache root",
+      "placeholder": "/home/admin/.calle-mcp/openclaw-brokered-auth"
+    }
+  }
+}
