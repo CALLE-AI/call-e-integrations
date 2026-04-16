@@ -5,6 +5,11 @@ Call-E Integrations is a public monorepo for shipping cross-platform agent integ
 ## Packages
 
 - `packages/openclaw-plugin`: the publishable OpenClaw plugin package for OpenAgent.
+  See [packages/openclaw-plugin/README.md](./packages/openclaw-plugin/README.md) for installation screenshots, OpenClaw UI usage, and package-specific configuration.
+
+## Community
+
+- [discord.gg/6AbXUzUV8w](https://discord.gg/6AbXUzUV8w)
 
 ## Quick Start
 
@@ -44,6 +49,8 @@ openclaw plugins install ./packages/openclaw-plugin --link
 openclaw plugins enable calle
 openclaw gateway restart
 ```
+
+For installation screenshots, OpenClaw UI examples, and package-specific setup details, see [packages/openclaw-plugin/README.md](./packages/openclaw-plugin/README.md).
 
 ## Remote Service Contract
 
