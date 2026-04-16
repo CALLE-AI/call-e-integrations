@@ -35,6 +35,30 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify npm auth and scope access
+        run: |
+          tmpdir=$(mktemp -d)
+          trap 'rm -rf "$tmpdir"' EXIT
+
+          cat > "$tmpdir/.npmrc" <<'EOF'
+          //registry.npmjs.org/:_authToken=${NPM_TOKEN}
+          EOF
+
+          package_name=$(node -p 'JSON.parse(require("node:fs").readFileSync("packages/openclaw-plugin/package.json", "utf8")).name')
+          scope="${package_name#@}"
+          scope="${scope%%/*}"
+          npm_user=$(NPM_TOKEN="$NPM_TOKEN" npm whoami \
+            --userconfig="$tmpdir/.npmrc" \
+            --registry=https://registry.npmjs.org/)
+
+          echo "Authenticated npm user: $npm_user"
+          npm org ls "$scope" "$npm_user" \
+            --userconfig="$tmpdir/.npmrc" \
+            --registry=https://registry.npmjs.org/
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Create release PR or publish
         uses: changesets/action@v1
         with:
@@ -45,3 +69,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
