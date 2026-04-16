@@ -34,18 +34,31 @@ pnpm pack:dry-run
 
 ## Install The Plugin
 
-Install from npm on the machine that runs `openclaw-gateway`:
+On the machine that runs `openclaw-gateway`, the quickest path is:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/openclaw-setup.sh | bash
+```
+
+If you already cloned this repository on that machine, you can run:
+
+```bash
+./openclaw-setup.sh
+```
+
+The script:
+
+- installs `@call-e/openagent`
+- enables `calle`
+- merges `plugins.entries.calle.enabled` and `plugins.allow` into `~/.openclaw/openclaw.json`
+- prompts before restarting `openclaw-gateway`
+
+It only depends on `openclaw` and `node`. Python is not required.
+
+If you prefer the manual path, run:
 
 ```bash
 openclaw plugins install @call-e/openagent
-openclaw plugins enable calle
-openclaw gateway restart
-```
-
-For local debugging from this repository:
-
-```bash
-openclaw plugins install ./packages/openclaw-plugin --link
 openclaw plugins enable calle
 openclaw gateway restart
 ```

@@ -23,18 +23,27 @@ Join the Discord community for installation help, rollout updates, and feedback:
 
 ## Installation
 
-Install on the machine that runs `openclaw-gateway`:
+On the machine that runs `openclaw-gateway`, the quickest path is:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/openclaw-setup.sh | bash
+```
+
+If you already cloned this repository on that machine, you can run:
+
+```bash
+./openclaw-setup.sh
+```
+
+That script installs the published package, enables `calle`, merges
+`plugins.entries.calle.enabled` and `plugins.allow` into
+`~/.openclaw/openclaw.json`, and asks before restarting the gateway.
+It depends on `openclaw` and `node`, not Python.
+
+If you prefer the manual path, run:
 
 ```bash
 openclaw plugins install @call-e/openagent
-openclaw plugins enable calle
-openclaw gateway restart
-```
-
-For repository-local debugging:
-
-```bash
-openclaw plugins install ./packages/openclaw-plugin --link
 openclaw plugins enable calle
 openclaw gateway restart
 ```
