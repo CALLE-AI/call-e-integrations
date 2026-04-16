@@ -35,3 +35,6 @@ logs/
 .vscode/
 .cursorignore
 .cursorindexingignore
+
+# Local docs not for GitHub
+packages/openclaw-plugin/docs/broker-bridge-plugin-retrospective.md
