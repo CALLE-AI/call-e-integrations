@@ -89,6 +89,13 @@ The plugin derives the following values from `baseUrl` unless they are explicitl
 - `timeoutSeconds`
 - `minTtlSeconds`
 
+## Common Issues
+
+- A brokered login session ID is stuck or keeps failing, for example `019d94db-a3eb-7081-9026-57f813e94a07`.
+- You need to clear `token.json` and `pending_login.json` and sign in again.
+
+See [docs/troubleshooting.md](./docs/troubleshooting.md) for the full troubleshooting guide.
+
 ## Remote Service Requirements
 
 The remote deployment must expose:
