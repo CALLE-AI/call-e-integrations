@@ -15,6 +15,12 @@ The package contains the full runtime needed to:
 - exchange authorized broker sessions into a local token cache
 - call remote MCP tools over streamable HTTP
 
+## Community
+
+Join the Discord community for installation help, rollout updates, and feedback:
+
+- [discord.gg/6AbXUzUV8w](https://discord.gg/6AbXUzUV8w)
+
 ## Installation
 
 Install on the machine that runs `openclaw-gateway`:
@@ -32,6 +38,18 @@ openclaw plugins install ./packages/openclaw-plugin --link
 openclaw plugins enable calle
 openclaw gateway restart
 ```
+
+## Install Walkthrough
+
+Example terminal session for installing, enabling, and restarting the plugin:
+
+![Terminal install walkthrough](./docs/images/terminal-install.png)
+
+## OpenClaw UI Chat
+
+Example OpenClaw Control UI chat session with the plugin:
+
+![OpenClaw UI chat using the plugin](./docs/images/openclaw-ui-chat.png)
 
 ## Default Target
 

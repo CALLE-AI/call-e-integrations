@@ -10,6 +10,7 @@ pnpm-debug.log*
 dist/
 coverage/
 *.tgz
+packages/openclaw-plugin/package/
 
 # Environment and local state
 .env
