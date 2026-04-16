@@ -2,6 +2,12 @@
 
 `@call-e/openagent` is a self-contained OpenClaw plugin for brokered web login and remote OpenAgent MCP tool execution.
 
+## Demo
+
+Install, enable, and restart walkthrough in the terminal:
+
+![Terminal install walkthrough (GIF)](./docs/images/terminal-install.gif)
+
 It registers three OpenClaw-native tools:
 
 - `calle_plan_call`
@@ -50,7 +56,7 @@ openclaw gateway restart
 
 ## Install Walkthrough
 
-Example terminal session for installing, enabling, and restarting the plugin:
+Static terminal screenshot:
 
 ![Terminal install walkthrough](./docs/images/terminal-install.png)
 

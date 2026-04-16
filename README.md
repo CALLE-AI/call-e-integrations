@@ -55,6 +55,10 @@ The script:
 
 It only depends on `openclaw` and `node`. Python is not required.
 
+Animated terminal walkthrough for installing, enabling, and restarting the plugin:
+
+![Terminal install walkthrough (GIF)](./packages/openclaw-plugin/docs/images/terminal-install.gif)
+
 If you prefer the manual path, run:
 
 ```bash
