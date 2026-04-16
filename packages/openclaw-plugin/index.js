@@ -5,7 +5,7 @@ import {
 import { callRemoteTool, isUnauthorizedMcpError } from "./lib/mcp-http.js";
 import { getPluginConfig } from "./lib/plugin-config.js";
 
-const PLUGIN_VERSION = "0.2.1";
+const PLUGIN_VERSION = "0.2.2";
 const MANAGER_CACHE = new Map();
 
 const PLAN_CALL_PARAMETERS = {
