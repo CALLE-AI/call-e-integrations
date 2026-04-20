@@ -53,6 +53,11 @@ const path = require("node:path");
 
 const configPath = process.env.OPENCLAW_CONFIG_PATH;
 const pluginId = process.env.PLUGIN_ID;
+const toolIds = [
+  "calle_plan_call",
+  "calle_run_call",
+  "calle_get_call_run",
+];
 
 function fail(message) {
   console.error(`[openclaw-setup] ${message}`);
@@ -117,6 +122,27 @@ if (!nextAllow.includes(pluginId)) {
 nextPlugins.entries = nextEntries;
 nextPlugins.allow = nextAllow;
 data.plugins = nextPlugins;
+
+const tools = data.tools;
+if (tools !== undefined && !isObject(tools)) {
+  fail(`${configPath} field "tools" must be a JSON object.`);
+}
+
+const nextTools = isObject(tools) ? { ...tools } : {};
+const alsoAllow = nextTools.alsoAllow;
+if (alsoAllow !== undefined && !Array.isArray(alsoAllow)) {
+  fail(`${configPath} field "tools.alsoAllow" must be an array.`);
+}
+
+const nextAlsoAllow = Array.isArray(alsoAllow) ? [...alsoAllow] : [];
+for (const toolId of toolIds) {
+  if (!nextAlsoAllow.includes(toolId)) {
+    nextAlsoAllow.push(toolId);
+  }
+}
+
+nextTools.alsoAllow = nextAlsoAllow;
+data.tools = nextTools;
 
 fs.mkdirSync(path.dirname(configPath), { recursive: true });
 fs.writeFileSync(configPath, `${JSON.stringify(data, null, 2)}\n`);
