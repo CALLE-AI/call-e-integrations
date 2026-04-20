@@ -10,6 +10,8 @@
     "test": "pnpm -r --filter ./packages/* run test",
     "check": "pnpm run check:versions && pnpm -r --filter ./packages/* run check",
     "check:versions": "node ./scripts/check-manifest-versions.mjs",
+    "pack:skill": "node ./scripts/pack-skills.mjs",
+    "pack:skill:calle": "node ./scripts/pack-skills.mjs calle",
     "pack:dry-run": "pnpm --filter @call-e/openagent run pack:dry-run",
     "changeset": "changeset",
     "version-packages": "changeset version && node ./scripts/sync-plugin-manifest-version.mjs",
