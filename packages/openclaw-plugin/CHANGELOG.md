@@ -1,5 +1,11 @@
 # @call-e/openagent
 
+## 0.2.3
+
+### Patch Changes
+
+- Force OpenClaw call replies to use the exact progress and terminal templates instead of free-form LLM summaries.
+
 ## 0.2.2
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@call-e/openagent",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Self-contained OpenClaw tool plugin for OpenAgent with brokered web login.",
   "type": "module",
   "license": "MIT",
@@ -35,7 +35,7 @@
   },
   "scripts": {
     "test": "node --test ./test/*.test.js",
-    "check": "node ../../scripts/check-runtime-syntax.mjs index.js lib/brokered-auth.js lib/mcp-http.js lib/plugin-config.js",
+    "check": "node ../../scripts/check-runtime-syntax.mjs index.js lib/brokered-auth.js lib/mcp-http.js lib/plugin-config.js lib/tool-result-text.js lib/prompt-guidance.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "openclaw": {
