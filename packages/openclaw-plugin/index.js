@@ -31,7 +31,7 @@ import {
   formatToolResultForDisplay,
 } from "./lib/tool-result-text.js";
 
-const PLUGIN_VERSION = "0.2.4";
+const PLUGIN_VERSION = "0.2.5";
 const TRANSCRIPT_SESSION_VERSION = 3;
 const MANAGER_CACHE = new Map();
 const LATEST_CALL_TOOL_STATE = new Map();

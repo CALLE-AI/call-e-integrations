@@ -1,6 +1,6 @@
 {
   "name": "@call-e/openagent",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Self-contained OpenClaw tool plugin for OpenAgent with brokered web login.",
   "type": "module",
   "license": "MIT",
