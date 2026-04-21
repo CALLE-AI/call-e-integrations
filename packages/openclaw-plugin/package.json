@@ -35,7 +35,7 @@
   },
   "scripts": {
     "test": "node --test ./test/*.test.js",
-    "check": "node ../../scripts/check-runtime-syntax.mjs index.js lib/brokered-auth.js lib/mcp-http.js lib/plugin-config.js lib/tool-result-text.js lib/prompt-guidance.js",
+    "check": "node ../../scripts/check-runtime-syntax.mjs index.js lib/brokered-auth.js lib/call-run-monitor.js lib/call-tool-state.js lib/mcp-http.js lib/plugin-config.js lib/tool-result-text.js lib/prompt-guidance.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "openclaw": {

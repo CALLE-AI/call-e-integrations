@@ -2,7 +2,7 @@
   "id": "calle",
   "name": "calle",
   "description": "Self-contained OpenClaw tool plugin for OpenAgent with brokered web login.",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,

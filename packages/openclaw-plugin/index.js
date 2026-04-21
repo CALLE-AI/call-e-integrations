@@ -1,10 +1,28 @@
+import { randomUUID } from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
+import {
+  acquireSessionWriteLock,
+  emitSessionTranscriptUpdate,
+} from "openclaw/plugin-sdk/agent-harness";
 import {
   BrokeredTokenManager,
 } from "./lib/brokered-auth.js";
 import { callRemoteTool, isUnauthorizedMcpError } from "./lib/mcp-http.js";
 import { getPluginConfig } from "./lib/plugin-config.js";
 import { OPENCLAW_CALL_PROGRESS_GUIDANCE } from "./lib/prompt-guidance.js";
+import {
+  clearCallRunMonitorsForSession,
+  isTerminalReplyText,
+  startCallRunMonitor as startBackgroundCallRunMonitor,
+  updateCallRunMonitorReply,
+} from "./lib/call-run-monitor.js";
+import {
+  analyzeCallToolStateTransition,
+  getCallStateKey,
+  normalizeCallToolName,
+} from "./lib/call-tool-state.js";
 import {
   extractReplyTextFromInstructionText,
   extractReplyTextFromToolResult,
@@ -13,9 +31,11 @@ import {
   formatToolResultForDisplay,
 } from "./lib/tool-result-text.js";
 
-const PLUGIN_VERSION = "0.2.3";
+const PLUGIN_VERSION = "0.2.4";
+const TRANSCRIPT_SESSION_VERSION = 3;
 const MANAGER_CACHE = new Map();
 const LATEST_CALL_TOOL_STATE = new Map();
+const LATEST_CALL_RUN_BY_SESSION = new Map();
 
 const PLAN_CALL_PARAMETERS = {
   type: "object",
@@ -156,19 +176,328 @@ function buildExactTemplateSystemMessage() {
   };
 }
 
-function normalizeCallToolName(toolName) {
-  const raw = typeof toolName === "string" ? toolName : "";
-  if (raw === "run_call" || raw === "calle_run_call") {
-    return "run_call";
+function logCallDebug(api, message, details = null) {
+  if (!api?.logger?.info) {
+    return;
   }
-  if (raw === "get_call_run" || raw === "calle_get_call_run") {
-    return "get_call_run";
-  }
-  return "";
+  const suffix =
+    details && typeof details === "object"
+      ? ` ${JSON.stringify(details)}`
+      : details
+        ? ` ${String(details)}`
+        : "";
+  api.logger.info(`calle: ${message}${suffix}`);
 }
 
-function getCallStateKey(ctx) {
-  return ctx?.sessionKey || ctx?.sessionId || ctx?.agentId || "";
+function logCallError(api, message, error) {
+  if (!api?.logger?.error) {
+    return;
+  }
+  api.logger.error(`calle: ${message}: ${String(error)}`);
+}
+
+function readNonEmptyString(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  const trimmed = value.trim();
+  return trimmed || "";
+}
+
+function hashText(value) {
+  const text = typeof value === "string" ? value : "";
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16);
+}
+
+function buildDeliveryContextFromSessionEntry(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+  const context = entry.deliveryContext && typeof entry.deliveryContext === "object" ? entry.deliveryContext : null;
+  const deliveryContext = {};
+  const channel =
+    readNonEmptyString(context?.channel) ||
+    readNonEmptyString(entry.lastChannel) ||
+    readNonEmptyString(entry.origin?.provider);
+  const to = readNonEmptyString(context?.to) || readNonEmptyString(entry.lastTo);
+  const accountId =
+    readNonEmptyString(context?.accountId) ||
+    readNonEmptyString(entry.lastAccountId) ||
+    readNonEmptyString(entry.origin?.accountId);
+  const threadId = context?.threadId ?? entry.lastThreadId ?? entry.origin?.threadId;
+
+  if (channel) {
+    deliveryContext.channel = channel;
+  }
+  if (to) {
+    deliveryContext.to = to;
+  }
+  if (accountId) {
+    deliveryContext.accountId = accountId;
+  }
+  if (threadId !== undefined && threadId !== null && threadId !== "") {
+    deliveryContext.threadId = threadId;
+  }
+
+  return Object.keys(deliveryContext).length > 0 ? deliveryContext : null;
+}
+
+function resolveCallDeliveryContext(api, ctx) {
+  const sessionKey = getCallStateKey(ctx);
+  const agentId = readNonEmptyString(ctx?.agentId);
+  const fallbackChannel = readNonEmptyString(ctx?.channelId) || readNonEmptyString(ctx?.messageProvider);
+
+  try {
+    const resolveStorePath = api?.runtime?.agent?.session?.resolveStorePath;
+    const loadSessionStore = api?.runtime?.agent?.session?.loadSessionStore;
+    if (sessionKey && agentId && typeof resolveStorePath === "function" && typeof loadSessionStore === "function") {
+      const storePath = resolveStorePath(api?.config?.session?.store, { agentId });
+      const store = loadSessionStore(storePath);
+      const entry = store?.[sessionKey];
+      const deliveryContext = buildDeliveryContextFromSessionEntry(entry);
+      if (deliveryContext) {
+        return deliveryContext;
+      }
+    }
+  } catch {
+    // Fall back to the live hook context when the session store is unavailable.
+  }
+
+  return fallbackChannel ? { channel: fallbackChannel } : null;
+}
+
+function buildCallMonitorWakeOptions(api, ctx, runId) {
+  const sessionKey = getCallStateKey(ctx);
+  if (!sessionKey) {
+    return null;
+  }
+  return {
+    sessionKey,
+    agentId: readNonEmptyString(ctx?.agentId),
+    reason: `hook:calle-call-run:${runId}`,
+    deliveryContext: resolveCallDeliveryContext(api, ctx),
+  };
+}
+
+function resolveCallSessionStoreContext(api, wakeOptions) {
+  const sessionKey = readNonEmptyString(wakeOptions?.sessionKey);
+  const agentId = readNonEmptyString(wakeOptions?.agentId);
+  const resolveStorePath = api?.runtime?.agent?.session?.resolveStorePath;
+  const loadSessionStore = api?.runtime?.agent?.session?.loadSessionStore;
+
+  if (!sessionKey || !agentId || typeof resolveStorePath !== "function" || typeof loadSessionStore !== "function") {
+    return null;
+  }
+
+  const storePath = resolveStorePath(api?.config?.session?.store, { agentId });
+  const store = loadSessionStore(storePath);
+  const entry = store?.[sessionKey];
+  if (!entry?.sessionId) {
+    return null;
+  }
+
+  const rawSessionFile = readNonEmptyString(entry.sessionFile);
+  const sessionFile = rawSessionFile
+    ? (path.isAbsolute(rawSessionFile)
+        ? rawSessionFile
+        : path.resolve(path.dirname(storePath), rawSessionFile))
+    : "";
+
+  return {
+    sessionKey,
+    sessionId: entry.sessionId,
+    sessionFile,
+  };
+}
+
+function buildAssistantTranscriptMessage(replyText, idempotencyKey) {
+  const message = {
+    role: "assistant",
+    content: [
+      {
+        type: "text",
+        text: replyText,
+      },
+    ],
+    api: "openai-responses",
+    provider: "openclaw",
+    model: "gateway-injected",
+    usage: {
+      input: 0,
+      output: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+      totalTokens: 0,
+      cost: {
+        input: 0,
+        output: 0,
+        cacheRead: 0,
+        cacheWrite: 0,
+        total: 0,
+      },
+    },
+    stopReason: "stop",
+    timestamp: Date.now(),
+  };
+
+  if (idempotencyKey) {
+    message.idempotencyKey = idempotencyKey;
+  }
+
+  return message;
+}
+
+function generateTranscriptEntryId(existingIds) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const candidate = randomUUID().slice(0, 8);
+    if (!existingIds.has(candidate)) {
+      return candidate;
+    }
+  }
+  return randomUUID();
+}
+
+async function appendCallUpdateToTranscript(api, wakeOptions, replyText, idempotencyKey) {
+  const sessionContext = resolveCallSessionStoreContext(api, wakeOptions);
+  if (!sessionContext) {
+    return { ok: false, reason: "session-store-context-unavailable" };
+  }
+
+  const { sessionFile, sessionId, sessionKey } = sessionContext;
+  if (!sessionId || !sessionKey || !replyText) {
+    return { ok: false, reason: "transcript-params-missing" };
+  }
+  if (!sessionFile) {
+    return { ok: false, reason: "session-file-missing" };
+  }
+
+  const message = buildAssistantTranscriptMessage(replyText, idempotencyKey);
+  let releaseLock = null;
+
+  try {
+    releaseLock = await acquireSessionWriteLock({
+      sessionFile,
+      allowReentrant: true,
+      timeoutMs: 5000,
+    });
+
+    await fs.mkdir(path.dirname(sessionFile), { recursive: true });
+
+    let raw = "";
+    try {
+      raw = await fs.readFile(sessionFile, "utf8");
+    } catch (error) {
+      if (error?.code !== "ENOENT") {
+        throw error;
+      }
+    }
+
+    if (!raw.trim()) {
+      const header = {
+        type: "session",
+        version: TRANSCRIPT_SESSION_VERSION,
+        id: sessionId,
+        timestamp: new Date().toISOString(),
+        cwd: process.cwd(),
+      };
+      raw = `${JSON.stringify(header)}\n`;
+      await fs.writeFile(sessionFile, raw, "utf8");
+    }
+
+    const existingIds = new Set();
+    let leafId = null;
+
+    for (const line of raw.split(/\r?\n/)) {
+      if (!line.trim()) {
+        continue;
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(line);
+      } catch {
+        continue;
+      }
+
+      if (
+        idempotencyKey &&
+        parsed?.type === "message" &&
+        parsed?.message?.role === "assistant" &&
+        parsed?.message?.idempotencyKey === idempotencyKey &&
+        typeof parsed?.id === "string"
+      ) {
+        return {
+          ok: true,
+          sessionFile,
+          messageId: parsed.id,
+        };
+      }
+
+      if (typeof parsed?.id === "string") {
+        existingIds.add(parsed.id);
+        if (parsed.type !== "session") {
+          leafId = parsed.id;
+        }
+      }
+    }
+
+    const entry = {
+      type: "message",
+      id: generateTranscriptEntryId(existingIds),
+      parentId: leafId,
+      timestamp: new Date().toISOString(),
+      message,
+    };
+
+    await fs.appendFile(sessionFile, `${JSON.stringify(entry)}\n`, "utf8");
+    emitSessionTranscriptUpdate({
+      sessionFile,
+      sessionKey,
+      message,
+      messageId: entry.id,
+    });
+
+    return {
+      ok: true,
+      sessionFile,
+      messageId: entry.id,
+    };
+  } catch (error) {
+    logCallError(api, `appendCallUpdateToTranscript failed for ${sessionKey}`, error);
+    return { ok: false, reason: "transcript-append-failed" };
+  } finally {
+    if (releaseLock?.release) {
+      await releaseLock.release().catch(() => {});
+    }
+  }
+}
+
+function setLatestCallRunForSession(sessionKey, runId) {
+  if (!sessionKey || !runId) {
+    return;
+  }
+  LATEST_CALL_RUN_BY_SESSION.set(sessionKey, runId);
+}
+
+function getLatestCallRunForSession(sessionKey) {
+  if (!sessionKey) {
+    return "";
+  }
+  return LATEST_CALL_RUN_BY_SESSION.get(sessionKey) || "";
+}
+
+function clearLatestCallRunForSession(sessionKey, runId = "") {
+  if (!sessionKey) {
+    return;
+  }
+  if (!runId || LATEST_CALL_RUN_BY_SESSION.get(sessionKey) === runId) {
+    LATEST_CALL_RUN_BY_SESSION.delete(sessionKey);
+  }
 }
 
 function storeLatestCallToolState(event, ctx) {
@@ -200,8 +529,7 @@ function popLatestCallToolState(ctx) {
   return state;
 }
 
-function setLatestCallToolState(ctx, state) {
-  const key = getCallStateKey(ctx);
+function setLatestCallToolStateForKey(key, state) {
   if (!key || !state) {
     return;
   }
@@ -209,7 +537,7 @@ function setLatestCallToolState(ctx, state) {
 }
 
 function isFreshCallToolState(state) {
-  return !!state && typeof state.ts === "number" && Date.now() - state.ts <= 30_000;
+  return !!state && typeof state.ts === "number" && Date.now() - state.ts <= 10 * 60_000;
 }
 
 function sleep(ms) {
@@ -245,6 +573,152 @@ async function pollCallRunForReply(api, runId) {
   };
 }
 
+async function dispatchCallRunUpdate(api, wakeOptions, runId, rawText, replyText, updateKind) {
+  setLatestCallToolStateForKey(wakeOptions.sessionKey, {
+    toolName: "get_call_run",
+    text: rawText || replyText,
+    ts: Date.now(),
+  });
+
+  const replyFingerprint = hashText(rawText || replyText);
+  const contextKey =
+    updateKind === "terminal"
+      ? `calle-call-run:${runId}:terminal`
+      : `calle-call-run:${runId}:progress:${replyFingerprint}`;
+  const eventText =
+    updateKind === "terminal"
+      ? `CALL-E call update ready for run ${runId}. Send the latest CALL-E call result to the user now.`
+      : `CALL-E call progress update ready for run ${runId}. Send the latest CALL-E call progress to the user now.`;
+  const transcriptAppend = await appendCallUpdateToTranscript(api, wakeOptions, replyText, contextKey);
+  logCallDebug(api, "appendCallUpdateToTranscript", {
+    updateKind,
+    runId,
+    sessionKey: wakeOptions.sessionKey,
+    ok: transcriptAppend?.ok === true,
+    reason: transcriptAppend?.reason || "",
+  });
+  if (transcriptAppend?.ok) {
+    return;
+  }
+  const eventOptions = {
+    sessionKey: wakeOptions.sessionKey,
+    contextKey,
+    ...(wakeOptions.deliveryContext ? { deliveryContext: wakeOptions.deliveryContext } : {}),
+  };
+
+  const enqueued = api.runtime.system.enqueueSystemEvent(eventText, eventOptions);
+  logCallDebug(api, "dispatchCallRunUpdate", {
+    updateKind,
+    runId,
+    sessionKey: wakeOptions.sessionKey,
+    enqueued,
+    hasDeliveryContext: !!wakeOptions.deliveryContext,
+    replyPreview: typeof replyText === "string" ? replyText.slice(0, 120) : "",
+  });
+  api.runtime.system.requestHeartbeatNow({
+    sessionKey: wakeOptions.sessionKey,
+    reason: wakeOptions.reason,
+  });
+}
+
+function startCallRunMonitor(api, ctx, runId, options = {}) {
+  const wakeOptions = buildCallMonitorWakeOptions(api, ctx, runId);
+  if (
+    !wakeOptions ||
+    !api?.runtime?.system?.enqueueSystemEvent ||
+    !api?.runtime?.system?.requestHeartbeatNow
+  ) {
+    logCallDebug(api, "startCallRunMonitor skipped", {
+      runId,
+      hasWakeOptions: !!wakeOptions,
+      hasEnqueueSystemEvent: !!api?.runtime?.system?.enqueueSystemEvent,
+      hasRequestHeartbeatNow: !!api?.runtime?.system?.requestHeartbeatNow,
+      ctxSessionKey: ctx?.sessionKey || "",
+      ctxAgentId: ctx?.agentId || "",
+    });
+    return false;
+  }
+  const started = startBackgroundCallRunMonitor({
+    sessionKey: wakeOptions.sessionKey,
+    runId,
+    intervalMs: options.intervalMs,
+    maxPolls: options.maxPolls,
+    async onPoll() {
+      const polled = await executeTool(api, "get_call_run", { run_id: runId });
+      const rawText = extractTextFromContent(polled?.content);
+      const replyText = extractReplyTextFromToolResult(polled);
+      logCallDebug(api, "monitor poll", {
+        runId,
+        sessionKey: wakeOptions.sessionKey,
+        replyPreview: typeof replyText === "string" ? replyText.slice(0, 120) : "",
+      });
+      return {
+        rawText,
+        replyText,
+      };
+    },
+    async onProgress({ rawText, replyText }) {
+      await dispatchCallRunUpdate(api, wakeOptions, runId, rawText, replyText, "progress");
+    },
+    async onTerminal({ rawText, replyText }) {
+      clearLatestCallRunForSession(wakeOptions.sessionKey, runId);
+      await dispatchCallRunUpdate(api, wakeOptions, runId, rawText, replyText, "terminal");
+    },
+    async onError(error) {
+      logCallError(api, `monitor poll failed for ${runId}`, error);
+    },
+  });
+  logCallDebug(api, "startCallRunMonitor", {
+    runId,
+    sessionKey: wakeOptions.sessionKey,
+    hasDeliveryContext: !!wakeOptions.deliveryContext,
+    started,
+    ctxSessionKey: ctx?.sessionKey || "",
+    ctxAgentId: ctx?.agentId || "",
+  });
+  return started;
+}
+
+export function handleCallToolResultPersist(api, event, ctx) {
+  const sessionKey = getCallStateKey(ctx);
+  const toolName = normalizeCallToolName(event?.toolName || event?.message?.toolName);
+  const text = extractTextFromContent(event?.message?.content);
+  const transition = analyzeCallToolStateTransition(event, ctx);
+  if (!transition) {
+    if (toolName === "get_call_run" && sessionKey && text) {
+      const runId = getLatestCallRunForSession(sessionKey);
+      const replyText = extractReplyTextFromInstructionText(text);
+      if (runId && replyText && !isTerminalReplyText(replyText)) {
+        logCallDebug(api, "updateCallRunMonitorReply", {
+          runId,
+          sessionKey,
+          replyPreview: replyText.slice(0, 120),
+        });
+        updateCallRunMonitorReply(sessionKey, runId, replyText);
+      }
+    }
+    return;
+  }
+  logCallDebug(api, "handleCallToolResultPersist transition", {
+    action: transition.action,
+    toolName,
+    sessionKey,
+    transitionSessionKey: transition.sessionKey,
+    runId: transition.runId || "",
+    ctxSessionKey: ctx?.sessionKey || "",
+    ctxAgentId: ctx?.agentId || "",
+  });
+  if (transition.action === "start-monitor") {
+    setLatestCallRunForSession(transition.sessionKey, transition.runId);
+    startCallRunMonitor(api, ctx, transition.runId);
+    return;
+  }
+  if (transition.action === "clear-monitor") {
+    clearCallRunMonitorsForSession(transition.sessionKey);
+    clearLatestCallRunForSession(transition.sessionKey);
+  }
+}
+
 async function maybeOverrideCallReply(api, ctx) {
   const state = popLatestCallToolState(ctx);
   if (!isFreshCallToolState(state)) {
@@ -254,6 +728,9 @@ async function maybeOverrideCallReply(api, ctx) {
   if (state.toolName === "get_call_run") {
     const replyText = extractReplyTextFromInstructionText(state.text);
     if (replyText) {
+      if (isTerminalReplyText(replyText)) {
+        clearCallRunMonitorsForSession(getCallStateKey(ctx));
+      }
       return replyText;
     }
     return null;
@@ -265,12 +742,9 @@ async function maybeOverrideCallReply(api, ctx) {
       return "Phone call is in progress! Progress:\n- Waiting for the next status update.";
     }
     const polled = await pollCallRunForReply(api, runId);
-    if (polled.rawText) {
-      setLatestCallToolState(ctx, {
-        toolName: "get_call_run",
-        text: polled.rawText,
-        ts: Date.now(),
-      });
+    if (!isTerminalReplyText(polled.replyText)) {
+      setLatestCallRunForSession(getCallStateKey(ctx), runId);
+      startCallRunMonitor(api, ctx, runId);
     }
     return polled.replyText;
   }
@@ -299,7 +773,6 @@ function appendPromptGuidanceToMessages(event) {
     messages: [...event.messages, buildExactTemplateSystemMessage()],
   };
 }
-
 export default definePluginEntry({
   id: "calle",
   name: "calle",
@@ -326,6 +799,7 @@ export default definePluginEntry({
 
       api.on("tool_result_persist", (event, ctx) => {
         storeLatestCallToolState(event, ctx);
+        handleCallToolResultPersist(api, event, ctx);
       });
 
       api.on("before_agent_reply", async (_event, ctx) => {
