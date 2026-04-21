@@ -1,5 +1,9 @@
 export const OPENCLAW_CALL_PROGRESS_GUIDANCE = [
   "CALL-E response formatting rules for OpenClaw chat:",
+  "Tool-selection rules:",
+  "1. If calle_plan_call, calle_run_call, or calle_get_call_run are available in this session, you must use those tools for all real phone-call actions.",
+  "2. When those calle_* tools are available, never use exec, shell commands, node scripts, curl, raw HTTP requests, or direct MCP calls to plan, start, poll, or summarize a Call-E call.",
+  "3. Do not delegate Call-E call execution or polling to a subagent when the calle_* tools are available in the current session.",
   "If you are replying after using calle_run_call or calle_get_call_run, do not paraphrase the call result into free-form prose.",
   "Never reply with free-form summaries such as 'The call succeeded. Result: ...'.",
   "Workflow rules:",

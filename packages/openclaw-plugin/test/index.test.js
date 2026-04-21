@@ -8,6 +8,7 @@ import {
   updateCallRunMonitorReply,
 } from "../lib/call-run-monitor.js";
 import { analyzeCallToolStateTransition, getCallStateKey } from "../lib/call-tool-state.js";
+import { OPENCLAW_CALL_PROGRESS_GUIDANCE } from "../lib/prompt-guidance.js";
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -226,4 +227,15 @@ test("analyzeCallToolStateTransition clears a monitor after terminal get_call_ru
     action: "clear-monitor",
     sessionKey: "agent:testray:main",
   });
+});
+
+test("OPENCLAW_CALL_PROGRESS_GUIDANCE forbids exec fallback when calle tools are available", () => {
+  assert.match(
+    OPENCLAW_CALL_PROGRESS_GUIDANCE,
+    /never use exec, shell commands, node scripts, curl, raw HTTP requests, or direct MCP calls/i
+  );
+  assert.match(
+    OPENCLAW_CALL_PROGRESS_GUIDANCE,
+    /do not delegate Call-E call execution or polling to a subagent/i
+  );
 });

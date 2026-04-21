@@ -182,6 +182,16 @@ If those tools are not yet available, do not proceed with call execution.
 
 Once the plugin is available, use the tools in this order.
 
+Hard rule:
+
+- If `calle_plan_call`, `calle_run_call`, and `calle_get_call_run` are
+  available in the current session, do not use `exec`, shell commands, Node
+  scripts, `curl`, raw HTTP requests, or direct MCP calls for Call-E work.
+- When those `calle_*` tools are available, do not delegate Call-E execution
+  or polling to a subagent.
+- If the user asked not to use subagents, that does not authorize an `exec`
+  fallback. Stay on the `calle_*` tool path.
+
 ### 1. Plan first
 
 Always start with `calle_plan_call`.
