@@ -40,6 +40,8 @@ simulated conversation, or general contact lookup that does not require Call-E.
 
 ## CLI selection
 
+Use the first command form that works.
+
 Prefer the repository-local CLI when the current workspace contains it:
 
 ```bash
@@ -52,11 +54,15 @@ If the repository-local CLI is unavailable, use the global command:
 calle
 ```
 
-If neither command works, tell the user to install the CLI:
+If neither command works, use the pinned npm package through `npx`:
 
 ```bash
-npm install -g @call-e/cli
+npx -y @call-e/cli@0.1.0
 ```
+
+Only tell the user to install the CLI globally if `npx` is unavailable,
+network access is blocked, or the user explicitly wants a persistent global
+command.
 
 ## Readiness flow
 

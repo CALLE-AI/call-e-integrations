@@ -53,6 +53,8 @@ intentionally exposes multiple Call-E marketplaces in the same client UI.
   marketplace from the Claude-compatible one.
 - Public install docs should use sparse checkout and include only the relevant
   marketplace entry point plus that ecosystem's package path.
+- Versioned install examples are synced during release PR versioning by
+  `scripts/sync-install-doc-versions.mjs`.
 
 Codex public install example:
 

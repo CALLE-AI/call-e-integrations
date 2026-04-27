@@ -9,12 +9,12 @@
   "scripts": {
     "test": "pnpm -r --filter \"./packages/*\" run test",
     "check": "pnpm run check:versions && pnpm -r --filter \"./packages/*\" run check",
-    "check:versions": "node ./scripts/check-manifest-versions.mjs",
+    "check:versions": "node ./scripts/check-manifest-versions.mjs && node ./scripts/sync-install-doc-versions.mjs --check",
     "pack:skill": "node ./scripts/pack-skills.mjs",
     "pack:skill:calle": "node ./scripts/pack-skills.mjs calle",
     "pack:dry-run": "pnpm -r --filter \"./packages/*\" run pack:dry-run",
     "changeset": "changeset",
-    "version-packages": "changeset version && node ./scripts/sync-plugin-manifest-version.mjs",
+    "version-packages": "changeset version && node ./scripts/sync-plugin-manifest-version.mjs && node ./scripts/sync-install-doc-versions.mjs",
     "publish-packages": "pnpm -r --filter \"@call-e/*\" publish --access public --no-git-checks",
     "release": "pnpm run version-packages"
   },

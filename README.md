@@ -61,11 +61,14 @@ pnpm --filter @call-e/codex-plugin pack:dry-run
 
 ## Install The Codex Plugin
 
-Install and authenticate the shared CLI first:
+You do not need to install the shared CLI globally before installing the Codex
+plugin. The plugin uses the repository-local CLI when available, then a global
+`calle` command when available, then falls back to `npx -y @call-e/cli@0.1.0`.
+
+To authenticate before installing the plugin, run:
 
 ```bash
-npm install -g @call-e/cli
-calle auth login
+npx -y @call-e/cli@0.1.0 auth login
 ```
 
 Then add the Codex marketplace from this repository. Replace

@@ -14,6 +14,12 @@ Global base command:
 calle
 ```
 
+npx fallback base command:
+
+```bash
+npx -y @call-e/cli@0.1.0
+```
+
 ## Setup and readiness
 
 ```bash
@@ -28,6 +34,13 @@ calle --help
 calle auth status
 calle auth login
 calle mcp tools
+```
+
+```bash
+npx -y @call-e/cli@0.1.0 --help
+npx -y @call-e/cli@0.1.0 auth status
+npx -y @call-e/cli@0.1.0 auth login
+npx -y @call-e/cli@0.1.0 mcp tools
 ```
 
 Rules:
@@ -46,6 +59,7 @@ Rules:
 ```bash
 node packages/cli/bin/calle.js call plan --to-phone +15551234567 --goal "Confirm the appointment"
 calle call plan --to-phone +15551234567 --goal "Confirm the appointment"
+npx -y @call-e/cli@0.1.0 call plan --to-phone +15551234567 --goal "Confirm the appointment"
 ```
 
 Supported `call plan` options:
@@ -63,6 +77,7 @@ phone numbers, country codes, language, or region.
 ```bash
 node packages/cli/bin/calle.js call run --plan-id <plan_id> --confirm-token <confirm_token>
 calle call run --plan-id <plan_id> --confirm-token <confirm_token>
+npx -y @call-e/cli@0.1.0 call run --plan-id <plan_id> --confirm-token <confirm_token>
 ```
 
 Supported `call run` options:
@@ -83,6 +98,7 @@ status is returned or the user asks you to stop.
 ```bash
 node packages/cli/bin/calle.js call status --run-id <run_id>
 calle call status --run-id <run_id>
+npx -y @call-e/cli@0.1.0 call status --run-id <run_id>
 ```
 
 Supported `call status` options:
