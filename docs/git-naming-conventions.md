@@ -18,12 +18,6 @@
 <type>/<short-kebab-summary>
 ```
 
-Codex 或自动化代理创建的工作分支格式：
-
-```text
-codex/<type>-<short-kebab-summary>
-```
-
 常用 `type`：
 
 - `feat`: 新功能
@@ -45,7 +39,6 @@ feat/openagent-oauth-standardization
 fix/codex-plugin-version-sync
 docs/git-naming-conventions
 ci/release-workflow-token-check
-codex/fix-codex-plugin-version-sync
 ```
 
 不推荐示例：
