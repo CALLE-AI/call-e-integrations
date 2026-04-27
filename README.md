@@ -6,6 +6,27 @@ Call-E Integrations is a public monorepo for shipping cross-platform agent integ
 
 - `packages/openclaw-plugin`: the publishable OpenClaw plugin package for OpenAgent.
   See [packages/openclaw-plugin/README.md](./packages/openclaw-plugin/README.md) for installation screenshots, OpenClaw UI usage, and package-specific configuration.
+- `packages/cli`: the publishable `@call-e/cli` package that ships the `calle` CLI for brokered login and MCP client configuration.
+  See [packages/cli/README.md](./packages/cli/README.md) for CLI commands and package-specific setup.
+- `packages/codex-plugin`: the Codex plugin bundle that lets Codex use the installed `calle` CLI.
+  See [packages/codex-plugin/README.md](./packages/codex-plugin/README.md) for marketplace installation and local validation.
+
+## Agent Client Layout
+
+This monorepo keeps client-specific marketplace entry points at the repository
+root and client-specific implementations under `packages/`.
+
+```text
+.agents/plugins/marketplace.json          # Codex marketplace entry
+packages/codex-plugin/plugin/             # Calle for Codex
+packages/cli/                             # Shared calle CLI
+packages/openclaw-plugin/                 # OpenClaw plugin
+```
+
+Future Claude, Copilot, VS Code, Gemini, or MCP-only integrations should add
+their own ecosystem entry point instead of sharing the Codex marketplace. For
+example, a Claude-compatible marketplace can live at
+`.claude-plugin/marketplace.json` once that integration is ready.
 
 ## Community
 
@@ -19,20 +40,51 @@ Install dependencies:
 pnpm install
 ```
 
-Run the plugin test suite:
+Run package test suites:
 
 ```bash
 pnpm test
 pnpm check
+pnpm --filter @call-e/cli test
+pnpm --filter @call-e/cli check
+pnpm --filter @call-e/codex-plugin test
+pnpm --filter @call-e/codex-plugin check
 ```
 
 Create a dry-run package tarball:
 
 ```bash
 pnpm pack:dry-run
+pnpm --filter @call-e/cli pack:dry-run
+pnpm --filter @call-e/codex-plugin pack:dry-run
 ```
 
-## Install The Plugin
+## Install The Codex Plugin
+
+Install and authenticate the shared CLI first:
+
+```bash
+npm install -g @call-e/cli
+calle auth login
+```
+
+Then add the Codex marketplace from this repository. Replace `v0.1.0` with the
+release tag you want to install.
+
+```bash
+codex plugin marketplace add CALLE-AI/call-e-integrations \
+  --ref v0.1.0 \
+  --sparse .agents/plugins \
+  --sparse packages/codex-plugin/plugin
+```
+
+Open Codex, run `/plugins`, choose the `Call-E` marketplace, and
+install `Calle`.
+
+For local development from a clone, restart Codex from this repository and use
+the repo-local marketplace at `.agents/plugins/marketplace.json`.
+
+## Install The OpenClaw Plugin
 
 On the machine that runs `openclaw-gateway`, the quickest path is:
 
@@ -81,4 +133,4 @@ This repository uses `pnpm`, Changesets, and GitHub Actions for releases.
 
 - Add a changeset for user-visible package changes.
 - Merge the resulting release PR.
-- The release workflow publishes `@call-e/openagent` to npm.
+- The release workflow publishes `@call-e/openagent` and `@call-e/cli` to npm.

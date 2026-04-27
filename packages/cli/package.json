@@ -1,0 +1,48 @@
+{
+  "name": "@call-e/cli",
+  "version": "0.0.0",
+  "description": "CLI wrapper for brokered MCP login and Calle MCP client configuration.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CALLE-AI/call-e-integrations.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/cli",
+  "bugs": {
+    "url": "https://github.com/CALLE-AI/call-e-integrations/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "calle": "./bin/calle.js"
+  },
+  "files": [
+    "README.md",
+    "bin",
+    "docs",
+    "lib",
+    "scripts"
+  ],
+  "keywords": [
+    "calle",
+    "call-e",
+    "mcp",
+    "oauth",
+    "cli"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "pnpm run test:unit && pnpm run test:e2e",
+    "test:unit": "node --test ./test/*.test.js",
+    "test:e2e": "node --test ./test/e2e/*.test.js",
+    "verify:live": "node ./scripts/live-e2e.mjs",
+    "verify:live:call": "node ./scripts/live-e2e.mjs --call",
+    "check": "node ../../scripts/check-runtime-syntax.mjs bin/calle.js lib/broker-client.js lib/cache.js lib/cli.js lib/config.js lib/http.js lib/mcp-client.js scripts/live-e2e.mjs",
+    "pack:dry-run": "npm pack --dry-run"
+  }
+}

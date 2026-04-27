@@ -7,15 +7,15 @@
     "pnpm": ">=10.18.3"
   },
   "scripts": {
-    "test": "pnpm -r --filter ./packages/* run test",
-    "check": "pnpm run check:versions && pnpm -r --filter ./packages/* run check",
+    "test": "pnpm -r --filter \"./packages/*\" run test",
+    "check": "pnpm run check:versions && pnpm -r --filter \"./packages/*\" run check",
     "check:versions": "node ./scripts/check-manifest-versions.mjs",
     "pack:skill": "node ./scripts/pack-skills.mjs",
     "pack:skill:calle": "node ./scripts/pack-skills.mjs calle",
-    "pack:dry-run": "pnpm --filter @call-e/openagent run pack:dry-run",
+    "pack:dry-run": "pnpm -r --filter \"./packages/*\" run pack:dry-run",
     "changeset": "changeset",
     "version-packages": "changeset version && node ./scripts/sync-plugin-manifest-version.mjs",
-    "publish-packages": "pnpm -r --filter @call-e/openagent publish --access public --no-git-checks",
+    "publish-packages": "pnpm -r --filter \"@call-e/*\" publish --access public --no-git-checks",
     "release": "pnpm run version-packages"
   },
   "devDependencies": {

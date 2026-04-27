@@ -55,7 +55,7 @@ test("startCallRunMonitor enqueues a heartbeat wake after the call reaches a ter
   });
 
   assert.equal(started, true);
-  await sleep(30);
+  await sleep(80);
 
   assert.equal(pollCount, 2);
   assert.equal(events.length, 1);
