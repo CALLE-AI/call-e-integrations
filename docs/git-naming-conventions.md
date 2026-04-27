@@ -159,7 +159,7 @@ When referencing package-level tags that contain `@` and `/` in installation com
 
 ```bash
 codex plugin marketplace add CALLE-AI/call-e-integrations \
-  --ref '@call-e/codex-plugin@0.1.0' \
+  --ref '@call-e/codex-plugin@0.1.1' \
   --sparse .agents/plugins \
   --sparse packages/codex-plugin/plugin
 ```

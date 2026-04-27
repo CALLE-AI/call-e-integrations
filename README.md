@@ -72,11 +72,11 @@ npx -y @call-e/cli@0.1.0 auth login
 ```
 
 Then add the Codex marketplace from this repository. Replace
-`@call-e/codex-plugin@0.1.0` with the package release tag you want to install.
+`@call-e/codex-plugin@0.1.1` with the package release tag you want to install.
 
 ```bash
 codex plugin marketplace add CALLE-AI/call-e-integrations \
-  --ref '@call-e/codex-plugin@0.1.0' \
+  --ref '@call-e/codex-plugin@0.1.1' \
   --sparse .agents/plugins \
   --sparse packages/codex-plugin/plugin
 ```
