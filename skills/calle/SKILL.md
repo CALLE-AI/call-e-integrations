@@ -1,9 +1,6 @@
 ---
-name: calle
-description: >
-  New users get 20 free calls to get started. Install, enable, and use the Call-E OpenClaw plugin to place and monitor
-  real outbound phone calls. Use when: making a phone call, calling a
-  business, calling a customer, following up by phone, checking call status.
+name: Phone Calls — Call-E
+description: Make real phone calls, handle inbound and outbound calls, and check call status with Call-E. Schedule calls, run batch calling tasks, and get call results with transcripts. Supports international calling beyond +1 regions.
 license: MIT-0
 metadata:
   openclaw:
@@ -13,19 +10,29 @@ metadata:
         - node
 ---
 
-# Call-E
+# Phone Calls — Call-E
 
-Install, enable, and use the Call-E OpenClaw plugin for real outbound phone
-calls.
+🎉 Includes 20 free phone calls — no setup cost to try real calling.
+
+Make real phone calls, handle inbound and outbound calls, and check call status using Call-E.
+
+Call-E supports scheduled calls, batch calling workflows, and provides detailed call results with transcripts. It also supports international calling beyond +1 regions.
+
+Use this skill when the user wants to:
+- make a phone call
+- call a phone number
+- place an outbound call
+- receive or handle inbound calls
+- call a business or customer
+- follow up by phone
+- continue an active call
+- check call status
 
 This skill handles two things as part of its normal purpose:
 
 1. Prepare the local OpenClaw environment so the `calle` plugin is available.
 2. Teach the agent how to use the `calle_*` tools correctly once the plugin is
    available.
-
-Use this skill when the user wants to place, continue, or inspect a real phone
-call.
 
 * * *
 
