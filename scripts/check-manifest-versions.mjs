@@ -18,22 +18,38 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
 
   const packageDir = path.join(packagesDir, entry.name);
   const packageJsonPath = path.join(packageDir, "package.json");
-  const manifestPath = path.join(packageDir, "openclaw.plugin.json");
+  const manifestPaths = [
+    {
+      label: "openclaw.plugin.json",
+      path: path.join(packageDir, "openclaw.plugin.json"),
+    },
+    {
+      label: "plugin/.codex-plugin/plugin.json",
+      path: path.join(packageDir, "plugin", ".codex-plugin", "plugin.json"),
+    },
+  ];
   const indexPath = path.join(packageDir, "index.js");
 
-  if (!fs.existsSync(packageJsonPath) || !fs.existsSync(manifestPath)) {
+  if (!fs.existsSync(packageJsonPath)) {
     continue;
   }
 
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
   const packageVersion = packageJson.version;
-  const manifestVersion = manifest.version;
 
-  if (packageVersion !== manifestVersion) {
-    failures.push(
-      `${entry.name}: package.json version (${packageVersion}) does not match openclaw.plugin.json version (${manifestVersion}).`
-    );
+  for (const manifestPath of manifestPaths) {
+    if (!fs.existsSync(manifestPath.path)) {
+      continue;
+    }
+
+    const manifest = JSON.parse(fs.readFileSync(manifestPath.path, "utf8"));
+    const manifestVersion = manifest.version;
+
+    if (packageVersion !== manifestVersion) {
+      failures.push(
+        `${entry.name}: package.json version (${packageVersion}) does not match ${manifestPath.label} version (${manifestVersion}).`
+      );
+    }
   }
 
   if (fs.existsSync(indexPath)) {
