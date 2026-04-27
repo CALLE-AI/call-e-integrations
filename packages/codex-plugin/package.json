@@ -1,6 +1,6 @@
 {
   "name": "@call-e/codex-plugin",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Codex plugin bundle for Call-E CLI workflows.",
   "type": "module",
   "license": "MIT",
