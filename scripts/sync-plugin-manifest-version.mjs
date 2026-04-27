@@ -17,20 +17,29 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
 
   const packageDir = path.join(packagesDir, entry.name);
   const packageJsonPath = path.join(packageDir, "package.json");
-  const manifestPath = path.join(packageDir, "openclaw.plugin.json");
+  const manifestPaths = [
+    path.join(packageDir, "openclaw.plugin.json"),
+    path.join(packageDir, "plugin", ".codex-plugin", "plugin.json"),
+  ];
   const indexPath = path.join(packageDir, "index.js");
 
-  if (!fs.existsSync(packageJsonPath) || !fs.existsSync(manifestPath)) {
+  if (!fs.existsSync(packageJsonPath)) {
     continue;
   }
 
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
   const version = packageJson.version;
 
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-  if (manifest.version !== version) {
-    manifest.version = version;
-    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  for (const manifestPath of manifestPaths) {
+    if (!fs.existsSync(manifestPath)) {
+      continue;
+    }
+
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    if (manifest.version !== version) {
+      manifest.version = version;
+      fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    }
   }
 
   if (fs.existsSync(indexPath)) {

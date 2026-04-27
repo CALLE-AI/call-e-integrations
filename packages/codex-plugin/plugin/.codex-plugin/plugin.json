@@ -1,6 +1,6 @@
 {
   "name": "calle",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Use Call-E from Codex through the calle CLI.",
   "homepage": "https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/codex-plugin",
   "repository": "https://github.com/CALLE-AI/call-e-integrations",
