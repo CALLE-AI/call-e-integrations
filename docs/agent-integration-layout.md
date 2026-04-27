@@ -58,7 +58,7 @@ Codex public install example:
 
 ```bash
 codex plugin marketplace add CALLE-AI/call-e-integrations \
-  --ref v0.1.0 \
+  --ref '@call-e/codex-plugin@0.1.0' \
   --sparse .agents/plugins \
   --sparse packages/codex-plugin/plugin
 ```

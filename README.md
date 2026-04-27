@@ -68,12 +68,12 @@ npm install -g @call-e/cli
 calle auth login
 ```
 
-Then add the Codex marketplace from this repository. Replace `v0.1.0` with the
-release tag you want to install.
+Then add the Codex marketplace from this repository. Replace
+`@call-e/codex-plugin@0.1.0` with the package release tag you want to install.
 
 ```bash
 codex plugin marketplace add CALLE-AI/call-e-integrations \
-  --ref v0.1.0 \
+  --ref '@call-e/codex-plugin@0.1.0' \
   --sparse .agents/plugins \
   --sparse packages/codex-plugin/plugin
 ```
