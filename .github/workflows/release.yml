@@ -47,9 +47,7 @@ jobs:
           //registry.npmjs.org/:_authToken=${NPM_TOKEN}
           EOF
 
-          package_name=$(node -p 'JSON.parse(require("node:fs").readFileSync("packages/openclaw-plugin/package.json", "utf8")).name')
-          scope="${package_name#@}"
-          scope="${scope%%/*}"
+          scope="call-e"
           npm_user=$(NPM_TOKEN="$NPM_TOKEN" npm whoami \
             --userconfig="$tmpdir/.npmrc" \
             --registry=https://registry.npmjs.org/)

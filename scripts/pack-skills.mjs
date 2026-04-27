@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const REPO_ROOT = path.resolve(import.meta.dirname, "..");
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SKILLS_ROOT = path.join(REPO_ROOT, "skills");
 const DIST_ROOT = path.join(REPO_ROOT, "dist", "skills");
 const FIXED_DATE = new Date("2024-01-01T00:00:00Z");

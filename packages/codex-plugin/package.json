@@ -1,0 +1,39 @@
+{
+  "name": "@call-e/codex-plugin",
+  "version": "0.0.0",
+  "description": "Codex plugin bundle for Call-E CLI workflows.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CALLE-AI/call-e-integrations.git",
+    "directory": "packages/codex-plugin"
+  },
+  "homepage": "https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/codex-plugin",
+  "bugs": {
+    "url": "https://github.com/CALLE-AI/call-e-integrations/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "README.md",
+    "plugin"
+  ],
+  "keywords": [
+    "calle",
+    "call-e",
+    "codex",
+    "plugin",
+    "cli",
+    "mcp"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "check": "node ./scripts/check-plugin.mjs",
+    "test": "node --test ./test/*.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  }
+}
