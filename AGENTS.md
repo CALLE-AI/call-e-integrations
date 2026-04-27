@@ -30,7 +30,8 @@ Call-E Integrations is a multi-ecosystem agent integration monorepo.
 
 - Follow existing package layout and scripts before adding new tooling.
 - Follow [docs/git-naming-conventions.md](./docs/git-naming-conventions.md)
-  when naming branches, commits, tags, PR titles, remotes, and stash entries.
+  when naming branches, commits, monorepo package release tags, PR titles,
+  remotes, and stash entries.
 - Keep user-facing installation steps in the root `README.md` and package
   `README.md` files.
 - Before changing marketplace entry points, plugin names, visible labels, or

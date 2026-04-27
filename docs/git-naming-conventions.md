@@ -134,7 +134,37 @@ ci(release): harden package publish workflow
 
 发布标签应由 Changesets 和 GitHub Actions 发布流程生成或遵循该流程要求。不要手动移动、覆盖或重命名已经发布的标签。
 
-如果需要手动创建仓库级版本标签，使用语义化版本：
+本仓库是 monorepo，默认按包独立发版。包级发布标签使用完整 npm 包名和版本：
+
+```text
+<package-name>@<major>.<minor>.<patch>
+```
+
+预发布版本使用：
+
+```text
+<package-name>@<major>.<minor>.<patch>-<channel>.<number>
+```
+
+推荐示例：
+
+```text
+@call-e/cli@0.1.0
+@call-e/codex-plugin@0.1.0
+@call-e/openagent@0.1.0
+@call-e/codex-plugin@0.2.0-rc.1
+```
+
+在安装命令或脚本里引用包含 `@` 和 `/` 的包级标签时，优先使用显式 `--ref` 并加引号，例如：
+
+```bash
+codex plugin marketplace add CALLE-AI/call-e-integrations \
+  --ref '@call-e/codex-plugin@0.1.0' \
+  --sparse .agents/plugins \
+  --sparse packages/codex-plugin/plugin
+```
+
+只有当整个仓库采用同一个统一版本、并且该标签代表一次仓库级发布时，才使用仓库级版本标签：
 
 ```text
 v<major>.<minor>.<patch>
@@ -153,6 +183,8 @@ v1.2.3
 v1.3.0-rc.1
 v1.3.0-beta.2
 ```
+
+避免把单个包发布标成通用 `v<version>`，因为同一个仓库内 tag 名称唯一，多个包各自发布 `0.1.0` 时会产生歧义或冲突。
 
 ## Remote Names
 
