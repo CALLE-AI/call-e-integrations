@@ -2,4 +2,4 @@
 "@call-e/codex-plugin": patch
 ---
 
-Improve Codex plugin search keywords for marketplace and package discovery.
+Improve Codex plugin metadata for marketplace discovery and trust scanning.

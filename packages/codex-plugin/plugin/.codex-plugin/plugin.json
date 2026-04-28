@@ -2,6 +2,10 @@
   "name": "calle",
   "version": "0.1.1",
   "description": "Use Call-E from Codex through the calle CLI.",
+  "author": {
+    "name": "CALLE AI",
+    "url": "https://github.com/CALLE-AI"
+  },
   "homepage": "https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/codex-plugin",
   "repository": "https://github.com/CALLE-AI/call-e-integrations",
   "license": "MIT",
