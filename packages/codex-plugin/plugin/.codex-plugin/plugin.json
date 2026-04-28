@@ -6,11 +6,16 @@
   "repository": "https://github.com/CALLE-AI/call-e-integrations",
   "license": "MIT",
   "keywords": [
+    "ai-agent",
     "call-e",
     "calle",
     "codex",
+    "codex-plugin",
     "cli",
     "mcp",
+    "openai",
+    "openai-codex",
+    "phone-call",
     "voice-call"
   ],
   "skills": "./skills/",

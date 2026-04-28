@@ -21,12 +21,18 @@
     "plugin"
   ],
   "keywords": [
+    "ai-agent",
     "calle",
     "call-e",
     "codex",
+    "codex-plugin",
     "plugin",
+    "openai",
+    "openai-codex",
     "cli",
-    "mcp"
+    "mcp",
+    "phone-call",
+    "voice-call"
   ],
   "publishConfig": {
     "access": "public"
