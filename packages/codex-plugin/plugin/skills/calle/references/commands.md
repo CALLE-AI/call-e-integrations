@@ -5,42 +5,42 @@ Use the first command form that is available in the current workspace.
 Repository-local base command:
 
 ```bash
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 node packages/cli/bin/calle.js
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 node packages/cli/bin/calle.js
 ```
 
 Global base command:
 
 ```bash
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 calle
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 calle
 ```
 
 npx fallback base command:
 
 ```bash
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 npx -y @call-e/cli@0.1.0
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.0
 ```
 
 ## Setup and readiness
 
 ```bash
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 node packages/cli/bin/calle.js --help
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 node packages/cli/bin/calle.js auth status
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 node packages/cli/bin/calle.js auth login
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 node packages/cli/bin/calle.js mcp tools
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 node packages/cli/bin/calle.js --help
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 node packages/cli/bin/calle.js auth status
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 node packages/cli/bin/calle.js auth login
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 node packages/cli/bin/calle.js mcp tools
 ```
 
 ```bash
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 calle --help
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 calle auth status
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 calle auth login
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 calle mcp tools
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 calle --help
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 calle auth status
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 calle auth login
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 calle mcp tools
 ```
 
 ```bash
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 npx -y @call-e/cli@0.1.0 --help
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 npx -y @call-e/cli@0.1.0 auth status
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 npx -y @call-e/cli@0.1.0 auth login
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 npx -y @call-e/cli@0.1.0 mcp tools
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.0 --help
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.0 auth status
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.0 auth login
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.0 mcp tools
 ```
 
 Rules:
@@ -57,9 +57,9 @@ Rules:
 ## Call planning
 
 ```bash
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 node packages/cli/bin/calle.js call plan --to-phone +15551234567 --goal "Confirm the appointment"
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 calle call plan --to-phone +15551234567 --goal "Confirm the appointment"
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 npx -y @call-e/cli@0.1.0 call plan --to-phone +15551234567 --goal "Confirm the appointment"
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 node packages/cli/bin/calle.js call plan --to-phone +15551234567 --goal "Confirm the appointment"
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 calle call plan --to-phone +15551234567 --goal "Confirm the appointment"
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.0 call plan --to-phone +15551234567 --goal "Confirm the appointment"
 ```
 
 Supported `call plan` options:
@@ -75,9 +75,9 @@ phone numbers, country codes, language, or region.
 ## Planned call execution
 
 ```bash
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 node packages/cli/bin/calle.js call run --plan-id <plan_id> --confirm-token <confirm_token>
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 calle call run --plan-id <plan_id> --confirm-token <confirm_token>
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 npx -y @call-e/cli@0.1.0 call run --plan-id <plan_id> --confirm-token <confirm_token>
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 node packages/cli/bin/calle.js call run --plan-id <plan_id> --confirm-token <confirm_token>
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 calle call run --plan-id <plan_id> --confirm-token <confirm_token>
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.0 call run --plan-id <plan_id> --confirm-token <confirm_token>
 ```
 
 Supported `call run` options:
@@ -96,9 +96,9 @@ status is returned or the user asks you to stop.
 ## Call status
 
 ```bash
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 node packages/cli/bin/calle.js call status --run-id <run_id>
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 calle call status --run-id <run_id>
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 npx -y @call-e/cli@0.1.0 call status --run-id <run_id>
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 node packages/cli/bin/calle.js call status --run-id <run_id>
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 calle call status --run-id <run_id>
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.0 call status --run-id <run_id>
 ```
 
 Supported `call status` options:

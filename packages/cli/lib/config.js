@@ -12,7 +12,7 @@ export const DEFAULT_TELEMETRY_TIMEOUT_SECONDS = 1.5;
 export const DEFAULT_MIN_TTL_SECONDS = 300;
 export const DEFAULT_CACHE_ROOT = path.join(os.homedir(), ".calle-mcp", "cli");
 export const SESSION_SECRET_HEADER = "X-OpenAgent-Session-Secret";
-export const CLI_VERSION = "0.1.0";
+export const CLI_VERSION = "0.2.0";
 export const INTEGRATION_HEADER = "X-Call-E-Integration";
 
 export function expandHomePath(value) {

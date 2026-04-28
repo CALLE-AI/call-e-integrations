@@ -45,7 +45,7 @@ All CLI commands run from this Codex plugin must include the Call-E integration
 attribution environment:
 
 ```bash
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3
 ```
 
 Use the first command form that works.
@@ -53,19 +53,19 @@ Use the first command form that works.
 Prefer the repository-local CLI when the current workspace contains it:
 
 ```bash
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 node packages/cli/bin/calle.js
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 node packages/cli/bin/calle.js
 ```
 
 If the repository-local CLI is unavailable, use the global command:
 
 ```bash
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 calle
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 calle
 ```
 
 If neither command works, use the pinned npm package through `npx`:
 
 ```bash
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 npx -y @call-e/cli@0.1.0
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.0
 ```
 
 Only tell the user to install the CLI globally if `npx` is unavailable,
