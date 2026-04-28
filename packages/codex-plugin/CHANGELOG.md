@@ -1,5 +1,11 @@
 # @call-e/codex-plugin
 
+## 0.1.2
+
+### Patch Changes
+
+- [`ec70577`](https://github.com/CALLE-AI/call-e-integrations/commit/ec705777f94adfe1929a12931b49a0a02c805dd9) Thanks [@Ray-56](https://github.com/Ray-56)! - Improve Codex plugin metadata for marketplace discovery and trust scanning.
+
 ## 0.1.1
 
 ### Patch Changes
