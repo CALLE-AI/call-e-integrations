@@ -152,4 +152,4 @@ This repository uses `pnpm`, Changesets, and GitHub Actions for releases.
 
 - Add a changeset for user-visible package changes.
 - Merge the resulting release PR.
-- The release workflow publishes `@call-e/openagent` and `@call-e/cli` to npm.
+- The release workflow publishes changed `@call-e/*` packages to npm through Changesets and creates package-level git tags.

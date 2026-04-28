@@ -15,7 +15,7 @@
     "pack:dry-run": "pnpm -r --filter \"./packages/*\" run pack:dry-run",
     "changeset": "changeset",
     "version-packages": "changeset version && node ./scripts/sync-plugin-manifest-version.mjs && node ./scripts/sync-install-doc-versions.mjs",
-    "publish-packages": "pnpm -r --filter \"@call-e/*\" publish --access public --no-git-checks",
+    "publish-packages": "changeset publish",
     "release": "pnpm run version-packages"
   },
   "devDependencies": {
