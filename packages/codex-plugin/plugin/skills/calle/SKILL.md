@@ -1,6 +1,7 @@
 ---
 name: calle
 description: Use Call-E from Codex through the calle CLI. Use for Call-E setup checks, authentication recovery, phone call planning, planned call execution, and call status checks.
+license: MIT
 ---
 
 # Call-E
