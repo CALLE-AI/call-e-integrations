@@ -10,6 +10,7 @@ const versionedFiles = [
   "docs/agent-integration-layout.md",
   "docs/git-naming-conventions.md",
   "packages/codex-plugin/README.md",
+  "packages/codex-plugin/plugin/README.md",
   "packages/codex-plugin/plugin/skills/calle/SKILL.md",
   "packages/codex-plugin/plugin/skills/calle/references/commands.md",
 ];
@@ -36,6 +37,11 @@ const replacements = [
     label: "npx CLI fallback",
     pattern: /npx -y @call-e\/cli@\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
     value: `npx -y @call-e/cli@${readPackageVersion("packages/cli")}`,
+  },
+  {
+    label: "Codex plugin integration attribution version",
+    pattern: /CALLE_INTEGRATION_VERSION=\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
+    value: `CALLE_INTEGRATION_VERSION=${readPackageVersion("packages/codex-plugin")}`,
   },
 ];
 

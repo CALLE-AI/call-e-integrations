@@ -6,6 +6,9 @@ import assert from "node:assert/strict";
 
 import { runCli } from "../lib/cli.js";
 import { pendingCachePath, tokenCachePath, writePrivateJson } from "../lib/cache.js";
+import { CLI_VERSION } from "../lib/config.js";
+
+const defaultIntegrationHeader = `cli/cli/${CLI_VERSION}`;
 
 function makeTempRoot(name) {
   return fs.mkdtempSync(path.join(os.tmpdir(), `${name}-`));
@@ -32,9 +35,21 @@ function writeToken(cacheRoot, serverUrl, accessToken = "cached-token") {
   });
 }
 
+function captureTelemetry(events) {
+  return async (url, init) => {
+    events.push({
+      url: String(url),
+      init,
+      payload: JSON.parse(init.body),
+    });
+    return jsonResponse({ accepted: true }, { status: 202 });
+  };
+}
+
 async function run(argv, deps = {}) {
   let stdout = "";
   let stderr = "";
+  const { env = {}, ...restDeps } = deps;
   const code = await runCli(argv, {
     stdout: (text) => {
       stdout += text;
@@ -44,7 +59,8 @@ async function run(argv, deps = {}) {
     },
     openBrowser: async () => {},
     sleepImpl: async () => {},
-    ...deps,
+    env: { CALLE_TELEMETRY: "0", ...env },
+    ...restDeps,
   });
   return { code, stdout, stderr };
 }
@@ -55,6 +71,7 @@ test("auth login defaults broker payload to openagent_oauth and hides token from
   const fetchImpl = async (url, init) => {
     requests.push({ url: String(url), init });
     if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+      assert.equal(init.headers["X-Call-E-Integration"], defaultIntegrationHeader);
       const payload = JSON.parse(init.body);
       assert.equal(payload.channel, "openagent_oauth");
       assert.equal(payload.server_url, "https://mcp.example/mcp/openagent_oauth");
@@ -73,9 +90,11 @@ test("auth login defaults broker payload to openagent_oauth and hides token from
     }
     if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-1") && init?.method === "GET") {
       assert.equal(init.headers["X-OpenAgent-Session-Secret"], "secret-1");
+      assert.equal(init.headers["X-Call-E-Integration"], defaultIntegrationHeader);
       return jsonResponse({ status: "AUTHORIZED", expires_at: "2030-01-01T00:00:00Z" });
     }
     if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-1/exchange") && init?.method === "POST") {
+      assert.equal(init.headers["X-Call-E-Integration"], defaultIntegrationHeader);
       return jsonResponse({
         token: { access_token: "secret-token" },
         expires_at: "2030-01-01T00:00:00Z",
@@ -98,6 +117,56 @@ test("auth login defaults broker payload to openagent_oauth and hides token from
   const tokenPayload = JSON.parse(fs.readFileSync(tokenCachePath(cacheRoot, payload.server_url), "utf8"));
   assert.equal(tokenPayload.token.access_token, "secret-token");
   assert.equal(fs.existsSync(pendingCachePath(cacheRoot, payload.server_url)), false);
+});
+
+test("auth login forwards upstream integration context from environment", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-integration");
+  const seenHeaders = [];
+  const fetchImpl = async (url, init) => {
+    seenHeaders.push(init.headers["X-Call-E-Integration"]);
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+      return jsonResponse(
+        {
+          session_id: "session-1",
+          session_secret: "secret-1",
+          login_url: "https://mcp.example/openagent-auth/sessions/session-1/start",
+          status: "PENDING",
+          poll_after_ms: 1,
+          expires_at: "2030-01-01T00:00:00Z",
+        },
+        { status: 201 }
+      );
+    }
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-1") && init?.method === "GET") {
+      return jsonResponse({ status: "AUTHORIZED", expires_at: "2030-01-01T00:00:00Z" });
+    }
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-1/exchange") && init?.method === "POST") {
+      return jsonResponse({
+        token: { access_token: "secret-token" },
+        expires_at: "2030-01-01T00:00:00Z",
+      });
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+
+  const result = await run(
+    ["auth", "login", "--base-url", "https://mcp.example", "--cache-root", cacheRoot, "--no-browser-open"],
+    {
+      fetchImpl,
+      env: {
+        CALLE_SOURCE: "codex",
+        CALLE_INTEGRATION: "codex_plugin",
+        CALLE_INTEGRATION_VERSION: "0.1.2",
+      },
+    }
+  );
+
+  assert.equal(result.code, 0);
+  assert.deepEqual(seenHeaders, [
+    "codex/codex_plugin/0.1.2",
+    "codex/codex_plugin/0.1.2",
+    "codex/codex_plugin/0.1.2",
+  ]);
 });
 
 test("auth login resumes a pending login without creating a new session", async () => {
@@ -283,6 +352,7 @@ test("mcp tools uses cached token and lists remote tools", async () => {
   const fetchImpl = async (url, init) => {
     assert.equal(String(url), serverUrl);
     assert.equal(init.headers.Authorization, "Bearer tool-token");
+    assert.equal(init.headers["X-Call-E-Integration"], defaultIntegrationHeader);
     const payload = JSON.parse(init.body);
     methods.push(payload.method);
     if (payload.method === "initialize") {
@@ -589,4 +659,208 @@ test("mcp 401 responses return auth_required without leaking cached token", asyn
   assert.equal(payload.ok, false);
   assert.equal(payload.error.code, "auth_required");
   assert.doesNotMatch(result.stdout, /stale-token/);
+});
+
+test("auth status emits server-compatible telemetry without sensitive fields", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-telemetry-status");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl, "usable-token");
+  const telemetryEvents = [];
+
+  const result = await run(["auth", "status", "--base-url", "https://mcp.example", "--cache-root", cacheRoot], {
+    env: { CALLE_TELEMETRY: "1" },
+    telemetryFetchImpl: captureTelemetry(telemetryEvents),
+  });
+
+  assert.equal(result.code, 0);
+  assert.equal(JSON.parse(result.stdout).usable, true);
+  assert.deepEqual(telemetryEvents.map((event) => event.payload.event), ["cli_invoked", "auth_status_checked"]);
+  assert.equal(telemetryEvents[0].url, "https://mcp.example/api/ui-telemetry/track");
+  assert.equal(telemetryEvents[0].payload.type, "track");
+  assert.match(telemetryEvents[0].payload.anonymousId, /^[0-9a-f-]{36}$/u);
+  assert.match(telemetryEvents[0].payload.messageId, /^[0-9a-f]{64}$/u);
+  assert.equal(telemetryEvents[0].payload.context.source, "cli");
+  assert.equal(telemetryEvents[0].payload.context.surface_name, "cli");
+  assert.equal(telemetryEvents[1].payload.properties.usable, true);
+  assert.equal(telemetryEvents[1].payload.properties.cache_exists, true);
+  const serialized = JSON.stringify(telemetryEvents.map((event) => event.payload));
+  assert.doesNotMatch(serialized, /usable-token/);
+  assert.doesNotMatch(serialized, /access_token/);
+});
+
+test("codex environment is reflected in telemetry integration context", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-telemetry-codex");
+  const telemetryEvents = [];
+
+  const result = await run(["auth", "status", "--base-url", "https://mcp.example", "--cache-root", cacheRoot], {
+    env: {
+      CALLE_TELEMETRY: "1",
+      CALLE_SOURCE: "codex",
+      CALLE_INTEGRATION: "codex_plugin",
+      CALLE_INTEGRATION_VERSION: "0.1.2",
+    },
+    telemetryFetchImpl: captureTelemetry(telemetryEvents),
+  });
+
+  assert.equal(result.code, 0);
+  const payload = telemetryEvents[0].payload;
+  assert.equal(payload.context.source, "codex");
+  assert.deepEqual(payload.context.integration_context, {
+    source: "codex",
+    integration: "codex_plugin",
+    version: "0.1.2",
+  });
+  assert.equal(payload.properties.integration_source, "codex");
+  assert.equal(payload.properties.integration_name, "codex_plugin");
+  assert.equal(payload.properties.integration_version, "0.1.2");
+});
+
+test("mcp tools telemetry records auth_required before contacting MCP", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-telemetry-auth-required");
+  const telemetryEvents = [];
+  let fetchCalled = false;
+
+  const result = await run(["mcp", "tools", "--base-url", "https://mcp.example", "--cache-root", cacheRoot], {
+    env: { CALLE_TELEMETRY: "1" },
+    telemetryFetchImpl: captureTelemetry(telemetryEvents),
+    fetchImpl: async () => {
+      fetchCalled = true;
+      throw new Error("fetch should not be called");
+    },
+  });
+
+  assert.equal(result.code, 1);
+  assert.equal(fetchCalled, false);
+  assert.deepEqual(telemetryEvents.map((event) => event.payload.event), [
+    "cli_invoked",
+    "mcp_tools_checked",
+    "auth_required",
+  ]);
+  assert.equal(telemetryEvents[1].payload.properties.outcome, "failure");
+  assert.equal(telemetryEvents[1].payload.properties.error_code, "auth_required");
+  const serialized = JSON.stringify(telemetryEvents.map((event) => event.payload));
+  assert.doesNotMatch(serialized, /login_command/);
+  assert.doesNotMatch(serialized, /access_token/);
+});
+
+test("call plan success does not emit CLI call telemetry", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-telemetry-call-plan");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl);
+  const telemetryEvents = [];
+  const fetchImpl = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") {
+      return jsonRpcResponse({ jsonrpc: "2.0", id: payload.id, result: {} });
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonRpcResponse({});
+    }
+    if (payload.method === "tools/call") {
+      return jsonRpcResponse({
+        jsonrpc: "2.0",
+        id: payload.id,
+        result: { structuredContent: { plan_id: "plan-1", confirm_token: "confirm-1" } },
+      });
+    }
+    throw new Error(`unexpected method: ${payload.method}`);
+  };
+
+  const result = await run(
+    [
+      "call",
+      "plan",
+      "--to-phone",
+      "+15551234567",
+      "--goal",
+      "Confirm appointment",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    {
+      env: { CALLE_TELEMETRY: "1" },
+      fetchImpl,
+      telemetryFetchImpl: captureTelemetry(telemetryEvents),
+    }
+  );
+
+  assert.equal(result.code, 0);
+  assert.deepEqual(telemetryEvents, []);
+});
+
+test("call plan local validation errors emit cli_local_error without call details", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-telemetry-call-plan-error");
+  const telemetryEvents = [];
+
+  const result = await run(
+    [
+      "call",
+      "plan",
+      "--to-phone",
+      "+15551234567",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    {
+      env: { CALLE_TELEMETRY: "1" },
+      telemetryFetchImpl: captureTelemetry(telemetryEvents),
+    }
+  );
+
+  assert.equal(result.code, 2);
+  assert.deepEqual(telemetryEvents.map((event) => event.payload.event), ["cli_local_error"]);
+  assert.equal(telemetryEvents[0].payload.properties.error_code, "invalid_arguments");
+  const serialized = JSON.stringify(telemetryEvents.map((event) => event.payload));
+  assert.doesNotMatch(serialized, /\+15551234567/);
+  assert.doesNotMatch(serialized, /to_phones/);
+});
+
+test("telemetry opt-out flags and failures do not affect command output", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-telemetry-opt-out");
+  const telemetryEvents = [];
+
+  let result = await run(
+    [
+      "auth",
+      "status",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+      "--no-telemetry",
+    ],
+    {
+      env: { CALLE_TELEMETRY: "1" },
+      telemetryFetchImpl: captureTelemetry(telemetryEvents),
+    }
+  );
+  assert.equal(result.code, 0);
+  assert.deepEqual(telemetryEvents, []);
+
+  result = await run(["auth", "status", "--base-url", "https://mcp.example", "--cache-root", cacheRoot], {
+    env: { CALLE_TELEMETRY: "0" },
+    telemetryFetchImpl: captureTelemetry(telemetryEvents),
+  });
+  assert.equal(result.code, 0);
+  assert.deepEqual(telemetryEvents, []);
+
+  result = await run(["auth", "status", "--base-url", "https://mcp.example", "--cache-root", cacheRoot], {
+    env: { CALLE_TELEMETRY: "1", DO_NOT_TRACK: "1" },
+    telemetryFetchImpl: captureTelemetry(telemetryEvents),
+  });
+  assert.equal(result.code, 0);
+  assert.deepEqual(telemetryEvents, []);
+
+  result = await run(["auth", "status", "--base-url", "https://mcp.example", "--cache-root", cacheRoot], {
+    env: { CALLE_TELEMETRY: "1" },
+    telemetryFetchImpl: async () => {
+      throw new Error("telemetry unavailable");
+    },
+  });
+  assert.equal(result.code, 0);
+  assert.equal(JSON.parse(result.stdout).usable, false);
 });

@@ -41,24 +41,31 @@ simulated conversation, or general contact lookup that does not require Call-E.
 
 ## CLI selection
 
+All CLI commands run from this Codex plugin must include the Call-E integration
+attribution environment:
+
+```bash
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2
+```
+
 Use the first command form that works.
 
 Prefer the repository-local CLI when the current workspace contains it:
 
 ```bash
-node packages/cli/bin/calle.js
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 node packages/cli/bin/calle.js
 ```
 
 If the repository-local CLI is unavailable, use the global command:
 
 ```bash
-calle
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 calle
 ```
 
 If neither command works, use the pinned npm package through `npx`:
 
 ```bash
-npx -y @call-e/cli@0.1.0
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.2 npx -y @call-e/cli@0.1.0
 ```
 
 Only tell the user to install the CLI globally if `npx` is unavailable,

@@ -22,6 +22,7 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
     path.join(packageDir, "plugin", ".codex-plugin", "plugin.json"),
   ];
   const indexPath = path.join(packageDir, "index.js");
+  const cliConfigPath = path.join(packageDir, "lib", "config.js");
 
   if (!fs.existsSync(packageJsonPath)) {
     continue;
@@ -50,6 +51,17 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
     );
     if (nextSource !== indexSource) {
       fs.writeFileSync(indexPath, nextSource);
+    }
+  }
+
+  if (fs.existsSync(cliConfigPath)) {
+    const configSource = fs.readFileSync(cliConfigPath, "utf8");
+    const nextSource = configSource.replace(
+      /export const CLI_VERSION = "([^"]+)";/,
+      `export const CLI_VERSION = "${version}";`
+    );
+    if (nextSource !== configSource) {
+      fs.writeFileSync(cliConfigPath, nextSource);
     }
   }
 }

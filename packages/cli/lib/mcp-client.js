@@ -1,4 +1,5 @@
 import { readJson, tokenCachePath, tokenIsUsable } from "./cache.js";
+import { CLI_VERSION, INTEGRATION_HEADER } from "./config.js";
 
 const PROTOCOL_VERSION = "2025-11-25";
 
@@ -130,6 +131,7 @@ async function openMcpSession({ config, fetchImpl }) {
     "Content-Type": "application/json",
     "mcp-protocol-version": PROTOCOL_VERSION,
     Authorization: `Bearer ${accessToken}`,
+    ...(config.integrationHeader ? { [INTEGRATION_HEADER]: config.integrationHeader } : {}),
   };
 
   const initialize = await requestJsonRpc(fetchImpl, config.serverUrl, {
@@ -142,7 +144,7 @@ async function openMcpSession({ config, fetchImpl }) {
         capabilities: {},
         clientInfo: {
           name: "calle",
-          version: "0.1.0",
+          version: config.cliVersion || CLI_VERSION,
         },
       },
     }),

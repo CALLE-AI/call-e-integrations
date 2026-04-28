@@ -29,6 +29,7 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
     },
   ];
   const indexPath = path.join(packageDir, "index.js");
+  const cliConfigPath = path.join(packageDir, "lib", "config.js");
 
   if (!fs.existsSync(packageJsonPath)) {
     continue;
@@ -60,6 +61,18 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
     } else if (match[1] !== packageVersion) {
       failures.push(
         `${entry.name}: index.js PLUGIN_VERSION (${match[1]}) does not match package.json version (${packageVersion}).`
+      );
+    }
+  }
+
+  if (fs.existsSync(cliConfigPath)) {
+    const configSource = fs.readFileSync(cliConfigPath, "utf8");
+    const match = configSource.match(/export const CLI_VERSION = "([^"]+)";/);
+    if (!match) {
+      failures.push(`${entry.name}: lib/config.js is missing a CLI_VERSION constant.`);
+    } else if (match[1] !== packageVersion) {
+      failures.push(
+        `${entry.name}: lib/config.js CLI_VERSION (${match[1]}) does not match package.json version (${packageVersion}).`
       );
     }
   }

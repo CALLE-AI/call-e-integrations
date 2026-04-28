@@ -1,9 +1,13 @@
 import { pendingCachePath, pendingIsExpired, readPendingLogin, removeFile, tokenCachePath, tokenIsUsable, writePrivateJson, readJson } from "./cache.js";
-import { SESSION_SECRET_HEADER } from "./config.js";
+import { INTEGRATION_HEADER, SESSION_SECRET_HEADER } from "./config.js";
 import { requestJson } from "./http.js";
 
-function brokerHeaders(sessionSecret) {
-  return { [SESSION_SECRET_HEADER]: sessionSecret };
+function integrationHeaders(config) {
+  return config?.integrationHeader ? { [INTEGRATION_HEADER]: config.integrationHeader } : {};
+}
+
+function brokerHeaders(config, sessionSecret) {
+  return { ...integrationHeaders(config), [SESSION_SECRET_HEADER]: sessionSecret };
 }
 
 function isActivePendingStatus(status) {
@@ -18,6 +22,7 @@ export async function createBrokerSession(config, { fetchImpl = globalThis.fetch
   return requestJson("POST", `${config.brokerBaseUrl}/api/v1/openagent-auth/sessions`, {
     fetchImpl,
     timeoutSeconds: config.timeoutSeconds,
+    headers: integrationHeaders(config),
     json: {
       server_url: config.serverUrl,
       auth_base_url: config.authBaseUrl,
@@ -32,7 +37,7 @@ export async function getBrokerSessionStatus(config, pending, { fetchImpl = glob
   return requestJson("GET", `${config.brokerBaseUrl}/api/v1/openagent-auth/sessions/${pending.session_id}`, {
     fetchImpl,
     timeoutSeconds: config.timeoutSeconds,
-    headers: brokerHeaders(pending.session_secret),
+    headers: brokerHeaders(config, pending.session_secret),
   });
 }
 
@@ -40,7 +45,7 @@ export async function exchangeBrokerSession(config, pending, { fetchImpl = globa
   return requestJson("POST", `${config.brokerBaseUrl}/api/v1/openagent-auth/sessions/${pending.session_id}/exchange`, {
     fetchImpl,
     timeoutSeconds: config.timeoutSeconds,
-    headers: brokerHeaders(pending.session_secret),
+    headers: brokerHeaders(config, pending.session_secret),
   });
 }
 

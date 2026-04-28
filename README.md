@@ -51,6 +51,22 @@ pnpm --filter @call-e/codex-plugin test
 pnpm --filter @call-e/codex-plugin check
 ```
 
+## Telemetry / Usage Data
+
+The `calle` CLI sends best-effort usage telemetry to Call-E to diagnose installation, authentication, MCP tool availability, and early usage drop-off before a first `plan_call` reaches the server.
+
+CLI telemetry includes an anonymous installation ID, CLI version, integration source such as `cli/cli/<version>` or `codex/codex_plugin/<version>`, command stage, outcome, error type, and server host/hash. It does not include phone numbers, call goals, OAuth tokens, broker login URLs, full argument JSON, transcripts, or contact data.
+
+Disable CLI telemetry with any of:
+
+```bash
+DO_NOT_TRACK=1 calle auth status
+CALLE_TELEMETRY=0 calle auth status
+calle auth status --no-telemetry
+```
+
+Broker and MCP requests still create service-side security, audit, and business operation logs needed to authenticate users and run calls.
+
 Create a dry-run package tarball:
 
 ```bash

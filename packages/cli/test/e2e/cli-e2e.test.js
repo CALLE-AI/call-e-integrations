@@ -8,9 +8,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { pendingCachePath, tokenCachePath, writePrivateJson } from "../../lib/cache.js";
+import { CLI_VERSION } from "../../lib/config.js";
 
 const binPath = fileURLToPath(new URL("../../bin/calle.js", import.meta.url));
 const packageRoot = fileURLToPath(new URL("../..", import.meta.url));
+const defaultIntegrationHeader = `cli/cli/${CLI_VERSION}`;
 
 const accessToken = "e2e-token";
 const sessionSecret = "secret-1";
@@ -39,7 +41,14 @@ function runCalle(args, { env = {} } = {}) {
       [binPath, ...args],
       {
         cwd: packageRoot,
-        env: { ...process.env, FORCE_COLOR: "0", ...env },
+        env: {
+          ...process.env,
+          FORCE_COLOR: "0",
+          CALLE_SOURCE: "",
+          CALLE_INTEGRATION: "",
+          CALLE_INTEGRATION_VERSION: "",
+          ...env,
+        },
         timeout: 10000,
         maxBuffer: 1024 * 1024,
       },
@@ -90,6 +99,7 @@ async function startFakeServer({ token = accessToken, unauthorizedMcp = false } 
     brokerExchangeCount: 0,
     mcpRequests: [],
     toolCalls: [],
+    telemetryEvents: [],
     failures: [],
   };
 
@@ -98,9 +108,21 @@ async function startFakeServer({ token = accessToken, unauthorizedMcp = false } 
       const requestUrl = new URL(req.url, "http://127.0.0.1");
       const pathname = requestUrl.pathname;
 
+      if (req.method === "POST" && pathname === "/api/ui-telemetry/track") {
+        const body = await readRequestJson(req);
+        state.telemetryEvents.push(body);
+        assert.equal(body.type, "track");
+        assert.equal(typeof body.event, "string");
+        assert.equal(typeof body.anonymousId, "string");
+        assert.equal(typeof body.messageId, "string");
+        writeJson(res, { accepted: true }, { status: 202 });
+        return;
+      }
+
       if (req.method === "POST" && pathname === "/api/v1/openagent-auth/sessions") {
         const body = await readRequestJson(req);
         state.brokerCreates.push(body);
+        assert.equal(req.headers["x-call-e-integration"], defaultIntegrationHeader);
         assert.equal(body.channel, "openagent_oauth");
         assert.equal(body.server_url, serverUrl(baseUrl));
         assert.equal(body.auth_base_url, baseUrl);
@@ -120,6 +142,7 @@ async function startFakeServer({ token = accessToken, unauthorizedMcp = false } 
       if (req.method === "GET" && pathname === "/api/v1/openagent-auth/sessions/session-1") {
         state.brokerStatusCount += 1;
         assert.equal(req.headers["x-openagent-session-secret"], sessionSecret);
+        assert.equal(req.headers["x-call-e-integration"], defaultIntegrationHeader);
         writeJson(res, { status: "AUTHORIZED", expires_at: expiresAt });
         return;
       }
@@ -127,6 +150,7 @@ async function startFakeServer({ token = accessToken, unauthorizedMcp = false } 
       if (req.method === "POST" && pathname === "/api/v1/openagent-auth/sessions/session-1/exchange") {
         state.brokerExchangeCount += 1;
         assert.equal(req.headers["x-openagent-session-secret"], sessionSecret);
+        assert.equal(req.headers["x-call-e-integration"], defaultIntegrationHeader);
         writeJson(res, {
           token: { access_token: token },
           expires_at: expiresAt,
@@ -147,6 +171,7 @@ async function startFakeServer({ token = accessToken, unauthorizedMcp = false } 
         assert.equal(req.headers.authorization, `Bearer ${token}`);
         assert.match(req.headers["content-type"] || "", /application\/json/);
         assert.equal(req.headers["mcp-protocol-version"], "2025-11-25");
+        assert.equal(req.headers["x-call-e-integration"], defaultIntegrationHeader);
 
         if (payload.method === "initialize") {
           writeJson(
@@ -273,6 +298,7 @@ test("prints MCP config without contacting the server", async (t) => {
   });
   assert.equal(fake.state.brokerCreates.length, 0);
   assert.equal(fake.state.mcpRequests.length, 0);
+  assert.deepEqual(fake.state.telemetryEvents.map((event) => event.event), ["cli_invoked"]);
   assert.deepEqual(fake.state.failures, []);
 });
 
@@ -322,6 +348,13 @@ test("logs in through the fake broker and reports cache status", async (t) => {
   assert.equal(statusPayload.cache_exists, true);
   assert.equal(statusPayload.usable, true);
   assertNoLeak(`${statusResult.stdout}\n${statusResult.stderr}`, [accessToken, sessionSecret]);
+  assert.deepEqual(fake.state.telemetryEvents.map((event) => event.event), [
+    "cli_invoked",
+    "auth_login_local_started",
+    "cli_invoked",
+    "auth_status_checked",
+  ]);
+  assertNoLeak(JSON.stringify(fake.state.telemetryEvents), [accessToken, sessionSecret, `${fake.baseUrl}/openagent-auth/sessions/session-1/start`]);
   assert.deepEqual(fake.state.failures, []);
 });
 
@@ -345,6 +378,9 @@ test("lists MCP tools with a cached token", async (t) => {
   ]);
   assert.deepEqual(payload.result.tools.map((tool) => tool.name), ["plan_call", "run_call", "get_call_run"]);
   assertNoLeak(`${result.stdout}\n${result.stderr}`, [accessToken]);
+  assert.deepEqual(fake.state.telemetryEvents.map((event) => event.event), ["cli_invoked", "mcp_tools_checked"]);
+  assert.equal(fake.state.telemetryEvents.at(-1).properties.outcome, "success");
+  assert.equal(fake.state.telemetryEvents.at(-1).properties.tool_count, 3);
   assert.deepEqual(fake.state.failures, []);
 });
 
@@ -371,6 +407,7 @@ test("forwards arbitrary mcp call arguments", async (t) => {
 
   assert.equal(result.code, 0);
   assert.equal(payload.ok, true);
+  assert.deepEqual(fake.state.telemetryEvents, []);
   assert.deepEqual(fake.state.toolCalls, [
     {
       name: "plan_call",
@@ -409,6 +446,7 @@ test("maps call plan flags to plan_call arguments", async (t) => {
 
   assert.equal(result.code, 0);
   assert.equal(payload.tool_name, "plan_call");
+  assert.deepEqual(fake.state.telemetryEvents, []);
   assert.deepEqual(fake.state.toolCalls, [
     {
       name: "plan_call",
@@ -450,6 +488,7 @@ test("runs a planned call and fetches status once", async (t) => {
   assert.equal(payload.run_result.structuredContent.status, "STARTED");
   assert.equal(payload.status_result.structuredContent.status, "IN_PROGRESS");
   assert.match(payload.next_command, /calle call status --run-id run-1/);
+  assert.deepEqual(fake.state.telemetryEvents, []);
   assert.deepEqual(fake.state.toolCalls, [
     { name: "run_call", arguments: { plan_id: "plan-1", confirm_token: "confirm-1" } },
     { name: "get_call_run", arguments: { run_id: "run-1" } },
@@ -485,6 +524,7 @@ test("maps call status flags to get_call_run arguments", async (t) => {
   assert.deepEqual(fake.state.toolCalls, [
     { name: "get_call_run", arguments: { run_id: "run-2", cursor: "cursor-1", limit: 20 } },
   ]);
+  assert.deepEqual(fake.state.telemetryEvents, []);
   assert.equal(payload.result.structuredContent.status, "COMPLETED");
   assert.deepEqual(fake.state.failures, []);
 });
@@ -503,6 +543,11 @@ test("returns auth_required without contacting MCP when token is missing", async
   assert.equal(payload.error.code, "auth_required");
   assert.match(payload.login_command, /calle auth login/);
   assert.equal(fake.state.mcpRequests.length, 0);
+  assert.deepEqual(fake.state.telemetryEvents.map((event) => event.event), [
+    "cli_invoked",
+    "mcp_tools_checked",
+    "auth_required",
+  ]);
   assert.deepEqual(fake.state.failures, []);
 });
 
@@ -522,6 +567,11 @@ test("returns auth_required for a remote 401 without leaking stale token", async
   assert.equal(payload.error.code, "auth_required");
   assert.equal(fake.state.mcpRequests.length, 1);
   assertNoLeak(`${result.stdout}\n${result.stderr}`, [staleToken]);
+  assert.deepEqual(fake.state.telemetryEvents.map((event) => event.event), [
+    "cli_invoked",
+    "mcp_tools_checked",
+    "auth_required",
+  ]);
   assert.deepEqual(fake.state.failures, []);
 });
 
@@ -538,6 +588,7 @@ test("returns structured invalid_arguments errors", async (t) => {
     "http://127.0.0.1:9",
     "--cache-root",
     cacheRoot,
+    "--no-telemetry",
   ]);
   const payload = parseJson(result.stdout);
 

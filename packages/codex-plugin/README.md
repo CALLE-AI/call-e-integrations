@@ -55,6 +55,14 @@ to let Codex handle Call-E setup checks, authentication recovery, call
 planning, automatic call execution after planning completes, and call status
 checks.
 
+## Telemetry / Usage Data
+
+When Codex runs the bundled Call-E skill, the skill invokes the shared `calle` CLI with source attribution environment variables so local telemetry and service-side call data can be grouped as `codex/codex_plugin/<version>`.
+
+CLI telemetry is best-effort and is used to diagnose installation, authentication, MCP tool availability, and drop-off before a first `plan_call` reaches the server. It includes an anonymous installation ID, CLI version, integration source, command stage, outcome, error type, and server host/hash. It does not include phone numbers, call goals, OAuth tokens, broker login URLs, full argument JSON, transcripts, or contact data.
+
+Disable CLI telemetry with `DO_NOT_TRACK=1`, `CALLE_TELEMETRY=0`, or by adding `--no-telemetry` to a direct `calle` command. Broker and MCP requests still create service-side security, audit, and business operation logs needed to authenticate users and run calls.
+
 ## Plugin layout
 
 ```text

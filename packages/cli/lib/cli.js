@@ -8,6 +8,7 @@ import {
   isUnauthorizedMcpError,
   listMcpTools,
 } from "./mcp-client.js";
+import { createTelemetryClient } from "./telemetry.js";
 
 class InvalidArgumentsError extends Error {
   constructor(message) {
@@ -44,6 +45,7 @@ Common options:
   --server-name <name>          Default: calle
   --force-login
   --no-browser-open
+  --no-telemetry
   --json
 
 MCP/call options:
@@ -67,7 +69,7 @@ function toCamelCase(optionName) {
 function parseOptions(argv) {
   const options = {};
   const positional = [];
-  const booleanOptions = new Set(["force-login", "no-browser-open", "json", "help"]);
+  const booleanOptions = new Set(["force-login", "no-browser-open", "no-telemetry", "telemetry", "json", "help"]);
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (!arg.startsWith("--")) {
@@ -317,6 +319,57 @@ function writeCommandError(stdout, stderr, error, config) {
   return formatted.exitCode;
 }
 
+function commandName(group, command) {
+  return [group, command].filter(Boolean).join(" ");
+}
+
+function prePlanInvokedCommand(group, command) {
+  return (group === "auth" && ["login", "status"].includes(command)) || (group === "mcp" && ["config", "tools"].includes(command));
+}
+
+function errorTelemetryCode(error) {
+  if (error instanceof InvalidArgumentsError) {
+    return "invalid_arguments";
+  }
+  if (error instanceof AuthRequiredError || isUnauthorizedMcpError(error)) {
+    return "auth_required";
+  }
+  if (error instanceof McpHttpError) {
+    return error.code || "mcp_error";
+  }
+  return "local_error";
+}
+
+function errorTelemetryProperties(error) {
+  return {
+    error_code: errorTelemetryCode(error),
+    error_name: error?.name || "Error",
+  };
+}
+
+function toolCount(result) {
+  return Array.isArray(result?.tools) ? result.tools.length : null;
+}
+
+function createCommandTelemetry({ config, group, command, deps }) {
+  const client = createTelemetryClient({
+    config,
+    fetchImpl: deps.telemetryFetchImpl || globalThis.fetch,
+  });
+  const baseProperties = {
+    command_group: group || null,
+    command: command || null,
+    command_name: commandName(group, command),
+  };
+
+  return async (eventName, properties = {}) => {
+    await client.capture(eventName, {
+      ...baseProperties,
+      ...properties,
+    });
+  };
+}
+
 function mcpSuccessPayload({ config, toolName = null, result, method = null }) {
   return {
     ok: true,
@@ -384,11 +437,15 @@ function extractRunId(result) {
   return match?.[1] ?? null;
 }
 
-async function handleMcpCommand({ command, positional, options, config, deps, stdout, stderr }) {
+async function handleMcpCommand({ command, positional, options, config, deps, stdout, stderr, captureTelemetry }) {
   try {
     if (command === "tools") {
       assertNoUnexpectedPositional(positional);
       const result = await listMcpTools({ config, fetchImpl: deps.fetchImpl || globalThis.fetch });
+      await captureTelemetry("mcp_tools_checked", {
+        outcome: "success",
+        tool_count: toolCount(result),
+      });
       writeJson(stdout, mcpSuccessPayload({ config, method: "tools/list", result }));
       return 0;
     }
@@ -411,11 +468,22 @@ async function handleMcpCommand({ command, positional, options, config, deps, st
 
     throw new InvalidArgumentsError(`Unknown mcp command: ${command || ""}`.trim());
   } catch (error) {
+    if (command === "tools") {
+      await captureTelemetry("mcp_tools_checked", {
+        outcome: "failure",
+        ...errorTelemetryProperties(error),
+      });
+      if (error instanceof AuthRequiredError || isUnauthorizedMcpError(error)) {
+        await captureTelemetry("auth_required", errorTelemetryProperties(error));
+      } else if (error instanceof InvalidArgumentsError) {
+        await captureTelemetry("cli_local_error", errorTelemetryProperties(error));
+      }
+    }
     return writeCommandError(stdout, stderr, error, config);
   }
 }
 
-async function handleCallCommand({ command, positional, options, config, deps, stdout, stderr }) {
+async function handleCallCommand({ command, positional, options, config, deps, stdout, stderr, captureTelemetry }) {
   try {
     assertNoUnexpectedPositional(positional);
 
@@ -475,6 +543,13 @@ async function handleCallCommand({ command, positional, options, config, deps, s
 
     throw new InvalidArgumentsError(`Unknown call command: ${command || ""}`.trim());
   } catch (error) {
+    if (command === "plan") {
+      if (error instanceof AuthRequiredError || isUnauthorizedMcpError(error)) {
+        await captureTelemetry("auth_required", errorTelemetryProperties(error));
+      } else if (error instanceof InvalidArgumentsError) {
+        await captureTelemetry("cli_local_error", errorTelemetryProperties(error));
+      }
+    }
     return writeCommandError(stdout, stderr, error, config);
   }
 }
@@ -498,24 +573,45 @@ export async function runCli(argv, deps = {}) {
   const [group, command, ...rest] = argv;
   const { options, positional } = parseOptions(rest);
 
-  const config = resolveRuntimeConfig(options);
+  const config = resolveRuntimeConfig(options, deps.env || process.env);
+  const captureTelemetry = createCommandTelemetry({ config, group, command, deps });
+  if (prePlanInvokedCommand(group, command)) {
+    await captureTelemetry("cli_invoked");
+  }
+
   if (group === "auth" && command === "login") {
     assertNoUnexpectedPositional(positional);
-    const result = await loginWithBroker(config, {
-      fetchImpl: deps.fetchImpl || globalThis.fetch,
-      openBrowser,
-      sleepImpl: deps.sleepImpl,
-      forceLogin: Boolean(options.forceLogin),
-      noBrowserOpen: Boolean(options.noBrowserOpen),
-      stderr,
+    await captureTelemetry("auth_login_local_started", {
+      force_login: Boolean(options.forceLogin),
+      no_browser_open: Boolean(options.noBrowserOpen),
     });
+    let result;
+    try {
+      result = await loginWithBroker(config, {
+        fetchImpl: deps.fetchImpl || globalThis.fetch,
+        openBrowser,
+        sleepImpl: deps.sleepImpl,
+        forceLogin: Boolean(options.forceLogin),
+        noBrowserOpen: Boolean(options.noBrowserOpen),
+        stderr,
+      });
+    } catch (error) {
+      await captureTelemetry("auth_login_local_failed", errorTelemetryProperties(error));
+      throw error;
+    }
     writeJson(stdout, publicLoginPayload({ config, ...result }));
     return 0;
   }
 
   if (group === "auth" && command === "status") {
     assertNoUnexpectedPositional(positional);
-    writeJson(stdout, statusPayload(config));
+    const payload = statusPayload(config);
+    writeJson(stdout, payload);
+    await captureTelemetry("auth_status_checked", {
+      cache_exists: payload.cache_exists,
+      pending_exists: payload.pending_exists,
+      usable: payload.usable,
+    });
     return 0;
   }
 
@@ -544,11 +640,11 @@ export async function runCli(argv, deps = {}) {
   }
 
   if (group === "mcp") {
-    return handleMcpCommand({ command, positional, options, config, deps, stdout, stderr });
+    return handleMcpCommand({ command, positional, options, config, deps, stdout, stderr, captureTelemetry });
   }
 
   if (group === "call") {
-    return handleCallCommand({ command, positional, options, config, deps, stdout, stderr });
+    return handleCallCommand({ command, positional, options, config, deps, stdout, stderr, captureTelemetry });
   }
 
   throw new Error(`Unknown command: ${[group, command].filter(Boolean).join(" ")}`);

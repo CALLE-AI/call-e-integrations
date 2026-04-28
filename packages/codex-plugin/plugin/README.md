@@ -13,7 +13,7 @@ Add the Call-E Codex marketplace from the repository root:
 
 ```bash
 codex plugin marketplace add CALLE-AI/call-e-integrations \
-  --ref '@call-e/codex-plugin@0.1.1' \
+  --ref '@call-e/codex-plugin@0.1.2' \
   --sparse .agents/plugins \
   --sparse packages/codex-plugin/plugin
 ```

@@ -77,6 +77,7 @@ Common options:
 - `--poll-timeout-seconds`
 - `--force-login`
 - `--no-browser-open`
+- `--no-telemetry`
 - `--json`
 - `--args-json`
 - `--to-phone`
@@ -88,6 +89,21 @@ Common options:
 - `--run-id`
 - `--cursor`
 - `--limit`
+
+## Telemetry / Usage Data
+
+The CLI sends best-effort usage telemetry to the configured Call-E service at `<base-url>/api/ui-telemetry/track` to help diagnose installation, authentication, MCP tool availability, and drop-off before a first `plan_call` reaches the server.
+
+Collected fields include an anonymous installation ID stored under the CLI cache root, CLI version, integration source, command stage, outcome, error type, and server host/hash. The payload does not include phone numbers, call goals, OAuth tokens, broker login URLs, full argument JSON, transcripts, or contact data.
+
+Disable CLI telemetry with `DO_NOT_TRACK=1`, `CALLE_TELEMETRY=0`, or `--no-telemetry`:
+
+```bash
+CALLE_TELEMETRY=0 calle auth status
+calle mcp tools --no-telemetry
+```
+
+Broker and MCP requests still create service-side security, audit, and business operation logs needed to authenticate users and run calls.
 
 ## Development
 
