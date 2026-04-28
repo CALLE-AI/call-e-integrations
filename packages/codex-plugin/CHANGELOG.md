@@ -1,5 +1,11 @@
 # @call-e/codex-plugin
 
+## 0.1.3
+
+### Patch Changes
+
+- [`c31d99b`](https://github.com/CALLE-AI/call-e-integrations/commit/c31d99b5186077081763210d7bbaf6242ed5e472) Thanks [@Ray-56](https://github.com/Ray-56)! - Add best-effort CLI telemetry and integration attribution for broker and MCP requests.
+
 ## 0.1.2
 
 ### Patch Changes
