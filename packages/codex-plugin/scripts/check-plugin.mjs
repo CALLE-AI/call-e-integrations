@@ -56,6 +56,75 @@ function checkSkill({ skillName, skillDir, failures }) {
     failures,
     `${skillFile} must document how to display assistant_hint.message after auth login.`,
   );
+  assert(
+    source.includes("Run blocking `auth login`"),
+    failures,
+    `${skillFile} must document blocking authorization login for the default Codex plugin flow.`,
+  );
+  assert(
+    source.includes("do not ask the user to reply"),
+    failures,
+    `${skillFile} must document that browser authorization should continue without a manual chat reply.`,
+  );
+  assert(
+    source.includes("Before we start, please complete authorization here"),
+    failures,
+    `${skillFile} must include the first authorization help message.`,
+  );
+  assert(
+    source.includes("Great, authorization is complete"),
+    failures,
+    `${skillFile} must include the post-authorization success message.`,
+  );
+  assert(
+    source.includes("Phone call is in progress! Progress:"),
+    failures,
+    `${skillFile} must document the non-terminal call activity progress template.`,
+  );
+  assert(
+    source.includes("Do not stay silent until a"),
+    failures,
+    `${skillFile} must require user-visible progress updates before terminal status.`,
+  );
+  assert(
+    source.includes("Poll every 10 seconds"),
+    failures,
+    `${skillFile} must document periodic polling while a call is non-terminal.`,
+  );
+
+  if (fs.existsSync(referenceFile)) {
+    const referenceSource = fs.readFileSync(referenceFile, "utf8");
+    assert(
+      referenceSource.includes("Phone call is in progress! Progress:"),
+      failures,
+      `${referenceFile} must document the non-terminal call activity progress template.`,
+    );
+    assert(
+      referenceSource.includes("Run blocking `auth login`"),
+      failures,
+      `${referenceFile} must document blocking authorization login for the default Codex plugin flow.`,
+    );
+    assert(
+      referenceSource.includes("do not ask the user to reply"),
+      failures,
+      `${referenceFile} must document that browser authorization should continue without a manual chat reply.`,
+    );
+    assert(
+      referenceSource.includes("Before we start, please complete authorization here"),
+      failures,
+      `${referenceFile} must include the first authorization help message.`,
+    );
+    assert(
+      referenceSource.includes("Great, authorization is complete"),
+      failures,
+      `${referenceFile} must include the post-authorization success message.`,
+    );
+    assert(
+      referenceSource.includes("Wait 10 seconds"),
+      failures,
+      `${referenceFile} must document the non-terminal call polling interval.`,
+    );
+  }
 
   if (!frontmatter) {
     return;

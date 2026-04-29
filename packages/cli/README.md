@@ -14,6 +14,7 @@ npm install -g @call-e/cli
 
 ```bash
 calle auth login
+calle auth login --start-only --no-browser-open
 calle auth status
 calle auth logout
 calle mcp config
@@ -33,6 +34,8 @@ Defaults:
 - Token cache: `~/.calle-mcp/cli`
 
 `calle auth login` opens the brokered login URL, polls the broker session, exchanges the authorized session, and stores the token in a private local cache. The token is not printed to stdout.
+
+`calle auth login --start-only --no-browser-open` creates or reuses a brokered login session and returns JSON with `login_url` and `assistant_hint.message` without polling for completion. This is intended for agent integrations that need to show the authorization link before continuing.
 
 `calle mcp config` prints a JSON MCP client config:
 
@@ -76,6 +79,7 @@ Common options:
 - `--timeout-seconds`
 - `--poll-timeout-seconds`
 - `--force-login`
+- `--start-only`
 - `--no-browser-open`
 - `--no-telemetry`
 - `--json`

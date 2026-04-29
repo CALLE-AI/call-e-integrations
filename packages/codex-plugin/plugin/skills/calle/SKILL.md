@@ -74,21 +74,56 @@ command.
 
 ## Readiness flow
 
-Use this flow before call planning when setup is uncertain, when auth fails, or
-when the user asks to verify Call-E setup:
+Use this flow whenever this Codex plugin is actively invoked for a Call-E
+request. Run it before call planning, before tool listing, when setup is
+uncertain, when auth fails, or when the user asks to verify Call-E setup:
 
 1. Check CLI availability with `--help`.
 2. Run `auth status`.
-3. If auth is missing or expired, run or suggest `auth login`.
-4. After login completes, run `mcp tools`.
-5. Confirm that `plan_call`, `run_call`, and `get_call_run` are available.
-6. If the successful `auth login` JSON included `assistant_hint.message`, use
-   it to include a brief post-auth help note in the next user-facing reply
-   after tool availability is confirmed. Adapt the wording naturally to the
-   user's language and context.
+3. If `auth status` reports `usable: false`, do not continue to call planning
+   or `mcp tools` yet. Run blocking `auth login` and keep that command running
+   until it exits. Do not use `auth login --start-only --no-browser-open` for
+   the default Codex plugin flow.
+4. When `auth login` prints the brokered login URL to command output or stderr,
+   immediately show the first authorization help with that URL. Keep waiting
+   for the same `auth login` command to complete; do not ask the user to reply
+   after browser authorization.
+5. If the successful `auth login` JSON included `assistant_hint.message`, show
+   that post-auth success message in the next user-facing reply. If the user
+   already gave a call goal, continue the original workflow after the message;
+   otherwise ask for the phone number and call goal, or offer a test call.
+6. After login completes, run `mcp tools`.
+7. Confirm that `plan_call`, `run_call`, and `get_call_run` are available.
 
 Setup verification must not place a real phone call. Use only help, auth, and
 tool-listing commands until the user asks for a call workflow.
+
+First authorization help template:
+
+```text
+Hi, I'm CALL-E 👋
+
+I can help you make phone calls, ask for information, and handle phone-related tasks. I'll also keep you updated on the call status, what was discussed, and the key points.
+Before we officially begin, I'll send you the call goal for confirmation.
+
+Before we start, please complete authorization here:
+<login_url>
+```
+
+Post-authorization success template:
+
+```text
+Great, authorization is complete ✨
+
+- If you already shared the call goal, I'll continue as planned.
+- If you haven't, that's okay. I can help you place a test call first, or start a real call directly.
+
+You can tell me:
+- Your phone number: Used only for this service. We will not disclose it to anyone else, including the callee.
+- What you want me to say: For example, "This is a test call from CALL-E. Wishing you a good day, and asking if there's anything you'd like to share."
+
+I'll keep you updated on the phone status, call content, and summary.
+```
 
 ## Call flow
 
@@ -97,14 +132,41 @@ tool-listing commands until the user asks for a call workflow.
 3. If the user's request is to place a call, immediately use `call run` with
    the exact `plan_id` and `confirm_token` returned by planning.
 4. Do not ask for a second confirmation between `call plan` and `call run`.
-5. Read the returned `run_id`.
-6. If the latest status is not terminal, keep using `call status` with that
-   exact `run_id` until the call reaches a terminal status or the user asks you
-   to stop.
-7. Use `call status` only with a known `run_id`.
+5. Read the returned `run_id` and latest call status. In `call run` output, the
+   latest call state is in `status_result.structuredContent`. In `call status`
+   output, the latest call state is in `result.structuredContent`.
+6. If the latest status is not terminal, immediately show a user-visible
+   progress update from the latest activity data before polling again. Use
+   `status_result.structuredContent.activity` after `call run`, or
+   `result.structuredContent.activity` after `call status`.
+7. Keep using `call status` with that exact `run_id` until the call reaches a
+   terminal status or the user asks you to stop. Poll every 10 seconds: after
+   each non-terminal response, show the latest activity progress, wait 10
+   seconds, then fetch `call status` again. Do not stay silent until a terminal
+   status.
+8. Use `call status` only with a known `run_id`.
 
 Terminal statuses include `COMPLETED`, `FAILED`, `NO_ANSWER`, `DECLINED`,
 `CANCELED`, `CANCELLED`, `VOICEMAIL`, `BUSY`, and `EXPIRED`.
+
+For non-terminal statuses, reply with progress in this shape:
+
+```text
+Phone call is in progress! Progress:
+- <HH:MM:SS message>
+```
+
+Use one bullet per `activity` item, preserving the order returned by the CLI.
+For each item, prefer the event `ts` formatted as `HH:MM:SS` plus `message`.
+If `ts` is missing, use the message by itself. If there is no activity, use
+`- Status: <status>` when a status exists; otherwise use
+`- Waiting for the next status update.` Do not include the final summary,
+details, or transcript until a terminal status is returned.
+
+The polling cadence is: show progress, wait 10 seconds, run `call status`, show
+new progress if still non-terminal, then repeat. Stop polling immediately when
+the user asks you to stop, when a terminal status is returned, or when command
+execution is interrupted.
 
 When the call reaches a terminal status, reply with the final call result,
 including these sections in this order:

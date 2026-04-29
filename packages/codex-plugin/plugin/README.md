@@ -32,6 +32,11 @@ To authenticate before using the plugin:
 npx -y @call-e/cli@0.2.1 auth login
 ```
 
+When `$calle` is invoked, the skill checks authorization first. If login is
+missing or expired, it runs blocking `calle auth login`, shows the brokered
+authorization link, and continues automatically after browser authorization
+completes.
+
 ## Safety
 
 Call-E can place real phone calls. The skill plans first, uses returned
