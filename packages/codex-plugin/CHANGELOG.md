@@ -1,5 +1,11 @@
 # @call-e/codex-plugin
 
+## 0.1.4
+
+### Patch Changes
+
+- [#14](https://github.com/CALLE-AI/call-e-integrations/pull/14) [`24c9e0d`](https://github.com/CALLE-AI/call-e-integrations/commit/24c9e0d4a97dfcb35acc866c3ae0b62ced28ef2c) Thanks [@Ray-56](https://github.com/Ray-56)! - Add start-only brokered login output for integrations and update the Codex plugin authorization flow guidance.
+
 ## 0.1.3
 
 ### Patch Changes
