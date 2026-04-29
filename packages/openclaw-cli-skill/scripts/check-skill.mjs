@@ -7,7 +7,8 @@ const DEFAULT_PACKAGE_ROOT = path.resolve(SCRIPT_DIR, "..");
 const DEFAULT_REPO_ROOT = path.resolve(DEFAULT_PACKAGE_ROOT, "../..");
 
 const EXPECTED_PACKAGE_NAME = "@call-e/openclaw-cli-skill";
-const EXPECTED_SKILL_NAME = "calle-cli";
+const EXPECTED_SKILL_DIR = "calle-cli";
+const EXPECTED_SKILL_NAME = "Phone Call — Call-E";
 const BANNED_PLUGIN_STRINGS = [
   ["openclaw", "plugins", "install"].join(" "),
   ["openclaw-setup", "sh"].join("."),
@@ -60,7 +61,7 @@ function checkPackage({ packageRoot, failures }) {
 }
 
 function checkSkill({ packageRoot, failures }) {
-  const skillDir = path.join(packageRoot, "skills", EXPECTED_SKILL_NAME);
+  const skillDir = path.join(packageRoot, "skills", EXPECTED_SKILL_DIR);
   const skillFile = path.join(skillDir, "SKILL.md");
   const referenceFile = path.join(skillDir, "references", "commands.md");
 
@@ -115,7 +116,7 @@ function checkSkill({ packageRoot, failures }) {
 }
 
 function checkReference({ packageRoot, failures }) {
-  const referenceFile = path.join(packageRoot, "skills", EXPECTED_SKILL_NAME, "references", "commands.md");
+  const referenceFile = path.join(packageRoot, "skills", EXPECTED_SKILL_DIR, "references", "commands.md");
   if (!fs.existsSync(referenceFile)) {
     return;
   }

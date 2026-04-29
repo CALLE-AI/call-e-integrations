@@ -122,7 +122,7 @@ command when available, then falls back to `npx -y @call-e/cli@0.2.1`.
 
 For local development from a clone, point OpenClaw skill loading at
 `packages/openclaw-cli-skill/skills`, then start a new OpenClaw session and use
-the `calle-cli` skill.
+the `Phone Call — Call-E` skill.
 
 Validate the package with:
 

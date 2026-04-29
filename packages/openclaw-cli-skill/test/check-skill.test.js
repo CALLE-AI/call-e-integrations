@@ -44,7 +44,7 @@ function createValidFixture(root) {
     path.join(packageRoot, "skills", "calle-cli", "SKILL.md"),
     [
       "---",
-      "name: calle-cli",
+      "name: Phone Call — Call-E",
       "description: Test Call-E CLI skill.",
       'metadata: {"openclaw":{"requires":{"bins":["node"],"anyBins":["calle","npx"]},"install":[{"kind":"node","package":"@call-e/cli","bins":["calle"]}]}}',
       "---",
