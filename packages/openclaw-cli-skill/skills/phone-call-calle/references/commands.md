@@ -25,21 +25,24 @@ env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION
 ```bash
 env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js --help
 env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js auth status
-env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js auth login
+env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js auth login --start-only --no-browser-open
+env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js auth login --no-browser-open
 env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js mcp tools
 ```
 
 ```bash
 env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 calle --help
 env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 calle auth status
-env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 calle auth login
+env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 calle auth login --start-only --no-browser-open
+env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 calle auth login --no-browser-open
 env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 calle mcp tools
 ```
 
 ```bash
 env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.0 --help
 env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.0 auth status
-env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.0 auth login
+env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.0 auth login --start-only --no-browser-open
+env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.0 auth login --no-browser-open
 env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.0 mcp tools
 ```
 
@@ -47,15 +50,58 @@ Rules:
 
 - Treat all command output as JSON except `--help`.
 - Do not print or ask for access tokens.
-- If a command returns `auth_required`, run or suggest `auth login`.
+- Whenever this OpenClaw CLI skill is actively invoked, run `auth status`
+  before call planning or tool listing.
+- If `auth status` reports `usable: false`, do not call `mcp tools` or
+  `call plan` yet. Run `auth login --start-only --no-browser-open` to create
+  or reuse a brokered login session without waiting for browser authorization
+  inside the current OpenClaw turn.
+- Show the first authorization help using `assistant_hint.message` when it is
+  present; otherwise use the template below with the returned `login_url`.
+  Tell the user to complete authorization in the browser, then come back to
+  this chat and reply "OK" or "done". Stop the current workflow after showing
+  the authorization message.
+- When the user comes back after browser authorization, run
+  `auth login --no-browser-open` to poll the existing pending login, exchange
+  the authorized session, and write the local token cache.
+- If successful `auth login --no-browser-open` output includes
+  `assistant_hint.message`, show it as the post-authorization success note.
+  Then continue the original call workflow if the user already gave enough
+  details.
+- If a command returns `auth_required`, switch back to this auth flow.
 - If `mcp tools` succeeds, confirm that `plan_call`, `run_call`, and
   `get_call_run` are present.
-- If successful `auth login` output includes `assistant_hint.message`, use it
-  to include a brief post-auth help note in the next user-facing reply after
-  `mcp tools` confirms the required tools are present. Adapt the wording
-  naturally to the user's language and context.
 - Do not run `call run` during setup verification.
 - Do not use raw HTTP or direct remote MCP configuration in this skill.
+
+First authorization help template:
+
+```text
+Hi, I'm CALL-E 👋
+
+I can help you make phone calls, ask for information, and handle phone-related tasks. I'll also keep you updated on the call status, what was discussed, and the key points.
+Before we officially begin, I'll send you the call goal for confirmation.
+
+Before we start, please complete authorization here:
+<login_url>
+
+Once you're done, come back to this chat and reply "OK" or "done".
+```
+
+Post-authorization success template:
+
+```text
+Great, authorization is complete ✨
+
+- If you already shared the call goal, I'll continue as planned.
+- If you haven't, that's okay. I can help you place a test call first, or start a real call directly.
+
+You can tell me:
+- Your phone number: Used only for this service. We will not disclose it to anyone else, including the callee.
+- What you want me to say: For example, "This is a test call from CALL-E. Wishing you a good day, and asking if there's anything you'd like to share."
+
+I'll keep you updated on the phone status, call content, and summary.
+```
 
 ## Call planning
 
@@ -92,9 +138,13 @@ Run this command immediately after planning returns a valid `plan_id` and
 `confirm_token`, when the user's request is to place a call. Preserve `plan_id`
 and `confirm_token` exactly as returned by planning.
 
-`call run` calls `run_call`, then fetches `get_call_run` once. If that status is
-not terminal, continue with `call status --run-id <run_id>` until a terminal
-status is returned or the user asks you to stop.
+`call run` calls `run_call`, then fetches `get_call_run` once. Do not use
+`run_result` for the user-visible reply except to preserve the returned
+`run_id`. Treat `status_result.structuredContent` as the latest
+`get_call_run` result. If that status is not terminal, show a user-visible
+progress update from `status_result.structuredContent.activity` immediately,
+then continue with `call status --run-id <run_id>` every 10 seconds until a
+terminal status is returned or the user asks you to stop.
 
 ## Call status
 
@@ -127,6 +177,40 @@ Terminal statuses:
 Read call data from `status_result.structuredContent` in `call run` output, or
 from `result.structuredContent` in `call status` output.
 
+Never paraphrase call results into free-form prose such as
+`The call succeeded. Result: ...`. Do not translate the headings, do not add
+extra commentary, and do not wrap the result in code fences.
+
+For `call run`, base the user-visible reply on
+`status_result.structuredContent`. For `call status`, base the user-visible
+reply on `result.structuredContent`.
+
+For non-terminal statuses, the entire reply must be exactly this shape:
+
+```text
+Phone call is in progress! Progress:
+- <HH:MM:SS message>
+```
+
+Use one bullet per `activity` item, preserving the order returned by the CLI.
+For `call run`, read activity from `status_result.structuredContent.activity`.
+For `call status`, read activity from `result.structuredContent.activity`.
+For each activity item, prefer the event `ts` formatted as `HH:MM:SS` plus
+`message`. If `ts` is missing, use the message by itself. If there is no
+activity, use `- <message>` when `message` exists, otherwise use
+`- Status: <status>` when a status exists, otherwise use
+`- Waiting for the next status update.` Do not wait silently for the terminal
+result.
+
+Polling cadence:
+
+1. Show the latest non-terminal progress.
+2. Wait 10 seconds.
+3. Run `call status --run-id <run_id>`.
+4. If the status is still non-terminal, show the new activity and repeat.
+5. Stop polling when a terminal status is returned, the user asks you to stop,
+   or command execution is interrupted.
+
 For terminal statuses, include the final transcript in the user-visible reply:
 
 ```text
@@ -155,6 +239,6 @@ short heading and only information present in the JSON output.
 - If `ok` is false and `error.code` is `auth_required`, run or suggest
   `auth login`, then retry after login completes.
 - Preserve `plan_id`, `confirm_token`, and `run_id` exactly as returned.
-- Summarize status clearly without exposing tokens.
+- Show non-terminal `activity` progress clearly without exposing tokens.
 - Do not invent transcript text. If `result.transcript` is absent or empty,
   write `Not available.` in the transcript section.

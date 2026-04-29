@@ -79,6 +79,66 @@ function checkSkill({ packageRoot, failures }) {
   assert(source.includes("assistant_hint.message"), failures, `${skillFile} must document assistant_hint.message handling.`);
   assert(source.includes("auth_required"), failures, `${skillFile} must document auth_required handling.`);
   assert(source.includes("CALLE_INTEGRATION=openclaw_cli_skill"), failures, `${skillFile} must include OpenClaw CLI skill integration attribution.`);
+  assert(
+    source.includes("auth login --start-only --no-browser-open"),
+    failures,
+    `${skillFile} must document start-only authorization login for the default OpenClaw CLI skill flow.`,
+  );
+  assert(
+    source.includes('reply "OK" or "done"'),
+    failures,
+    `${skillFile} must document that the user should return after browser authorization.`,
+  );
+  assert(
+    source.includes("auth login --no-browser-open"),
+    failures,
+    `${skillFile} must document how to continue and exchange a pending authorization.`,
+  );
+  assert(
+    source.includes("Before we start, please complete authorization here"),
+    failures,
+    `${skillFile} must include the first authorization help message.`,
+  );
+  assert(
+    source.includes("Great, authorization is complete"),
+    failures,
+    `${skillFile} must include the post-authorization success message.`,
+  );
+  assert(
+    source.includes("Phone call is in progress! Progress:"),
+    failures,
+    `${skillFile} must document the non-terminal call activity progress template.`,
+  );
+  assert(
+    source.includes("do not use `run_result`"),
+    failures,
+    `${skillFile} must require call run replies to ignore run_result for user-visible output.`,
+  );
+  assert(
+    source.includes("Treat `status_result.structuredContent`"),
+    failures,
+    `${skillFile} must require call run replies to use status_result.structuredContent.`,
+  );
+  assert(
+    source.includes("Never paraphrase call results"),
+    failures,
+    `${skillFile} must forbid free-form call result paraphrases.`,
+  );
+  assert(
+    source.includes("the entire reply must be exactly this shape"),
+    failures,
+    `${skillFile} must require the exact non-terminal progress reply shape.`,
+  );
+  assert(
+    source.includes("Do not stay silent until a"),
+    failures,
+    `${skillFile} must require user-visible progress updates before terminal status.`,
+  );
+  assert(
+    source.includes("Poll every 10 seconds"),
+    failures,
+    `${skillFile} must document periodic polling while a call is non-terminal.`,
+  );
 
   for (const banned of BANNED_PLUGIN_STRINGS) {
     assert(!source.includes(banned), failures, `${skillFile} must not reference plugin install path: ${banned}`);
@@ -129,9 +189,21 @@ function checkReference({ packageRoot, failures }) {
     "CALLE_INTEGRATION=openclaw_cli_skill",
     "auth_required",
     "assistant_hint.message",
+    "auth login --start-only --no-browser-open",
+    'reply "OK" or "done"',
+    "auth login --no-browser-open",
+    "Before we start, please complete authorization here",
+    "Great, authorization is complete",
     "call plan",
     "call run",
     "call status",
+    "Phone call is in progress! Progress:",
+    "Do not use",
+    "run_result",
+    "status_result.structuredContent",
+    "Never paraphrase call results",
+    "the entire reply must be exactly this shape",
+    "Wait 10 seconds",
   ];
 
   for (const snippet of requiredSnippets) {
