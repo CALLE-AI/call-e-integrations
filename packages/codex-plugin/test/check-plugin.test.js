@@ -46,7 +46,7 @@ function createValidFixture(root) {
 
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"),
-    "---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n",
+    "---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\nUse assistant_hint.message to include a brief post-auth help note after auth login.\n",
   );
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "agents", "openai.yaml"),
