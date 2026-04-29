@@ -25,6 +25,8 @@ importers:
 
   packages/core: {}
 
+  packages/openclaw-cli-skill: {}
+
   packages/openclaw-plugin: {}
 
 packages:

@@ -7,6 +7,9 @@ This repository is a multi-ecosystem integration monorepo.
 - Keep ecosystem-specific marketplace entry points at the repository root.
 - Keep ecosystem-specific implementations under `packages/`.
 - Keep shared local capability in `packages/cli`.
+- Keep package-scoped, productized skills under their owning package.
+- Keep root `skills/` for repository-local skill source and legacy/local skill
+  packaging source.
 
 Current Codex layout:
 
@@ -15,6 +18,18 @@ Current Codex layout:
 packages/codex-plugin/plugin/
 packages/cli/
 ```
+
+Current OpenClaw layout:
+
+```text
+packages/openclaw-plugin/
+packages/openclaw-cli-skill/skills/
+skills/
+```
+
+Use `packages/openclaw-cli-skill/skills/` for the CLI-based OpenClaw skill
+source. Root `skills/` remains available for repository-local skills and should
+not be the default place for new productized client-specific skill packages.
 
 ## Marketplace Naming Rules
 

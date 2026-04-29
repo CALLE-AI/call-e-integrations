@@ -13,7 +13,21 @@ const versionedFiles = [
   "packages/codex-plugin/plugin/README.md",
   "packages/codex-plugin/plugin/skills/calle/SKILL.md",
   "packages/codex-plugin/plugin/skills/calle/references/commands.md",
+  "packages/openclaw-cli-skill/README.md",
+  "packages/openclaw-cli-skill/skills/calle-cli/SKILL.md",
+  "packages/openclaw-cli-skill/skills/calle-cli/references/commands.md",
 ];
+
+const codexIntegrationFiles = new Set([
+  "packages/codex-plugin/plugin/skills/calle/SKILL.md",
+  "packages/codex-plugin/plugin/skills/calle/references/commands.md",
+]);
+
+const openclawCliSkillIntegrationFiles = new Set([
+  "packages/openclaw-cli-skill/README.md",
+  "packages/openclaw-cli-skill/skills/calle-cli/SKILL.md",
+  "packages/openclaw-cli-skill/skills/calle-cli/references/commands.md",
+]);
 
 function readPackageVersion(packagePath) {
   const packageJsonPath = path.join(repoRoot, packagePath, "package.json");
@@ -38,10 +52,21 @@ const replacements = [
     pattern: /npx -y @call-e\/cli@\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
     value: `npx -y @call-e/cli@${readPackageVersion("packages/cli")}`,
   },
+];
+
+const codexIntegrationReplacements = [
   {
     label: "Codex plugin integration attribution version",
     pattern: /CALLE_INTEGRATION_VERSION=\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
     value: `CALLE_INTEGRATION_VERSION=${readPackageVersion("packages/codex-plugin")}`,
+  },
+];
+
+const openclawCliSkillIntegrationReplacements = [
+  {
+    label: "OpenClaw CLI skill integration attribution version",
+    pattern: /CALLE_INTEGRATION_VERSION=\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
+    value: `CALLE_INTEGRATION_VERSION=${readPackageVersion("packages/openclaw-cli-skill")}`,
   },
 ];
 
@@ -57,6 +82,16 @@ for (const relativePath of versionedFiles) {
   let nextSource = source;
 
   for (const replacement of replacements) {
+    nextSource = nextSource.replace(replacement.pattern, replacement.value);
+  }
+
+  const integrationReplacements = codexIntegrationFiles.has(relativePath)
+    ? codexIntegrationReplacements
+    : openclawCliSkillIntegrationFiles.has(relativePath)
+      ? openclawCliSkillIntegrationReplacements
+      : [];
+
+  for (const replacement of integrationReplacements) {
     nextSource = nextSource.replace(replacement.pattern, replacement.value);
   }
 
