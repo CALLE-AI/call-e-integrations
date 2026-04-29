@@ -97,14 +97,41 @@ tool-listing commands until the user asks for a call workflow.
 3. If the user's request is to place a call, immediately use `call run` with
    the exact `plan_id` and `confirm_token` returned by planning.
 4. Do not ask for a second confirmation between `call plan` and `call run`.
-5. Read the returned `run_id`.
-6. If the latest status is not terminal, keep using `call status` with that
-   exact `run_id` until the call reaches a terminal status or the user asks you
-   to stop.
-7. Use `call status` only with a known `run_id`.
+5. Read the returned `run_id` and latest call status. In `call run` output, the
+   latest call state is in `status_result.structuredContent`. In `call status`
+   output, the latest call state is in `result.structuredContent`.
+6. If the latest status is not terminal, immediately show a user-visible
+   progress update from the latest activity data before polling again. Use
+   `status_result.structuredContent.activity` after `call run`, or
+   `result.structuredContent.activity` after `call status`.
+7. Keep using `call status` with that exact `run_id` until the call reaches a
+   terminal status or the user asks you to stop. Poll every 10 seconds: after
+   each non-terminal response, show the latest activity progress, wait 10
+   seconds, then fetch `call status` again. Do not stay silent until a terminal
+   status.
+8. Use `call status` only with a known `run_id`.
 
 Terminal statuses include `COMPLETED`, `FAILED`, `NO_ANSWER`, `DECLINED`,
 `CANCELED`, `CANCELLED`, `VOICEMAIL`, `BUSY`, and `EXPIRED`.
+
+For non-terminal statuses, reply with progress in this shape:
+
+```text
+Phone call is in progress! Progress:
+- <HH:MM:SS message>
+```
+
+Use one bullet per `activity` item, preserving the order returned by the CLI.
+For each item, prefer the event `ts` formatted as `HH:MM:SS` plus `message`.
+If `ts` is missing, use the message by itself. If there is no activity, use
+`- Status: <status>` when a status exists; otherwise use
+`- Waiting for the next status update.` Do not include the final summary,
+details, or transcript until a terminal status is returned.
+
+The polling cadence is: show progress, wait 10 seconds, run `call status`, show
+new progress if still non-terminal, then repeat. Stop polling immediately when
+the user asks you to stop, when a terminal status is returned, or when command
+execution is interrupted.
 
 When the call reaches a terminal status, reply with the final call result,
 including these sections in this order:

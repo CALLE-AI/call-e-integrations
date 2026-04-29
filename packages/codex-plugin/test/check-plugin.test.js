@@ -46,7 +46,7 @@ function createValidFixture(root) {
 
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"),
-    "---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\nUse assistant_hint.message to include a brief post-auth help note after auth login.\n",
+    "---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\nUse assistant_hint.message to include a brief post-auth help note after auth login.\n\nPhone call is in progress! Progress:\n\nDo not stay silent until a terminal status.\n\nPoll every 10 seconds.\n",
   );
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "agents", "openai.yaml"),
@@ -54,7 +54,7 @@ function createValidFixture(root) {
   );
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "references", "commands.md"),
-    "# Commands\n",
+    "# Commands\n\nPhone call is in progress! Progress:\n\nWait 10 seconds.\n",
   );
 
   writeJson(path.join(repoRoot, ".agents", "plugins", "marketplace.json"), {
@@ -107,4 +107,26 @@ test("reports missing skill UI metadata", () => {
 
   const failures = checkCodexPlugin({ packageRoot, repoRoot });
   assert.ok(failures.some((failure) => failure.includes("agents/openai.yaml")));
+});
+
+test("reports missing non-terminal call progress guidance", () => {
+  const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-codex-plugin-missing-progress"));
+  writeFile(
+    path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"),
+    "---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\nUse assistant_hint.message to include a brief post-auth help note after auth login.\n",
+  );
+
+  const failures = checkCodexPlugin({ packageRoot, repoRoot });
+  assert.ok(failures.some((failure) => failure.includes("activity progress template")));
+});
+
+test("reports missing non-terminal call polling interval guidance", () => {
+  const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-codex-plugin-missing-polling"));
+  writeFile(
+    path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"),
+    "---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\nUse assistant_hint.message to include a brief post-auth help note after auth login.\n\nPhone call is in progress! Progress:\n\nDo not stay silent until a terminal status.\n",
+  );
+
+  const failures = checkCodexPlugin({ packageRoot, repoRoot });
+  assert.ok(failures.some((failure) => failure.includes("periodic polling")));
 });

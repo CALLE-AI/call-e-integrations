@@ -56,6 +56,35 @@ function checkSkill({ skillName, skillDir, failures }) {
     failures,
     `${skillFile} must document how to display assistant_hint.message after auth login.`,
   );
+  assert(
+    source.includes("Phone call is in progress! Progress:"),
+    failures,
+    `${skillFile} must document the non-terminal call activity progress template.`,
+  );
+  assert(
+    source.includes("Do not stay silent until a"),
+    failures,
+    `${skillFile} must require user-visible progress updates before terminal status.`,
+  );
+  assert(
+    source.includes("Poll every 10 seconds"),
+    failures,
+    `${skillFile} must document periodic polling while a call is non-terminal.`,
+  );
+
+  if (fs.existsSync(referenceFile)) {
+    const referenceSource = fs.readFileSync(referenceFile, "utf8");
+    assert(
+      referenceSource.includes("Phone call is in progress! Progress:"),
+      failures,
+      `${referenceFile} must document the non-terminal call activity progress template.`,
+    );
+    assert(
+      referenceSource.includes("Wait 10 seconds"),
+      failures,
+      `${referenceFile} must document the non-terminal call polling interval.`,
+    );
+  }
 
   if (!frontmatter) {
     return;

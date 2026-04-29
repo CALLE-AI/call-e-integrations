@@ -93,9 +93,12 @@ Run this command immediately after planning returns a valid `plan_id` and
 `confirm_token`, when the user's request is to place a call. Preserve `plan_id`
 and `confirm_token` exactly as returned by planning.
 
-`call run` calls `run_call`, then fetches `get_call_run` once. If that status is
-not terminal, continue with `call status --run-id <run_id>` until a terminal
-status is returned or the user asks you to stop.
+`call run` calls `run_call`, then fetches `get_call_run` once. Read the latest
+call state from `status_result.structuredContent`. If that status is not
+terminal, show a user-visible progress update from
+`status_result.structuredContent.activity` immediately, then continue with
+`call status --run-id <run_id>` every 10 seconds until a terminal status is
+returned or the user asks you to stop.
 
 ## Call status
 
@@ -128,6 +131,31 @@ Terminal statuses:
 Read call data from `status_result.structuredContent` in `call run` output, or
 from `result.structuredContent` in `call status` output.
 
+For non-terminal statuses, show the latest activity before polling again:
+
+```text
+Phone call is in progress! Progress:
+- <HH:MM:SS message>
+```
+
+Use one bullet per `activity` item, preserving the order returned by the CLI.
+For `call run`, read activity from `status_result.structuredContent.activity`.
+For `call status`, read activity from `result.structuredContent.activity`.
+For each activity item, prefer the event `ts` formatted as `HH:MM:SS` plus
+`message`. If `ts` is missing, use the message by itself. If there is no
+activity, use `- Status: <status>` when a status exists; otherwise use
+`- Waiting for the next status update.` Do not wait silently for the terminal
+result.
+
+Polling cadence:
+
+1. Show the latest non-terminal progress.
+2. Wait 10 seconds.
+3. Run `call status --run-id <run_id>`.
+4. If the status is still non-terminal, show the new activity and repeat.
+5. Stop polling when a terminal status is returned, the user asks you to stop,
+   or command execution is interrupted.
+
 For terminal statuses, include the final transcript in the user-visible reply:
 
 ```text
@@ -156,6 +184,6 @@ short heading and only information present in the JSON output.
 - If `ok` is false and `error.code` is `auth_required`, run or suggest
   `auth login`, then retry after login completes.
 - Preserve `plan_id`, `confirm_token`, and `run_id` exactly as returned.
-- Summarize status clearly without exposing tokens.
+- Show non-terminal `activity` progress clearly without exposing tokens.
 - Do not invent transcript text. If `result.transcript` is absent or empty,
   write `Not available.` in the transcript section.
