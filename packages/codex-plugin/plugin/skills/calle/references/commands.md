@@ -17,7 +17,7 @@ env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=
 npx fallback base command:
 
 ```bash
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.0
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.1
 ```
 
 ## Setup and readiness
@@ -37,10 +37,10 @@ env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=
 ```
 
 ```bash
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.0 --help
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.0 auth status
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.0 auth login
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.0 mcp tools
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.1 --help
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.1 auth status
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.1 auth login
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.1 mcp tools
 ```
 
 Rules:
@@ -63,7 +63,7 @@ Rules:
 ```bash
 env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 node packages/cli/bin/calle.js call plan --to-phone +15551234567 --goal "Confirm the appointment"
 env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 calle call plan --to-phone +15551234567 --goal "Confirm the appointment"
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.0 call plan --to-phone +15551234567 --goal "Confirm the appointment"
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.1 call plan --to-phone +15551234567 --goal "Confirm the appointment"
 ```
 
 Supported `call plan` options:
@@ -81,7 +81,7 @@ phone numbers, country codes, language, or region.
 ```bash
 env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 node packages/cli/bin/calle.js call run --plan-id <plan_id> --confirm-token <confirm_token>
 env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 calle call run --plan-id <plan_id> --confirm-token <confirm_token>
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.0 call run --plan-id <plan_id> --confirm-token <confirm_token>
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.1 call run --plan-id <plan_id> --confirm-token <confirm_token>
 ```
 
 Supported `call run` options:
@@ -102,7 +102,7 @@ status is returned or the user asks you to stop.
 ```bash
 env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 node packages/cli/bin/calle.js call status --run-id <run_id>
 env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 calle call status --run-id <run_id>
-env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.0 call status --run-id <run_id>
+env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.3 npx -y @call-e/cli@0.2.1 call status --run-id <run_id>
 ```
 
 Supported `call status` options:
