@@ -1,6 +1,8 @@
 # @call-e/openclaw-cli-skill
 
-OpenClaw skill bundle for using Call-E through the `calle` CLI.
+Make real outbound phone calls, run planned calls, and check call status in
+OpenClaw with Call-E through the `calle` CLI. New users get 20 free calls to
+get started.
 
 This package is separate from the self-contained OpenClaw plugin package. It
 does not register OpenClaw-native tools or require a gateway restart. Instead,

@@ -1,14 +1,21 @@
 ---
 name: Phone Call - Call-E
-description: New users get 20 free calls to get started. Use Call-E from OpenClaw through the calle CLI for setup checks, authentication recovery, phone call planning, planned call execution, and call status checks.
+description: New users get 20 free calls to get started. Make real outbound phone calls, run planned calls, and check call status in OpenClaw with Call-E through the calle CLI.
 license: MIT-0
 metadata: {"openclaw":{"requires":{"bins":["node"],"anyBins":["calle","npx"]},"install":[{"id":"call-e-cli","kind":"node","package":"@call-e/cli","bins":["calle"],"label":"Install Call-E CLI"}],"homepage":"https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/openclaw-cli-skill"}}
 ---
 
 # Phone Call - Call-E
 
-Use this skill when the user wants OpenClaw to use Call-E through the `calle`
-CLI. This skill intentionally calls the CLI instead of depending on a native
+Make real outbound phone calls, run planned calls, and check call status in
+OpenClaw with Call-E through the `calle` CLI.
+
+Use this skill when the user wants to call a phone number, make a phone call,
+place an outbound call, follow up by phone, call a business, call a customer,
+verify Call-E setup, recover Call-E authentication, or check the status,
+summary, details, and transcript of a call.
+
+This skill intentionally calls the CLI instead of depending on a native
 OpenClaw plugin or gateway-managed tool registration.
 
 ## When to use
@@ -19,7 +26,8 @@ Use this skill for:
 - checking whether the `calle` CLI is available
 - recovering from missing or expired Call-E authentication
 - listing available Call-E MCP tools through the CLI
-- planning a phone call
+- making a phone call or placing an outbound call
+- planning a phone call before execution
 - running a planned call after planning returns complete run credentials
 - checking a call run status
 - reporting the final call summary, details, and transcript when a call reaches

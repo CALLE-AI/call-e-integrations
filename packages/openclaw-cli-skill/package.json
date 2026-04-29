@@ -1,7 +1,7 @@
 {
   "name": "@call-e/openclaw-cli-skill",
   "version": "0.1.0",
-  "description": "OpenClaw skill bundle for Call-E CLI workflows.",
+  "description": "Make outbound phone calls and check call status in OpenClaw with the Call-E.",
   "type": "module",
   "private": true,
   "license": "MIT",
@@ -30,6 +30,8 @@
     "cli",
     "mcp",
     "phone-call",
+    "outbound-call",
+    "call-status",
     "voice-call"
   ],
   "scripts": {
