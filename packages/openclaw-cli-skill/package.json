@@ -1,0 +1,42 @@
+{
+  "name": "@call-e/openclaw-cli-skill",
+  "version": "0.1.0",
+  "description": "Make outbound phone calls and check call status in OpenClaw with the Call-E.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CALLE-AI/call-e-integrations.git",
+    "directory": "packages/openclaw-cli-skill"
+  },
+  "homepage": "https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/openclaw-cli-skill",
+  "bugs": {
+    "url": "https://github.com/CALLE-AI/call-e-integrations/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "README.md",
+    "skills"
+  ],
+  "keywords": [
+    "ai-agent",
+    "calle",
+    "call-e",
+    "openclaw",
+    "skill",
+    "cli",
+    "mcp",
+    "phone-call",
+    "outbound-call",
+    "call-status",
+    "voice-call"
+  ],
+  "scripts": {
+    "check": "node ./scripts/check-skill.mjs",
+    "test": "node --test ./test/*.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  }
+}

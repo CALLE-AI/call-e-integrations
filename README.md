@@ -10,6 +10,8 @@ Call-E Integrations is a public monorepo for shipping cross-platform agent integ
   See [packages/cli/README.md](./packages/cli/README.md) for CLI commands and package-specific setup.
 - `packages/codex-plugin`: the Codex plugin bundle that lets Codex use the installed `calle` CLI.
   See [packages/codex-plugin/README.md](./packages/codex-plugin/README.md) for marketplace installation and local validation.
+- `packages/openclaw-cli-skill`: the package-scoped OpenClaw skill source that lets OpenClaw use the installed `calle` CLI.
+  See [packages/openclaw-cli-skill/README.md](./packages/openclaw-cli-skill/README.md) for skill layout and local validation.
 
 ## Agent Client Layout
 
@@ -19,8 +21,10 @@ root and client-specific implementations under `packages/`.
 ```text
 .agents/plugins/marketplace.json          # Codex marketplace entry
 packages/codex-plugin/plugin/             # Calle for Codex
+packages/openclaw-cli-skill/skills/        # Calle CLI skill for OpenClaw
 packages/cli/                             # Shared calle CLI
 packages/openclaw-plugin/                 # OpenClaw plugin
+skills/                                   # Repository-local skill source
 ```
 
 Future Claude, Copilot, VS Code, Gemini, or MCP-only integrations should add
@@ -49,6 +53,8 @@ pnpm --filter @call-e/cli test
 pnpm --filter @call-e/cli check
 pnpm --filter @call-e/codex-plugin test
 pnpm --filter @call-e/codex-plugin check
+pnpm --filter @call-e/openclaw-cli-skill test
+pnpm --filter @call-e/openclaw-cli-skill check
 ```
 
 ## Telemetry / Usage Data
@@ -73,6 +79,7 @@ Create a dry-run package tarball:
 pnpm pack:dry-run
 pnpm --filter @call-e/cli pack:dry-run
 pnpm --filter @call-e/codex-plugin pack:dry-run
+pnpm --filter @call-e/openclaw-cli-skill pack:dry-run
 ```
 
 ## Install The Codex Plugin
@@ -102,6 +109,28 @@ install `Calle`.
 
 For local development from a clone, restart Codex from this repository and use
 the repo-local marketplace at `.agents/plugins/marketplace.json`.
+
+## Use The OpenClaw CLI Skill
+
+The CLI-based OpenClaw skill source lives in
+`packages/openclaw-cli-skill/skills/phone-call-calle`. It is package-scoped so the
+published integration source stays separate from repository-local skills under
+the root `skills/` directory.
+
+This skill uses the repository-local CLI when available, then a global `calle`
+command when available, then falls back to `npx -y @call-e/cli@0.2.1`.
+
+For local development from a clone, point OpenClaw skill loading at
+`packages/openclaw-cli-skill/skills`, then start a new OpenClaw session and use
+the `Phone Call - Call-E` skill.
+
+Validate the package with:
+
+```bash
+pnpm --filter @call-e/openclaw-cli-skill check
+pnpm --filter @call-e/openclaw-cli-skill test
+pnpm --filter @call-e/openclaw-cli-skill pack:dry-run
+```
 
 ## Install The OpenClaw Plugin
 
