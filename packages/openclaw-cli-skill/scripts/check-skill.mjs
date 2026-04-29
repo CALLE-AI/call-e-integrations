@@ -7,8 +7,8 @@ const DEFAULT_PACKAGE_ROOT = path.resolve(SCRIPT_DIR, "..");
 const DEFAULT_REPO_ROOT = path.resolve(DEFAULT_PACKAGE_ROOT, "../..");
 
 const EXPECTED_PACKAGE_NAME = "@call-e/openclaw-cli-skill";
-const EXPECTED_SKILL_DIR = "calle-cli";
-const EXPECTED_SKILL_NAME = "Phone Call — Call-E";
+const EXPECTED_SKILL_DIR = "phone-call-calle";
+const EXPECTED_SKILL_NAME = "Phone Call - Call-E";
 const BANNED_PLUGIN_STRINGS = [
   ["openclaw", "plugins", "install"].join(" "),
   ["openclaw-setup", "sh"].join("."),

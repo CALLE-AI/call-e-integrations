@@ -1,11 +1,11 @@
 ---
-name: Phone Call — Call-E
+name: Phone Call - Call-E
 description: New users get 20 free calls to get started. Use Call-E from OpenClaw through the calle CLI for setup checks, authentication recovery, phone call planning, planned call execution, and call status checks.
 license: MIT-0
 metadata: {"openclaw":{"requires":{"bins":["node"],"anyBins":["calle","npx"]},"install":[{"id":"call-e-cli","kind":"node","package":"@call-e/cli","bins":["calle"],"label":"Install Call-E CLI"}],"homepage":"https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/openclaw-cli-skill"}}
 ---
 
-# Phone Call — Call-E
+# Phone Call - Call-E
 
 Use this skill when the user wants OpenClaw to use Call-E through the `calle`
 CLI. This skill intentionally calls the CLI instead of depending on a native

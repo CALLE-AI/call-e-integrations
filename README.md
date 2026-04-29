@@ -113,7 +113,7 @@ the repo-local marketplace at `.agents/plugins/marketplace.json`.
 ## Use The OpenClaw CLI Skill
 
 The CLI-based OpenClaw skill source lives in
-`packages/openclaw-cli-skill/skills/calle-cli`. It is package-scoped so the
+`packages/openclaw-cli-skill/skills/phone-call-calle`. It is package-scoped so the
 published integration source stays separate from repository-local skills under
 the root `skills/` directory.
 
@@ -122,7 +122,7 @@ command when available, then falls back to `npx -y @call-e/cli@0.2.1`.
 
 For local development from a clone, point OpenClaw skill loading at
 `packages/openclaw-cli-skill/skills`, then start a new OpenClaw session and use
-the `Phone Call — Call-E` skill.
+the `Phone Call - Call-E` skill.
 
 Validate the package with:
 

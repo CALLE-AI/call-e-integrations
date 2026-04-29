@@ -12,7 +12,7 @@ and call status checks.
 
 ```text
 skills/
-  calle-cli/
+  phone-call-calle/
     SKILL.md
     references/
       commands.md
@@ -31,9 +31,9 @@ pnpm --filter @call-e/openclaw-cli-skill pack:dry-run
 ## OpenClaw use
 
 For local development from a clone, point OpenClaw skill loading at this
-package's `skills/` directory, or install the `Phone Call — Call-E` skill from
-the `calle-cli` source directory through the normal skill distribution flow once
-published.
+package's `skills/` directory, or install the `Phone Call - Call-E` skill from
+the `phone-call-calle` source directory through the normal skill distribution
+flow once published.
 
 The skill uses the repository-local CLI when available, then a global `calle`
 command when available, then falls back to `npx -y @call-e/cli@0.2.1`.

@@ -14,8 +14,8 @@ const versionedFiles = [
   "packages/codex-plugin/plugin/skills/calle/SKILL.md",
   "packages/codex-plugin/plugin/skills/calle/references/commands.md",
   "packages/openclaw-cli-skill/README.md",
-  "packages/openclaw-cli-skill/skills/calle-cli/SKILL.md",
-  "packages/openclaw-cli-skill/skills/calle-cli/references/commands.md",
+  "packages/openclaw-cli-skill/skills/phone-call-calle/SKILL.md",
+  "packages/openclaw-cli-skill/skills/phone-call-calle/references/commands.md",
 ];
 
 const codexIntegrationFiles = new Set([
@@ -25,8 +25,8 @@ const codexIntegrationFiles = new Set([
 
 const openclawCliSkillIntegrationFiles = new Set([
   "packages/openclaw-cli-skill/README.md",
-  "packages/openclaw-cli-skill/skills/calle-cli/SKILL.md",
-  "packages/openclaw-cli-skill/skills/calle-cli/references/commands.md",
+  "packages/openclaw-cli-skill/skills/phone-call-calle/SKILL.md",
+  "packages/openclaw-cli-skill/skills/phone-call-calle/references/commands.md",
 ]);
 
 function readPackageVersion(packagePath) {

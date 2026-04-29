@@ -41,10 +41,10 @@ function createValidFixture(root) {
   });
 
   writeFile(
-    path.join(packageRoot, "skills", "calle-cli", "SKILL.md"),
+    path.join(packageRoot, "skills", "phone-call-calle", "SKILL.md"),
     [
       "---",
-      "name: Phone Call — Call-E",
+      "name: Phone Call - Call-E",
       "description: Test Call-E CLI skill.",
       'metadata: {"openclaw":{"requires":{"bins":["node"],"anyBins":["calle","npx"]},"install":[{"kind":"node","package":"@call-e/cli","bins":["calle"]}]}}',
       "---",
@@ -58,7 +58,7 @@ function createValidFixture(root) {
   );
 
   writeFile(
-    path.join(packageRoot, "skills", "calle-cli", "references", "commands.md"),
+    path.join(packageRoot, "skills", "phone-call-calle", "references", "commands.md"),
     [
       "# Commands",
       "",
@@ -85,15 +85,15 @@ test("current OpenClaw CLI skill metadata is valid", () => {
 
 test("reports a missing skill", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-openclaw-cli-skill-missing"));
-  fs.rmSync(path.join(packageRoot, "skills", "calle-cli"), { recursive: true, force: true });
+  fs.rmSync(path.join(packageRoot, "skills", "phone-call-calle"), { recursive: true, force: true });
 
   const failures = checkOpenClawCliSkill({ packageRoot, repoRoot });
-  assert.ok(failures.some((failure) => failure.includes("skills/calle-cli")));
+  assert.ok(failures.some((failure) => failure.includes("skills/phone-call-calle")));
 });
 
 test("reports non-json metadata", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-openclaw-cli-skill-bad-metadata"));
-  const skillFile = path.join(packageRoot, "skills", "calle-cli", "SKILL.md");
+  const skillFile = path.join(packageRoot, "skills", "phone-call-calle", "SKILL.md");
   const source = fs.readFileSync(skillFile, "utf8");
   fs.writeFileSync(skillFile, source.replace('metadata: {"openclaw"', "metadata: openclaw"));
 
@@ -103,7 +103,7 @@ test("reports non-json metadata", () => {
 
 test("reports plugin install commands in the command reference", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-openclaw-cli-skill-plugin-command"));
-  const referenceFile = path.join(packageRoot, "skills", "calle-cli", "references", "commands.md");
+  const referenceFile = path.join(packageRoot, "skills", "phone-call-calle", "references", "commands.md");
   const bannedPluginInstallCommand = ["openclaw", "plugins", "install"].join(" ");
   fs.appendFileSync(referenceFile, `\n${bannedPluginInstallCommand} example\n`);
 
