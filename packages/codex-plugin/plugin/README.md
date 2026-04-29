@@ -24,12 +24,12 @@ Open Codex, run `/plugins`, choose the `Call-E` marketplace, and install
 ## Authentication
 
 The plugin uses the repository-local CLI when available, then a global `calle`
-command when available, then falls back to `npx -y @call-e/cli@0.2.0`.
+command when available, then falls back to `npx -y @call-e/cli@0.2.1`.
 
 To authenticate before using the plugin:
 
 ```bash
-npx -y @call-e/cli@0.2.0 auth login
+npx -y @call-e/cli@0.2.1 auth login
 ```
 
 ## Safety

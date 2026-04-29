@@ -11,12 +11,12 @@ output, and MCP error handling remain owned by the CLI package.
 
 You do not need to install the shared CLI globally before installing the Codex
 plugin. The plugin uses the repository-local CLI when available, then a global
-`calle` command when available, then falls back to `npx -y @call-e/cli@0.2.0`.
+`calle` command when available, then falls back to `npx -y @call-e/cli@0.2.1`.
 
 To authenticate before installing the plugin, run:
 
 ```bash
-npx -y @call-e/cli@0.2.0 auth login
+npx -y @call-e/cli@0.2.1 auth login
 ```
 
 Then add the Codex marketplace from this repository. Replace
