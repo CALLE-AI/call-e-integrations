@@ -1,58 +1,45 @@
 import os from "node:os";
 import path from "node:path";
 
-export const DEFAULT_BASE_URL = "https://seleven-mcp-sg.airudder.com";
-export const DEFAULT_CHANNEL = "openagent_oauth";
-export const DEFAULT_SCOPE = "openid email profile";
-export const DEFAULT_CLIENT_NAME = "calle Login";
+import {
+  DEFAULT_BASE_URL,
+  DEFAULT_CHANNEL,
+  DEFAULT_CLIENT_NAME,
+  DEFAULT_MIN_TTL_SECONDS,
+  DEFAULT_SCOPE,
+  DEFAULT_TIMEOUT_SECONDS,
+  INTEGRATION_HEADER,
+  SESSION_SECRET_HEADER,
+} from "@call-e/core/constants";
+import {
+  expandHomePath,
+  normalizeBaseUrl,
+  resolveAuthBaseUrl,
+  resolveBrokerBaseUrl,
+  resolveServerUrl,
+} from "@call-e/core/config";
+
+export {
+  DEFAULT_BASE_URL,
+  DEFAULT_CHANNEL,
+  DEFAULT_CLIENT_NAME,
+  DEFAULT_MIN_TTL_SECONDS,
+  DEFAULT_SCOPE,
+  DEFAULT_TIMEOUT_SECONDS,
+  INTEGRATION_HEADER,
+  SESSION_SECRET_HEADER,
+  expandHomePath,
+  normalizeBaseUrl,
+  resolveAuthBaseUrl,
+  resolveBrokerBaseUrl,
+  resolveServerUrl,
+};
+
 export const DEFAULT_SERVER_NAME = "calle";
-export const DEFAULT_TIMEOUT_SECONDS = 15;
 export const DEFAULT_POLL_TIMEOUT_SECONDS = 300;
 export const DEFAULT_TELEMETRY_TIMEOUT_SECONDS = 1.5;
-export const DEFAULT_MIN_TTL_SECONDS = 300;
 export const DEFAULT_CACHE_ROOT = path.join(os.homedir(), ".calle-mcp", "cli");
-export const SESSION_SECRET_HEADER = "X-OpenAgent-Session-Secret";
 export const CLI_VERSION = "0.2.0";
-export const INTEGRATION_HEADER = "X-Call-E-Integration";
-
-export function expandHomePath(value) {
-  if (!value || typeof value !== "string") {
-    return value;
-  }
-  if (value === "~") {
-    return os.homedir();
-  }
-  if (value.startsWith("~/")) {
-    return path.join(os.homedir(), value.slice(2));
-  }
-  return value;
-}
-
-export function normalizeBaseUrl(baseUrl) {
-  return String(baseUrl || "").replace(/\/+$/, "");
-}
-
-export function resolveServerUrl({ serverUrl, baseUrl, channel }) {
-  if (serverUrl) {
-    return serverUrl;
-  }
-  return `${normalizeBaseUrl(baseUrl)}/mcp/${String(channel || DEFAULT_CHANNEL).trim().toLowerCase() || DEFAULT_CHANNEL}`;
-}
-
-export function resolveAuthBaseUrl({ authBaseUrl, baseUrl, serverUrl }) {
-  if (authBaseUrl) {
-    return normalizeBaseUrl(authBaseUrl);
-  }
-  if (baseUrl) {
-    return normalizeBaseUrl(baseUrl);
-  }
-  const parsed = new URL(serverUrl);
-  return `${parsed.protocol}//${parsed.host}`;
-}
-
-export function resolveBrokerBaseUrl({ brokerBaseUrl, baseUrl }) {
-  return normalizeBaseUrl(brokerBaseUrl || baseUrl);
-}
 
 function firstOptionValue(value) {
   return Array.isArray(value) ? value[0] : value;

@@ -1,0 +1,47 @@
+{
+  "name": "@call-e/core",
+  "version": "0.1.0",
+  "description": "Shared Call-E runtime helpers for brokered auth, local token cache, and MCP HTTP calls.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CALLE-AI/call-e-integrations.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/core",
+  "bugs": {
+    "url": "https://github.com/CALLE-AI/call-e-integrations/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": "./lib/index.js",
+    "./broker-client": "./lib/broker-client.js",
+    "./cache": "./lib/cache.js",
+    "./config": "./lib/config.js",
+    "./constants": "./lib/constants.js",
+    "./http": "./lib/http.js",
+    "./mcp-client": "./lib/mcp-client.js"
+  },
+  "files": [
+    "README.md",
+    "lib"
+  ],
+  "keywords": [
+    "calle",
+    "call-e",
+    "mcp",
+    "oauth",
+    "brokered-auth"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node --test ./test/*.test.js",
+    "check": "node ../../scripts/check-runtime-syntax.mjs lib/broker-client.js lib/cache.js lib/config.js lib/constants.js lib/http.js lib/index.js lib/mcp-client.js",
+    "pack:dry-run": "npm pack --dry-run"
+  }
+}
