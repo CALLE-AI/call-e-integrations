@@ -4,7 +4,7 @@ import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { runCli } from "../lib/cli.js";
+import { POST_AUTH_HELP_MESSAGE, runCli } from "../lib/cli.js";
 import { pendingCachePath, tokenCachePath, writePrivateJson } from "../lib/cache.js";
 import { CLI_VERSION } from "../lib/config.js";
 
@@ -114,9 +114,38 @@ test("auth login defaults broker payload to openagent_oauth and hides token from
   const payload = JSON.parse(result.stdout);
   assert.equal(payload.status, "logged_in");
   assert.equal(payload.server_url, "https://mcp.example/mcp/openagent_oauth");
+  assert.deepEqual(payload.assistant_hint, {
+    type: "post_auth_help",
+    message: POST_AUTH_HELP_MESSAGE,
+  });
+  assert.match(payload.assistant_hint.message, /I can help make phone calls/);
   const tokenPayload = JSON.parse(fs.readFileSync(tokenCachePath(cacheRoot, payload.server_url), "utf8"));
   assert.equal(tokenPayload.token.access_token, "secret-token");
   assert.equal(fs.existsSync(pendingCachePath(cacheRoot, payload.server_url)), false);
+});
+
+test("auth login returns post-auth assistant hint for cached login", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-cached-login");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl, "cached-login-token");
+
+  const result = await run(
+    ["auth", "login", "--base-url", "https://mcp.example", "--cache-root", cacheRoot],
+    {
+      fetchImpl: async () => {
+        throw new Error("auth login should not contact broker with a usable cached token");
+      },
+    }
+  );
+
+  assert.equal(result.code, 0);
+  assert.doesNotMatch(result.stdout, /cached-login-token/);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.status, "cached");
+  assert.deepEqual(payload.assistant_hint, {
+    type: "post_auth_help",
+    message: POST_AUTH_HELP_MESSAGE,
+  });
 });
 
 test("auth login forwards upstream integration context from environment", async () => {

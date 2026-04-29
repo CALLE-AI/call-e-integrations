@@ -50,6 +50,10 @@ Rules:
 - If a command returns `auth_required`, run or suggest `auth login`.
 - If `mcp tools` succeeds, confirm that `plan_call`, `run_call`, and
   `get_call_run` are present.
+- If successful `auth login` output includes `assistant_hint.message`, use it
+  to include a brief post-auth help note in the next user-facing reply after
+  `mcp tools` confirms the required tools are present. Adapt the wording
+  naturally to the user's language and context.
 - Do not run `call run` during setup verification.
 - Do not use `.mcp.json`, raw HTTP, or direct remote MCP configuration in this
   plugin version.

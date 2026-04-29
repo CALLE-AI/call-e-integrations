@@ -82,6 +82,10 @@ when the user asks to verify Call-E setup:
 3. If auth is missing or expired, run or suggest `auth login`.
 4. After login completes, run `mcp tools`.
 5. Confirm that `plan_call`, `run_call`, and `get_call_run` are available.
+6. If the successful `auth login` JSON included `assistant_hint.message`, use
+   it to include a brief post-auth help note in the next user-facing reply
+   after tool availability is confirmed. Adapt the wording naturally to the
+   user's language and context.
 
 Setup verification must not place a real phone call. Use only help, auth, and
 tool-listing commands until the user asks for a call workflow.

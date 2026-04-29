@@ -17,6 +17,14 @@ class InvalidArgumentsError extends Error {
   }
 }
 
+export const POST_AUTH_HELP_MESSAGE = `Hi, I’m CALL-E 👋
+
+I can help make phone calls, gather information, and handle phone-based tasks like appointments, reservations, follow-ups, and customer service requests.
+
+Before each call, I’ll confirm the goal and key details with you. Afterward, I’ll share the status, summary, key takeaways, and next steps.`;
+
+const POST_AUTH_HELP_HINT_TYPE = "post_auth_help";
+
 function printHelp(stdout) {
   stdout(`Usage: calle <command> [options]
 
@@ -164,7 +172,18 @@ function assertNoUnexpectedPositional(positional) {
   }
 }
 
+function postAuthAssistantHint(status) {
+  if (status !== "logged_in" && status !== "cached") {
+    return null;
+  }
+  return {
+    type: POST_AUTH_HELP_HINT_TYPE,
+    message: POST_AUTH_HELP_MESSAGE,
+  };
+}
+
 function publicLoginPayload({ config, cachePath, pendingPath, tokenDocument, status }) {
+  const assistantHint = postAuthAssistantHint(status);
   return {
     status,
     broker_base_url: config.brokerBaseUrl,
@@ -172,6 +191,7 @@ function publicLoginPayload({ config, cachePath, pendingPath, tokenDocument, sta
     cache_path: cachePath,
     pending_cache_path: pendingPath,
     expires_at: tokenDocument?.expires_at ?? null,
+    ...(assistantHint ? { assistant_hint: assistantHint } : {}),
   };
 }
 

@@ -51,6 +51,11 @@ function checkSkill({ skillName, skillDir, failures }) {
   const source = fs.readFileSync(skillFile, "utf8");
   const frontmatter = extractFrontmatter(source);
   assert(frontmatter, failures, `${skillFile} must start with YAML frontmatter.`);
+  assert(
+    source.includes("assistant_hint.message"),
+    failures,
+    `${skillFile} must document how to display assistant_hint.message after auth login.`,
+  );
 
   if (!frontmatter) {
     return;
