@@ -86,20 +86,20 @@ pnpm --filter @call-e/openclaw-cli-skill pack:dry-run
 
 You do not need to install the shared CLI globally before installing the Codex
 plugin. The plugin uses the repository-local CLI when available, then a global
-`calle` command when available, then falls back to `npx -y @call-e/cli@0.2.1`.
+`calle` command when available, then falls back to `npx -y @call-e/cli@0.3.0`.
 
 To authenticate before installing the plugin, run:
 
 ```bash
-npx -y @call-e/cli@0.2.1 auth login
+npx -y @call-e/cli@0.3.0 auth login
 ```
 
 Then add the Codex marketplace from this repository. Replace
-`@call-e/codex-plugin@0.1.3` with the package release tag you want to install.
+`@call-e/codex-plugin@0.1.4` with the package release tag you want to install.
 
 ```bash
 codex plugin marketplace add CALLE-AI/call-e-integrations \
-  --ref '@call-e/codex-plugin@0.1.3' \
+  --ref '@call-e/codex-plugin@0.1.4' \
   --sparse .agents/plugins \
   --sparse packages/codex-plugin/plugin
 ```
@@ -118,7 +118,7 @@ published integration source stays separate from repository-local skills under
 the root `skills/` directory.
 
 This skill uses the repository-local CLI when available, then a global `calle`
-command when available, then falls back to `npx -y @call-e/cli@0.2.1`.
+command when available, then falls back to `npx -y @call-e/cli@0.3.0`.
 
 For local development from a clone, point OpenClaw skill loading at
 `packages/openclaw-cli-skill/skills`, then start a new OpenClaw session and use
