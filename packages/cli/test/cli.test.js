@@ -4,7 +4,7 @@ import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { POST_AUTH_HELP_MESSAGE, runCli } from "../lib/cli.js";
+import { POST_AUTH_HELP_MESSAGE, preAuthHelpMessage, runCli } from "../lib/cli.js";
 import { pendingCachePath, tokenCachePath, writePrivateJson } from "../lib/cache.js";
 import { CLI_VERSION } from "../lib/config.js";
 
@@ -118,10 +118,59 @@ test("auth login defaults broker payload to openagent_oauth and hides token from
     type: "post_auth_help",
     message: POST_AUTH_HELP_MESSAGE,
   });
-  assert.match(payload.assistant_hint.message, /I can help make phone calls/);
+  assert.match(payload.assistant_hint.message, /Great, authorization is complete/);
   const tokenPayload = JSON.parse(fs.readFileSync(tokenCachePath(cacheRoot, payload.server_url), "utf8"));
   assert.equal(tokenPayload.token.access_token, "secret-token");
   assert.equal(fs.existsSync(pendingCachePath(cacheRoot, payload.server_url)), false);
+});
+
+test("auth login start-only returns authorization hint without polling", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-start-only");
+  const loginUrl = "https://mcp.example/openagent-auth/sessions/session-1/start";
+  const requests = [];
+  const fetchImpl = async (url, init) => {
+    requests.push(`${init?.method} ${url}`);
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+      return jsonResponse(
+        {
+          session_id: "session-1",
+          session_secret: "secret-1",
+          login_url: loginUrl,
+          status: "PENDING",
+          poll_after_ms: 1,
+          expires_at: "2030-01-01T00:00:00Z",
+        },
+        { status: 201 }
+      );
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+
+  const result = await run(
+    [
+      "auth",
+      "login",
+      "--start-only",
+      "--no-browser-open",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 0);
+  assert.deepEqual(requests, ["POST https://mcp.example/api/v1/openagent-auth/sessions"]);
+  assert.equal(payload.status, "login_required");
+  assert.equal(payload.login_url, loginUrl);
+  assert.deepEqual(payload.assistant_hint, {
+    type: "pre_auth_help",
+    message: preAuthHelpMessage(loginUrl),
+  });
+  assert.match(payload.assistant_hint.message, /Before we start, please complete authorization here/);
+  assert.doesNotMatch(result.stdout, /secret-1/);
 });
 
 test("auth login returns post-auth assistant hint for cached login", async () => {
@@ -321,6 +370,20 @@ test("auth status reports missing, usable, and expired cache states", async () =
   payload = JSON.parse(result.stdout);
   assert.equal(payload.cache_exists, true);
   assert.equal(payload.usable, false);
+
+  writePrivateJson(pendingCachePath(cacheRoot, serverUrl), {
+    session_id: "session-1",
+    session_secret: "secret-1",
+    login_url: "https://mcp.example/openagent-auth/sessions/session-1/start",
+    status: "PENDING",
+    created_at: "2026-04-23T00:00:00Z",
+  });
+  result = await run(["auth", "status", "--base-url", "https://mcp.example", "--cache-root", cacheRoot]);
+  payload = JSON.parse(result.stdout);
+  assert.equal(payload.pending_exists, true);
+  assert.equal(payload.pending_status, "PENDING");
+  assert.equal(payload.pending_login_url, "https://mcp.example/openagent-auth/sessions/session-1/start");
+  assert.doesNotMatch(result.stdout, /secret-1/);
 });
 
 test("auth logout removes token and pending cache", async () => {
@@ -653,6 +716,24 @@ test("mcp commands return auth_required for missing or expired tokens", async ()
   assert.equal(payload.error.code, "auth_required");
   assert.match(payload.login_command, /calle auth login/);
   assert.doesNotMatch(result.stdout, /access_token/);
+
+  writePrivateJson(pendingCachePath(cacheRoot, serverUrl), {
+    session_id: "session-1",
+    session_secret: "secret-1",
+    login_url: "https://mcp.example/openagent-auth/sessions/session-1/start",
+    status: "PENDING",
+    created_at: "2026-04-23T00:00:00Z",
+  });
+  const pendingResult = await run(["mcp", "tools", "--base-url", "https://mcp.example", "--cache-root", cacheRoot], {
+    fetchImpl: async () => {
+      throw new Error("fetch should not be called");
+    },
+  });
+  const pendingPayload = JSON.parse(pendingResult.stdout);
+  assert.equal(pendingPayload.error.code, "auth_required");
+  assert.equal(pendingPayload.login_url, "https://mcp.example/openagent-auth/sessions/session-1/start");
+  assert.match(pendingPayload.assistant_hint.message, /Before we start, please complete authorization here/);
+  assert.doesNotMatch(pendingResult.stdout, /secret-1/);
 
   writePrivateJson(tokenCachePath(cacheRoot, serverUrl), {
     token: { access_token: "expired-token" },

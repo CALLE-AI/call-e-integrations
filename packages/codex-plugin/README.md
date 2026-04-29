@@ -55,6 +55,11 @@ to let Codex handle Call-E setup checks, authentication recovery, call
 planning, automatic call execution after planning completes, and call status
 checks.
 
+When `$calle` is invoked, the skill checks `calle auth status` first. If the
+user is not authorized, it runs blocking `calle auth login`, shows the brokered
+authorization link, and continues automatically after browser authorization
+completes.
+
 ## Telemetry / Usage Data
 
 When Codex runs the bundled Call-E skill, the skill invokes the shared `calle` CLI with source attribution environment variables so local telemetry and service-side call data can be grouped as `codex/codex_plugin/<version>`.

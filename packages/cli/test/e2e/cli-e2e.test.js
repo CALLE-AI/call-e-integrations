@@ -302,6 +302,42 @@ test("prints MCP config without contacting the server", async (t) => {
   assert.deepEqual(fake.state.failures, []);
 });
 
+test("starts brokered auth and returns an authorization hint without polling", async (t) => {
+  const fake = await startFakeServer();
+  const cacheRoot = makeTempCacheRoot();
+  t.after(() => fake.close());
+  t.after(() => fs.rmSync(cacheRoot, { recursive: true, force: true }));
+
+  const result = await runCalle([
+    "auth",
+    "login",
+    "--start-only",
+    "--no-browser-open",
+    "--base-url",
+    fake.baseUrl,
+    "--broker-base-url",
+    fake.baseUrl,
+    "--cache-root",
+    cacheRoot,
+  ]);
+  const payload = parseJson(result.stdout);
+
+  assert.equal(result.code, 0);
+  assert.equal(payload.status, "login_required");
+  assert.equal(payload.login_url, `${fake.baseUrl}/openagent-auth/sessions/session-1/start`);
+  assert.match(payload.assistant_hint.message, /Before we start, please complete authorization here/);
+  assert.equal(fake.state.brokerCreates.length, 1);
+  assert.equal(fake.state.brokerStatusCount, 0);
+  assert.equal(fake.state.brokerExchangeCount, 0);
+  assertNoLeak(`${result.stdout}\n${result.stderr}`, [accessToken, sessionSecret]);
+  assert.deepEqual(fake.state.telemetryEvents.map((event) => event.event), [
+    "cli_invoked",
+    "auth_login_local_started",
+  ]);
+  assertNoLeak(JSON.stringify(fake.state.telemetryEvents), [accessToken, sessionSecret, payload.login_url]);
+  assert.deepEqual(fake.state.failures, []);
+});
+
 test("logs in through the fake broker and reports cache status", async (t) => {
   const fake = await startFakeServer();
   const cacheRoot = makeTempCacheRoot();

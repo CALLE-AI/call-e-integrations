@@ -57,6 +57,26 @@ function checkSkill({ skillName, skillDir, failures }) {
     `${skillFile} must document how to display assistant_hint.message after auth login.`,
   );
   assert(
+    source.includes("Run blocking `auth login`"),
+    failures,
+    `${skillFile} must document blocking authorization login for the default Codex plugin flow.`,
+  );
+  assert(
+    source.includes("do not ask the user to reply"),
+    failures,
+    `${skillFile} must document that browser authorization should continue without a manual chat reply.`,
+  );
+  assert(
+    source.includes("Before we start, please complete authorization here"),
+    failures,
+    `${skillFile} must include the first authorization help message.`,
+  );
+  assert(
+    source.includes("Great, authorization is complete"),
+    failures,
+    `${skillFile} must include the post-authorization success message.`,
+  );
+  assert(
     source.includes("Phone call is in progress! Progress:"),
     failures,
     `${skillFile} must document the non-terminal call activity progress template.`,
@@ -78,6 +98,26 @@ function checkSkill({ skillName, skillDir, failures }) {
       referenceSource.includes("Phone call is in progress! Progress:"),
       failures,
       `${referenceFile} must document the non-terminal call activity progress template.`,
+    );
+    assert(
+      referenceSource.includes("Run blocking `auth login`"),
+      failures,
+      `${referenceFile} must document blocking authorization login for the default Codex plugin flow.`,
+    );
+    assert(
+      referenceSource.includes("do not ask the user to reply"),
+      failures,
+      `${referenceFile} must document that browser authorization should continue without a manual chat reply.`,
+    );
+    assert(
+      referenceSource.includes("Before we start, please complete authorization here"),
+      failures,
+      `${referenceFile} must include the first authorization help message.`,
+    );
+    assert(
+      referenceSource.includes("Great, authorization is complete"),
+      failures,
+      `${referenceFile} must include the post-authorization success message.`,
     );
     assert(
       referenceSource.includes("Wait 10 seconds"),

@@ -1,6 +1,6 @@
 import { pendingCachePath, readJson, removeFile, tokenCachePath, tokenIsUsable } from "./cache.js";
 import { DEFAULT_BASE_URL, DEFAULT_CHANNEL, DEFAULT_CLIENT_NAME, DEFAULT_SCOPE, resolveRuntimeConfig } from "./config.js";
-import { loginWithBroker } from "./broker-client.js";
+import { ensurePendingLogin, loginWithBroker } from "./broker-client.js";
 import {
   AuthRequiredError,
   McpHttpError,
@@ -17,13 +17,29 @@ class InvalidArgumentsError extends Error {
   }
 }
 
-export const POST_AUTH_HELP_MESSAGE = `Hi, I’m CALL-E 👋
+export function preAuthHelpMessage(loginUrl) {
+  return `Hi, I'm CALL-E 👋
 
-I can help make phone calls, gather information, and handle phone-based tasks like appointments, reservations, follow-ups, and customer service requests.
+I can help you make phone calls, ask for information, and handle phone-related tasks. I'll also keep you updated on the call status, what was discussed, and the key points.
+Before we officially begin, I'll send you the call goal for confirmation.
 
-Before each call, I’ll confirm the goal and key details with you. Afterward, I’ll share the status, summary, key takeaways, and next steps.`;
+Before we start, please complete authorization here:
+${loginUrl}`;
+}
+
+export const POST_AUTH_HELP_MESSAGE = `Great, authorization is complete ✨
+
+- If you already shared the call goal, I'll continue as planned.
+- If you haven't, that's okay. I can help you place a test call first, or start a real call directly.
+
+You can tell me:
+- Your phone number: Used only for this service. We will not disclose it to anyone else, including the callee.
+- What you want me to say: For example, "This is a test call from CALL-E. Wishing you a good day, and asking if there's anything you'd like to share."
+
+I'll keep you updated on the phone status, call content, and summary.`;
 
 const POST_AUTH_HELP_HINT_TYPE = "post_auth_help";
+const PRE_AUTH_HELP_HINT_TYPE = "pre_auth_help";
 
 function printHelp(stdout) {
   stdout(`Usage: calle <command> [options]
@@ -52,6 +68,7 @@ Common options:
   --poll-timeout-seconds <seconds>
   --server-name <name>          Default: calle
   --force-login
+  --start-only
   --no-browser-open
   --no-telemetry
   --json
@@ -77,7 +94,15 @@ function toCamelCase(optionName) {
 function parseOptions(argv) {
   const options = {};
   const positional = [];
-  const booleanOptions = new Set(["force-login", "no-browser-open", "no-telemetry", "telemetry", "json", "help"]);
+  const booleanOptions = new Set([
+    "force-login",
+    "start-only",
+    "no-browser-open",
+    "no-telemetry",
+    "telemetry",
+    "json",
+    "help",
+  ]);
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (!arg.startsWith("--")) {
@@ -182,6 +207,31 @@ function postAuthAssistantHint(status) {
   };
 }
 
+function preAuthAssistantHint(loginUrl) {
+  if (typeof loginUrl !== "string" || !loginUrl.trim()) {
+    return null;
+  }
+  return {
+    type: PRE_AUTH_HELP_HINT_TYPE,
+    message: preAuthHelpMessage(loginUrl.trim()),
+  };
+}
+
+function publicPendingLoginPayload({ config, cachePath, pendingPath, pending, created }) {
+  const assistantHint = preAuthAssistantHint(pending.login_url);
+  return {
+    status: "login_required",
+    broker_base_url: config.brokerBaseUrl,
+    server_url: config.serverUrl,
+    cache_path: cachePath,
+    pending_cache_path: pendingPath,
+    pending_status: pending.status,
+    pending_created: created,
+    login_url: pending.login_url,
+    ...(assistantHint ? { assistant_hint: assistantHint } : {}),
+  };
+}
+
 function publicLoginPayload({ config, cachePath, pendingPath, tokenDocument, status }) {
   const assistantHint = postAuthAssistantHint(status);
   return {
@@ -208,6 +258,8 @@ function statusPayload(config) {
     pending_exists: pendingDocument !== null,
     usable: tokenIsUsable(cacheDocument, config.minTtlSeconds),
     expires_at: cacheDocument?.expires_at ?? null,
+    pending_status: pendingDocument?.status ?? null,
+    pending_login_url: pendingDocument?.login_url ?? null,
   };
 }
 
@@ -271,6 +323,9 @@ function callStatusCommand(config, runId) {
 }
 
 function authRequiredPayload(config, message = "A usable Calle auth token is required.") {
+  const pendingDocument = readJson(pendingCachePath(config.cacheRoot, config.serverUrl));
+  const loginUrl = typeof pendingDocument?.login_url === "string" ? pendingDocument.login_url : null;
+  const assistantHint = preAuthAssistantHint(loginUrl);
   return {
     ok: false,
     server_url: config.serverUrl,
@@ -279,6 +334,8 @@ function authRequiredPayload(config, message = "A usable Calle auth token is req
       message,
     },
     login_command: loginCommand(config),
+    ...(loginUrl ? { login_url: loginUrl } : {}),
+    ...(assistantHint ? { assistant_hint: assistantHint } : {}),
   };
 }
 
@@ -603,8 +660,42 @@ export async function runCli(argv, deps = {}) {
     assertNoUnexpectedPositional(positional);
     await captureTelemetry("auth_login_local_started", {
       force_login: Boolean(options.forceLogin),
+      start_only: Boolean(options.startOnly),
       no_browser_open: Boolean(options.noBrowserOpen),
     });
+    const cachePath = tokenCachePath(config.cacheRoot, config.serverUrl);
+    const pendingPath = pendingCachePath(config.cacheRoot, config.serverUrl);
+    if (options.startOnly) {
+      const cached = readJson(cachePath);
+      if (!options.forceLogin && tokenIsUsable(cached, config.minTtlSeconds)) {
+        writeJson(stdout, publicLoginPayload({
+          config,
+          cachePath,
+          pendingPath,
+          tokenDocument: cached,
+          status: "cached",
+        }));
+        return 0;
+      }
+      let result;
+      try {
+        result = await ensurePendingLogin(config, {
+          fetchImpl: deps.fetchImpl || globalThis.fetch,
+          forceLogin: Boolean(options.forceLogin),
+        });
+      } catch (error) {
+        await captureTelemetry("auth_login_local_failed", errorTelemetryProperties(error));
+        throw error;
+      }
+      writeJson(stdout, publicPendingLoginPayload({
+        config,
+        cachePath,
+        pendingPath,
+        pending: result.pending,
+        created: result.created,
+      }));
+      return 0;
+    }
     let result;
     try {
       result = await loginWithBroker(config, {

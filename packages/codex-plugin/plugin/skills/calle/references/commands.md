@@ -47,16 +47,52 @@ Rules:
 
 - Treat all command output as JSON except `--help`.
 - Do not print or ask for access tokens.
-- If a command returns `auth_required`, run or suggest `auth login`.
+- Whenever this Codex plugin is actively invoked, run `auth status` before call
+  planning or tool listing.
+- If `auth status` reports `usable: false`, do not call `mcp tools` or
+  `call plan` yet. Run blocking `auth login` and keep that command running
+  until it exits. Do not use `auth login --start-only --no-browser-open` for
+  the default Codex plugin flow.
+- When `auth login` prints the brokered login URL to command output or stderr,
+  show the first authorization help with that URL. Keep waiting for the same
+  command to complete; do not ask the user to reply after browser
+  authorization.
+- If successful `auth login` output includes `assistant_hint.message`, show it
+  as the post-authorization success note. Then continue the original call
+  workflow if the user already gave enough details.
+- If a command returns `auth_required`, switch back to this auth flow.
 - If `mcp tools` succeeds, confirm that `plan_call`, `run_call`, and
   `get_call_run` are present.
-- If successful `auth login` output includes `assistant_hint.message`, use it
-  to include a brief post-auth help note in the next user-facing reply after
-  `mcp tools` confirms the required tools are present. Adapt the wording
-  naturally to the user's language and context.
 - Do not run `call run` during setup verification.
 - Do not use `.mcp.json`, raw HTTP, or direct remote MCP configuration in this
   plugin version.
+
+First authorization help template:
+
+```text
+Hi, I'm CALL-E 👋
+
+I can help you make phone calls, ask for information, and handle phone-related tasks. I'll also keep you updated on the call status, what was discussed, and the key points.
+Before we officially begin, I'll send you the call goal for confirmation.
+
+Before we start, please complete authorization here:
+<login_url>
+```
+
+Post-authorization success template:
+
+```text
+Great, authorization is complete ✨
+
+- If you already shared the call goal, I'll continue as planned.
+- If you haven't, that's okay. I can help you place a test call first, or start a real call directly.
+
+You can tell me:
+- Your phone number: Used only for this service. We will not disclose it to anyone else, including the callee.
+- What you want me to say: For example, "This is a test call from CALL-E. Wishing you a good day, and asking if there's anything you'd like to share."
+
+I'll keep you updated on the phone status, call content, and summary.
+```
 
 ## Call planning
 
