@@ -65,7 +65,7 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
     }
   }
 
-  if (fs.existsSync(cliConfigPath)) {
+  if (packageJson.name === "@call-e/cli" && fs.existsSync(cliConfigPath)) {
     const configSource = fs.readFileSync(cliConfigPath, "utf8");
     const match = configSource.match(/export const CLI_VERSION = "([^"]+)";/);
     if (!match) {

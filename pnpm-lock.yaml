@@ -15,7 +15,15 @@ importers:
         specifier: ^2.30.0
         version: 2.30.0
 
-  packages/cli: {}
+  packages/cli:
+    dependencies:
+      '@call-e/core':
+        specifier: workspace:^
+        version: link:../core
+
+  packages/codex-plugin: {}
+
+  packages/core: {}
 
   packages/openclaw-plugin: {}
 

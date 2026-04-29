@@ -1,0 +1,11 @@
+export const DEFAULT_BASE_URL = "https://seleven-mcp-sg.airudder.com";
+export const DEFAULT_CHANNEL = "openagent_oauth";
+export const DEFAULT_SCOPE = "openid email profile";
+export const DEFAULT_CLIENT_NAME = "calle Login";
+export const DEFAULT_TIMEOUT_SECONDS = 15;
+export const DEFAULT_MIN_TTL_SECONDS = 300;
+export const DEFAULT_MCP_CLIENT_NAME = "calle";
+export const DEFAULT_MCP_CLIENT_VERSION = "unknown";
+export const MCP_PROTOCOL_VERSION = "2025-11-25";
+export const SESSION_SECRET_HEADER = "X-OpenAgent-Session-Secret";
+export const INTEGRATION_HEADER = "X-Call-E-Integration";

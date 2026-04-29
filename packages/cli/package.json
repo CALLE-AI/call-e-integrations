@@ -36,6 +36,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "dependencies": {
+    "@call-e/core": "workspace:^"
+  },
   "scripts": {
     "test": "pnpm run test:unit && pnpm run test:e2e",
     "test:unit": "node --test ./test/*.test.js",
@@ -43,6 +46,6 @@
     "verify:live": "node ./scripts/live-e2e.mjs",
     "verify:live:call": "node ./scripts/live-e2e.mjs --call",
     "check": "node ../../scripts/check-runtime-syntax.mjs bin/calle.js lib/broker-client.js lib/cache.js lib/cli.js lib/config.js lib/http.js lib/mcp-client.js lib/telemetry.js scripts/live-e2e.mjs",
-    "pack:dry-run": "npm pack --dry-run"
+    "pack:dry-run": "tmpdir=$(mktemp -d) && trap 'rm -rf \"$tmpdir\"' EXIT && pnpm pack --pack-destination \"$tmpdir\""
   }
 }
