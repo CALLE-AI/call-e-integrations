@@ -1,22 +1,17 @@
 ---
 name: Phone Call - Call-E
-description: New users get 20 free calls to get started. Make real outbound phone calls, run planned calls, and check call status in OpenClaw with Call-E through the calle CLI.
+description: New users get 20 free calls to get started. Make real outbound phone calls, run planned calls, and check call status in OpenClaw.
 license: MIT-0
 metadata: {"openclaw":{"requires":{"bins":["node"],"anyBins":["calle","npx"]},"install":[{"id":"call-e-cli","kind":"node","package":"@call-e/cli","bins":["calle"],"label":"Install Call-E CLI"}],"homepage":"https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/openclaw-cli-skill"}}
 ---
 
 # Phone Call - Call-E
 
-Make real outbound phone calls, run planned calls, and check call status in
-OpenClaw with Call-E through the `calle` CLI.
+Make real outbound phone calls, continue active calls, and check call status with Call-E for OpenClaw.
 
 Use this skill when the user wants to call a phone number, make a phone call,
 place an outbound call, follow up by phone, call a business, call a customer,
-verify Call-E setup, recover Call-E authentication, or check the status,
-summary, details, and transcript of a call.
-
-This skill intentionally calls the CLI instead of depending on a native
-OpenClaw plugin or gateway-managed tool registration.
+or check the status, summary, details, and transcript of a call.
 
 ## When to use
 
