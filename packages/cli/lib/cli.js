@@ -79,6 +79,7 @@ MCP/call options:
   --goal <text>
   --language <language>
   --region <region>
+  --timezone <iana>            Timezone hint for relative scheduling in call plan
   --plan-id <id>
   --confirm-token <token>
   --run-id <id>
@@ -162,6 +163,76 @@ function requireStringOption(options, key, optionName) {
 function optionalStringOption(options, key) {
   const value = firstOptionValue(options[key]);
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function optionalEnvString(env, key) {
+  const value = env?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function normalizeIanaTimezone(value) {
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+  try {
+    const resolved = new Intl.DateTimeFormat("en-US", { timeZone: value.trim() }).resolvedOptions().timeZone;
+    if (typeof resolved !== "string" || !resolved.includes("/")) {
+      return null;
+    }
+    return resolved;
+  } catch {
+    return null;
+  }
+}
+
+function osTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+  } catch {
+    return null;
+  }
+}
+
+function resolvePlanTimezone(options, env = process.env) {
+  const explicitTimezone = optionalStringOption(options, "timezone");
+  if (explicitTimezone) {
+    return normalizeIanaTimezone(explicitTimezone);
+  }
+
+  const envTimezone = optionalEnvString(env, "CALLE_TIMEZONE");
+  if (envTimezone) {
+    return normalizeIanaTimezone(envTimezone);
+  }
+
+  return normalizeIanaTimezone(osTimezone());
+}
+
+function timezoneOffsetMinutes(timezone, instant = new Date()) {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).formatToParts(instant);
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    const wallClockAsUtc = Date.UTC(
+      Number(values.year),
+      Number(values.month) - 1,
+      Number(values.day),
+      Number(values.hour),
+      Number(values.minute),
+      Number(values.second)
+    );
+    const offset = Math.round((instant.getTime() - wallClockAsUtc) / 60000);
+    return Number.isInteger(offset) ? offset : null;
+  } catch {
+    return null;
+  }
 }
 
 function parsePositiveInteger(value, optionName) {
@@ -480,6 +551,24 @@ function buildPlanArguments(options) {
   return args;
 }
 
+function buildPlanRequestMeta(options, env = process.env) {
+  const timezone = resolvePlanTimezone(options, env);
+  if (!timezone) {
+    return null;
+  }
+
+  const meta = {
+    "openai/userLocation": {
+      timezone,
+    },
+  };
+  const offsetMinutes = timezoneOffsetMinutes(timezone);
+  if (offsetMinutes !== null) {
+    meta.timezone_offset_minutes = offsetMinutes;
+  }
+  return meta;
+}
+
 function buildRunArguments(options) {
   return {
     plan_id: requireStringOption(options, "planId", "--plan-id"),
@@ -537,6 +626,7 @@ async function handleMcpCommand({ command, positional, options, config, deps, st
         config,
         toolName,
         toolArguments,
+        requestMeta: toolName === "plan_call" ? buildPlanRequestMeta(options, deps.env || process.env) : null,
         fetchImpl: deps.fetchImpl || globalThis.fetch,
       });
       writeJson(stdout, mcpSuccessPayload({ config, toolName, result }));
@@ -570,6 +660,7 @@ async function handleCallCommand({ command, positional, options, config, deps, s
         config,
         toolName,
         toolArguments: buildPlanArguments(options),
+        requestMeta: buildPlanRequestMeta(options, deps.env || process.env),
         fetchImpl: deps.fetchImpl || globalThis.fetch,
       });
       writeJson(stdout, mcpSuccessPayload({ config, toolName, result }));

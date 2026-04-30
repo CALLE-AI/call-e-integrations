@@ -115,6 +115,13 @@ function mcpClientInfo(config) {
   };
 }
 
+function nonEmptyMetaObject(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return Object.keys(value).length > 0 ? value : null;
+}
+
 export function currentTokenDocument(config) {
   const cacheDocument = readJson(tokenCachePath(config.cacheRoot, config.serverUrl));
   if (!tokenIsUsable(cacheDocument, config.minTtlSeconds)) {
@@ -187,17 +194,28 @@ export async function listMcpTools({ config, fetchImpl = globalThis.fetch } = {}
   return response.body?.result ?? {};
 }
 
-export async function callMcpTool({ config, toolName, toolArguments = {}, fetchImpl = globalThis.fetch } = {}) {
+export async function callMcpTool({
+  config,
+  toolName,
+  toolArguments = {},
+  requestMeta = null,
+  fetchImpl = globalThis.fetch,
+} = {}) {
   const { rpcHeaders, timeoutMs } = await openMcpSession({ config, fetchImpl });
+  const toolCallParams = {
+    name: toolName,
+    arguments: toolArguments,
+  };
+  const normalizedRequestMeta = nonEmptyMetaObject(requestMeta);
+  if (normalizedRequestMeta) {
+    toolCallParams._meta = normalizedRequestMeta;
+  }
   const response = await requestJsonRpc(fetchImpl, config.serverUrl, {
     headers: rpcHeaders,
     payload: buildJsonRpcPayload({
       id: `calle-${toolName}`,
       method: "tools/call",
-      params: {
-        name: toolName,
-        arguments: toolArguments,
-      },
+      params: toolCallParams,
     }),
     timeoutMs,
   });

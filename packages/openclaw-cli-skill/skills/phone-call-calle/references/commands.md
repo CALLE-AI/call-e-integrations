@@ -17,7 +17,7 @@ env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION
 npx fallback base command:
 
 ```bash
-env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.0
+env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.1
 ```
 
 ## Setup and readiness
@@ -39,11 +39,11 @@ env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION
 ```
 
 ```bash
-env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.0 --help
-env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.0 auth status
-env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.0 auth login --start-only --no-browser-open
-env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.0 auth login --no-browser-open
-env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.0 mcp tools
+env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.1 --help
+env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.1 auth status
+env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.1 auth login --start-only --no-browser-open
+env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.1 auth login --no-browser-open
+env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.1 mcp tools
 ```
 
 Rules:
@@ -95,7 +95,7 @@ I'll keep you updated on the phone status, call content, and summary.
 ```bash
 env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js call plan --to-phone +15551234567 --goal "Confirm the appointment"
 env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 calle call plan --to-phone +15551234567 --goal "Confirm the appointment"
-env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.0 call plan --to-phone +15551234567 --goal "Confirm the appointment"
+env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.1 call plan --to-phone +15551234567 --goal "Confirm the appointment"
 ```
 
 Supported `call plan` options:
@@ -113,7 +113,7 @@ phone numbers, country codes, language, or region.
 ```bash
 env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js call run --plan-id <plan_id> --confirm-token <confirm_token>
 env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 calle call run --plan-id <plan_id> --confirm-token <confirm_token>
-env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.0 call run --plan-id <plan_id> --confirm-token <confirm_token>
+env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.1 call run --plan-id <plan_id> --confirm-token <confirm_token>
 ```
 
 Supported `call run` options:
@@ -138,7 +138,7 @@ terminal status is returned or the user asks you to stop.
 ```bash
 env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js call status --run-id <run_id>
 env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 calle call status --run-id <run_id>
-env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.0 call status --run-id <run_id>
+env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.1 call status --run-id <run_id>
 ```
 
 Supported `call status` options:

@@ -420,7 +420,7 @@ test("lists MCP tools with a cached token", async (t) => {
   assert.deepEqual(fake.state.failures, []);
 });
 
-test("forwards arbitrary mcp call arguments", async (t) => {
+test("forwards mcp plan_call arguments and request meta", async (t) => {
   const fake = await startFakeServer();
   const cacheRoot = makeTempCacheRoot();
   t.after(() => fake.close());
@@ -434,6 +434,8 @@ test("forwards arbitrary mcp call arguments", async (t) => {
     "plan_call",
     "--args-json",
     argsJson,
+    "--timezone",
+    "Asia/Shanghai",
     "--base-url",
     fake.baseUrl,
     "--cache-root",
@@ -448,8 +450,15 @@ test("forwards arbitrary mcp call arguments", async (t) => {
     {
       name: "plan_call",
       arguments: { to_phones: ["+15551234567"], goal: "Confirm appointment" },
+      _meta: {
+        "openai/userLocation": { timezone: "Asia/Shanghai" },
+        timezone_offset_minutes: -480,
+      },
     },
   ]);
+  assert.equal(fake.state.toolCalls[0]._meta["openai/subject"], undefined);
+  assert.equal(fake.state.toolCalls[0]._meta["openai/session"], undefined);
+  assert.equal(fake.state.toolCalls[0]._meta["openai/organization"], undefined);
   assert.deepEqual(fake.state.failures, []);
 });
 
@@ -473,6 +482,8 @@ test("maps call plan flags to plan_call arguments", async (t) => {
     "English",
     "--region",
     "US",
+    "--timezone",
+    "Asia/Shanghai",
     "--base-url",
     fake.baseUrl,
     "--cache-root",
@@ -492,8 +503,15 @@ test("maps call plan flags to plan_call arguments", async (t) => {
         language: "English",
         region: "US",
       },
+      _meta: {
+        "openai/userLocation": { timezone: "Asia/Shanghai" },
+        timezone_offset_minutes: -480,
+      },
     },
   ]);
+  assert.equal(fake.state.toolCalls[0]._meta["openai/subject"], undefined);
+  assert.equal(fake.state.toolCalls[0]._meta["openai/session"], undefined);
+  assert.equal(fake.state.toolCalls[0]._meta["openai/organization"], undefined);
   assert.deepEqual(fake.state.failures, []);
 });
 

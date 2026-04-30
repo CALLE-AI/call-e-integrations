@@ -1,5 +1,11 @@
 # @call-e/codex-plugin
 
+## 0.1.6
+
+### Patch Changes
+
+- Forward ChatGPT-compatible request metadata for CLI plan_call requests so planner runtime context can infer the caller timezone.
+
 ## 0.1.5
 
 ### Patch Changes

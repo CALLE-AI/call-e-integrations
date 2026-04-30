@@ -38,12 +38,12 @@ the `phone-call-calle` source directory through the normal skill distribution
 flow once published.
 
 The skill uses the repository-local CLI when available, then a global `calle`
-command when available, then falls back to `npx -y @call-e/cli@0.3.0`.
+command when available, then falls back to `npx -y @call-e/cli@0.3.1`.
 
 To authenticate before using the skill:
 
 ```bash
-npx -y @call-e/cli@0.3.0 auth login
+npx -y @call-e/cli@0.3.1 auth login
 ```
 
 ## Safety

@@ -88,7 +88,7 @@ Keep those paths exactly as shown so the marketplace entry can resolve
 
 ```bash
 codex plugin marketplace add CALLE-AI/call-e-integrations \
-  --ref '@call-e/codex-plugin@0.1.5' \
+  --ref '@call-e/codex-plugin@0.1.6' \
   --sparse .agents/plugins \
   --sparse packages/codex-plugin/plugin
 ```

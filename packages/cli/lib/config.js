@@ -39,7 +39,7 @@ export const DEFAULT_SERVER_NAME = "calle";
 export const DEFAULT_POLL_TIMEOUT_SECONDS = 300;
 export const DEFAULT_TELEMETRY_TIMEOUT_SECONDS = 1.5;
 export const DEFAULT_CACHE_ROOT = path.join(os.homedir(), ".calle-mcp", "cli");
-export const CLI_VERSION = "0.3.0";
+export const CLI_VERSION = "0.3.1";
 
 function firstOptionValue(value) {
   return Array.isArray(value) ? value[0] : value;

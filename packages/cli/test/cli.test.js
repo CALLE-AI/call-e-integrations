@@ -475,7 +475,7 @@ test("mcp tools uses cached token and lists remote tools", async () => {
   assert.doesNotMatch(result.stdout, /tool-token/);
 });
 
-test("mcp call forwards arbitrary tool arguments", async () => {
+test("mcp call forwards plan_call arguments and request meta", async () => {
   const cacheRoot = makeTempRoot("calle-cli-mcp-call");
   const serverUrl = "https://mcp.example/mcp/openagent_oauth";
   writeToken(cacheRoot, serverUrl, "call-token");
@@ -506,6 +506,8 @@ test("mcp call forwards arbitrary tool arguments", async () => {
       "plan_call",
       "--args-json",
       '{"to_phones":["+15551234567"],"goal":"Confirm appointment"}',
+      "--timezone",
+      "Asia/Shanghai",
       "--base-url",
       "https://mcp.example",
       "--cache-root",
@@ -520,10 +522,70 @@ test("mcp call forwards arbitrary tool arguments", async () => {
     {
       name: "plan_call",
       arguments: { to_phones: ["+15551234567"], goal: "Confirm appointment" },
+      _meta: {
+        "openai/userLocation": { timezone: "Asia/Shanghai" },
+        timezone_offset_minutes: -480,
+      },
+    },
+  ]);
+  assert.equal(calls[0]._meta["openai/subject"], undefined);
+  assert.equal(calls[0]._meta["openai/session"], undefined);
+  assert.equal(calls[0]._meta["openai/organization"], undefined);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.tool_name, "plan_call");
+});
+
+test("mcp call leaves non-plan tools without request meta", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-mcp-call-non-plan");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl, "call-token");
+  const calls = [];
+  const fetchImpl = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") {
+      return jsonRpcResponse({ jsonrpc: "2.0", id: payload.id, result: {} }, { headers: { "mcp-session-id": "sess-1" } });
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonRpcResponse({});
+    }
+    if (payload.method === "tools/call") {
+      calls.push(payload.params);
+      return jsonRpcResponse({
+        jsonrpc: "2.0",
+        id: payload.id,
+        result: { structuredContent: { run_id: "run-1" } },
+      });
+    }
+    throw new Error(`unexpected method: ${payload.method}`);
+  };
+
+  const result = await run(
+    [
+      "mcp",
+      "call",
+      "run_call",
+      "--args-json",
+      '{"plan_id":"plan-1","confirm_token":"confirm-1"}',
+      "--timezone",
+      "Asia/Shanghai",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 0);
+  assert.deepEqual(calls, [
+    {
+      name: "run_call",
+      arguments: { plan_id: "plan-1", confirm_token: "confirm-1" },
     },
   ]);
   assert.equal(payload.ok, true);
-  assert.equal(payload.tool_name, "plan_call");
+  assert.equal(payload.tool_name, "run_call");
 });
 
 test("call plan maps flags to plan_call arguments", async () => {
@@ -564,6 +626,8 @@ test("call plan maps flags to plan_call arguments", async () => {
       "English",
       "--region",
       "US",
+      "--timezone",
+      "Asia/Shanghai",
       "--base-url",
       "https://mcp.example",
       "--cache-root",
@@ -581,8 +645,106 @@ test("call plan maps flags to plan_call arguments", async () => {
       language: "English",
       region: "US",
     },
+    _meta: {
+      "openai/userLocation": { timezone: "Asia/Shanghai" },
+      timezone_offset_minutes: -480,
+    },
   });
+  assert.equal(toolCall._meta["openai/subject"], undefined);
+  assert.equal(toolCall._meta["openai/session"], undefined);
+  assert.equal(toolCall._meta["openai/organization"], undefined);
   assert.equal(JSON.parse(result.stdout).tool_name, "plan_call");
+});
+
+test("call plan injects timezone meta from CALLE_TIMEZONE", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-call-plan-env-timezone");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl);
+  let toolCall = null;
+  const fetchImpl = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") {
+      return jsonRpcResponse({ jsonrpc: "2.0", id: payload.id, result: {} });
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonRpcResponse({});
+    }
+    if (payload.method === "tools/call") {
+      toolCall = payload.params;
+      return jsonRpcResponse({
+        jsonrpc: "2.0",
+        id: payload.id,
+        result: { structuredContent: { plan_id: "plan-1", confirm_token: "confirm-1" } },
+      });
+    }
+    throw new Error(`unexpected method: ${payload.method}`);
+  };
+
+  const result = await run(
+    [
+      "call",
+      "plan",
+      "--to-phone",
+      "+15551234567",
+      "--goal",
+      "Confirm appointment",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    { env: { CALLE_TIMEZONE: "America/New_York" }, fetchImpl }
+  );
+
+  assert.equal(result.code, 0);
+  assert.equal(toolCall._meta["openai/userLocation"].timezone, "America/New_York");
+  assert.equal(Number.isInteger(toolCall._meta.timezone_offset_minutes), true);
+});
+
+test("call plan skips timezone meta when explicit timezone is invalid", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-call-plan-invalid-timezone");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl);
+  let toolCall = null;
+  const fetchImpl = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") {
+      return jsonRpcResponse({ jsonrpc: "2.0", id: payload.id, result: {} });
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonRpcResponse({});
+    }
+    if (payload.method === "tools/call") {
+      toolCall = payload.params;
+      return jsonRpcResponse({
+        jsonrpc: "2.0",
+        id: payload.id,
+        result: { structuredContent: { plan_id: "plan-1", confirm_token: "confirm-1" } },
+      });
+    }
+    throw new Error(`unexpected method: ${payload.method}`);
+  };
+
+  const result = await run(
+    [
+      "call",
+      "plan",
+      "--to-phone",
+      "+15551234567",
+      "--goal",
+      "Confirm appointment",
+      "--timezone",
+      "Mars/Base",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    { fetchImpl }
+  );
+
+  assert.equal(result.code, 0);
+  assert.equal(toolCall._meta, undefined);
 });
 
 test("call run invokes run_call then get_call_run once", async () => {

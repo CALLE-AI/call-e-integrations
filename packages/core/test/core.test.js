@@ -234,6 +234,43 @@ test("MCP client calls tools through an initialized session", async () => {
   assert.deepEqual(result, { content: [{ type: "text", text: "ok" }] });
 });
 
+test("MCP client forwards request meta on tool calls", async () => {
+  const config = mcpConfig(makeTempRoot("calle-core-mcp-call-meta"));
+  const fetchImpl = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") {
+      return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "mcp-session-2" } });
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonResponse({});
+    }
+    if (payload.method === "tools/call") {
+      assert.deepEqual(payload.params, {
+        name: "plan_call",
+        arguments: { goal: "Confirm the appointment" },
+        _meta: {
+          "openai/userLocation": { timezone: "Asia/Shanghai" },
+          timezone_offset_minutes: -480,
+        },
+      });
+      return jsonResponse({ result: { content: [{ type: "text", text: "ok" }] } });
+    }
+    throw new Error(`Unexpected MCP method ${payload.method}`);
+  };
+
+  const result = await callMcpTool({
+    config,
+    toolName: "plan_call",
+    toolArguments: { goal: "Confirm the appointment" },
+    requestMeta: {
+      "openai/userLocation": { timezone: "Asia/Shanghai" },
+      timezone_offset_minutes: -480,
+    },
+    fetchImpl,
+  });
+  assert.deepEqual(result, { content: [{ type: "text", text: "ok" }] });
+});
+
 test("MCP client classifies unauthorized HTTP responses", async () => {
   const config = mcpConfig(makeTempRoot("calle-core-mcp-401"));
   const fetchImpl = async () => jsonResponse({ error: "unauthorized" }, { status: 401, statusText: "Unauthorized" });

@@ -1,5 +1,11 @@
 # @call-e/core
 
+## 0.2.1
+
+### Patch Changes
+
+- Forward ChatGPT-compatible request metadata for CLI plan_call requests so planner runtime context can infer the caller timezone.
+
 ## 0.2.0
 
 ### Minor Changes
