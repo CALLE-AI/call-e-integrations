@@ -1,5 +1,11 @@
 # @call-e/codex-plugin
 
+## 0.1.5
+
+### Patch Changes
+
+- [#16](https://github.com/CALLE-AI/call-e-integrations/pull/16) [`110b9af`](https://github.com/CALLE-AI/call-e-integrations/commit/110b9afa3ee78ec60601d8b2bd41682a64e58ee2) Thanks [@Ray-56](https://github.com/Ray-56)! - Clarify the minimum supported Codex CLI version for marketplace installation and document the manual sparse payload fallback for older Codex releases.
+
 ## 0.1.4
 
 ### Patch Changes
