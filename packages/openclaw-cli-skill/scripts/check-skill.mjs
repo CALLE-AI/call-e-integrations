@@ -13,6 +13,11 @@ const BANNED_PLUGIN_STRINGS = [
   ["openclaw", "plugins", "install"].join(" "),
   ["openclaw-setup", "sh"].join("."),
 ];
+const BANNED_AUTH_LINK_STRINGS = [
+  "Before we start, please complete authorization here",
+  "<login_url>",
+  'reply "OK" or "done"',
+];
 
 function readJson(filePath, failures) {
   if (!fs.existsSync(filePath)) {
@@ -85,19 +90,14 @@ function checkSkill({ packageRoot, failures }) {
     `${skillFile} must document start-only authorization login for the default OpenClaw CLI skill flow.`,
   );
   assert(
-    source.includes('reply "OK" or "done"'),
+    source.includes("authorization instructions returned by the CLI"),
     failures,
-    `${skillFile} must document that the user should return after browser authorization.`,
+    `${skillFile} must use neutral CLI-provided authorization instructions.`,
   );
   assert(
     source.includes("auth login --no-browser-open"),
     failures,
     `${skillFile} must document how to continue and exchange a pending authorization.`,
-  );
-  assert(
-    source.includes("Before we start, please complete authorization here"),
-    failures,
-    `${skillFile} must include the first authorization help message.`,
   );
   assert(
     source.includes("Great, authorization is complete"),
@@ -142,6 +142,9 @@ function checkSkill({ packageRoot, failures }) {
 
   for (const banned of BANNED_PLUGIN_STRINGS) {
     assert(!source.includes(banned), failures, `${skillFile} must not reference plugin install path: ${banned}`);
+  }
+  for (const banned of BANNED_AUTH_LINK_STRINGS) {
+    assert(!source.includes(banned), failures, `${skillFile} must not include handwritten authorization link template text: ${banned}`);
   }
 
   if (!frontmatter) {
@@ -190,9 +193,8 @@ function checkReference({ packageRoot, failures }) {
     "auth_required",
     "assistant_hint.message",
     "auth login --start-only --no-browser-open",
-    'reply "OK" or "done"',
+    "authorization instructions returned by the CLI",
     "auth login --no-browser-open",
-    "Before we start, please complete authorization here",
     "Great, authorization is complete",
     "call plan",
     "call run",
@@ -212,6 +214,9 @@ function checkReference({ packageRoot, failures }) {
 
   for (const banned of BANNED_PLUGIN_STRINGS) {
     assert(!source.includes(banned), failures, `${referenceFile} must not reference plugin install path: ${banned}`);
+  }
+  for (const banned of BANNED_AUTH_LINK_STRINGS) {
+    assert(!source.includes(banned), failures, `${referenceFile} must not include handwritten authorization link template text: ${banned}`);
   }
 }
 

@@ -86,14 +86,16 @@ uncertain, when auth fails, or when the user asks to verify Call-E setup:
 2. Run `auth status`.
 3. If `auth status` reports `usable: false`, do not continue to call planning
    or `mcp tools` yet. Run `auth login --start-only --no-browser-open` to
-   create or reuse a brokered login session without waiting for browser
-   authorization inside the current OpenClaw turn.
-4. Show the first authorization help using `assistant_hint.message` when it is
-   present; otherwise use the template below with the returned `login_url`.
-   Tell the user to complete authorization in the browser, then come back to
-   this chat and reply "OK" or "done". Stop the current workflow after showing
-   the authorization message.
-5. When the user comes back after browser authorization, run
+   create or reuse a brokered login session and return CLI-provided
+   authorization instructions without opening a browser inside the current
+   OpenClaw turn.
+4. Show the CLI-provided `assistant_hint.message` when it is present. If it is
+   absent, tell the user that authentication is required, ask them to follow
+   the authorization instructions returned by the CLI, and stop the current
+   workflow until they confirm authorization is complete. Do not invent or
+   rewrite authorization URLs, and never ask for credentials, secrets, or
+   tokens.
+5. When the user confirms browser authorization is complete, run
    `auth login --no-browser-open` to poll the existing pending login, exchange
    the authorized session, and write the local token cache.
 6. If the successful `auth login --no-browser-open` JSON included
@@ -106,20 +108,6 @@ uncertain, when auth fails, or when the user asks to verify Call-E setup:
 
 Setup verification must not place a real phone call. Use only help, auth, and
 tool-listing commands until the user asks for a call workflow.
-
-First authorization help template:
-
-```text
-Hi, I'm CALL-E 👋
-
-I can help you make phone calls, ask for information, and handle phone-related tasks. I'll also keep you updated on the call status, what was discussed, and the key points.
-Before we officially begin, I'll send you the call goal for confirmation.
-
-Before we start, please complete authorization here:
-<login_url>
-
-Once you're done, come back to this chat and reply "OK" or "done".
-```
 
 Post-authorization success template:
 
