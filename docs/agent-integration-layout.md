@@ -73,6 +73,19 @@ intentionally exposes multiple Call-E marketplaces in the same client UI.
 
 Codex public install example:
 
+This command is the official Codex plugin install path and requires
+`codex-cli >= 0.122.0`. Users pinned to older Codex releases should upgrade
+when possible; if they cannot, they may manually add the sparse payload from the
+same release tag:
+
+```text
+.agents/plugins/marketplace.json
+packages/codex-plugin/plugin/
+```
+
+Keep those paths exactly as shown so the marketplace entry can resolve
+`./packages/codex-plugin/plugin`.
+
 ```bash
 codex plugin marketplace add CALLE-AI/call-e-integrations \
   --ref '@call-e/codex-plugin@0.1.4' \
