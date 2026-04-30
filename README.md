@@ -99,11 +99,11 @@ Check your version with `codex --version`; older Codex releases are outside the
 primary support path for this command.
 
 Then add the Codex marketplace from this repository. Replace
-`@call-e/codex-plugin@0.1.4` with the package release tag you want to install.
+`@call-e/codex-plugin@0.1.5` with the package release tag you want to install.
 
 ```bash
 codex plugin marketplace add CALLE-AI/call-e-integrations \
-  --ref '@call-e/codex-plugin@0.1.4' \
+  --ref '@call-e/codex-plugin@0.1.5' \
   --sparse .agents/plugins \
   --sparse packages/codex-plugin/plugin
 ```
