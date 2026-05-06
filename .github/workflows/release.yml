@@ -35,6 +35,34 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org/
 
+      - name: Initialize Codex latest ref
+        run: |
+          latest_ref="@call-e/codex-plugin@latest"
+
+          if git ls-remote --exit-code --tags origin "$latest_ref" >/dev/null 2>&1; then
+            echo "${latest_ref} already exists."
+            exit 0
+          fi
+
+          codex_version=$(node --input-type=module <<'EOF'
+          import fs from "node:fs";
+
+          const packageJson = JSON.parse(fs.readFileSync("packages/codex-plugin/package.json", "utf8"));
+          console.log(packageJson.version);
+          EOF
+          )
+          release_ref="@call-e/codex-plugin@${codex_version}"
+
+          if ! release_commit=$(git rev-parse --verify --quiet "${release_ref}^{}"); then
+            echo "No local ${release_ref} tag found; leaving ${latest_ref} uninitialized."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$latest_ref" "$release_commit"
+          git push origin "refs/tags/${latest_ref}"
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -61,6 +89,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create release PR or publish
+        id: changesets
         uses: changesets/action@v1
         with:
           version: pnpm run version-packages
@@ -71,3 +100,34 @@ jobs:
           GITHUB_TOKEN: ${{ env.RELEASE_GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Update Codex latest ref
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
+        run: |
+          latest_ref="@call-e/codex-plugin@latest"
+
+          should_update=$(node --input-type=module <<'EOF'
+          const packages = JSON.parse(process.env.PUBLISHED_PACKAGES || "[]");
+          const codexPlugin = packages.find((pkg) => pkg.name === "@call-e/codex-plugin");
+
+          if (!codexPlugin) {
+            console.error("No @call-e/codex-plugin package was published; leaving @call-e/codex-plugin@latest unchanged.");
+            console.log("false");
+            process.exit(0);
+          }
+
+          console.error(`Updating @call-e/codex-plugin@latest for @call-e/codex-plugin@${codexPlugin.version}.`);
+          console.log("true");
+          EOF
+          )
+
+          if [ "$should_update" != "true" ]; then
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f "$latest_ref" "$GITHUB_SHA"
+          git push origin "refs/tags/${latest_ref}" --force

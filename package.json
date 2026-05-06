@@ -8,8 +8,10 @@
   },
   "scripts": {
     "test": "pnpm -r --filter \"./packages/*\" run test",
-    "check": "pnpm run check:versions && pnpm -r --filter \"./packages/*\" run check",
+    "check": "pnpm run check:branch-name && pnpm run check:versions && pnpm -r --filter \"./packages/*\" run check",
+    "check:branch-name": "node ./scripts/check-branch-name.mjs",
     "check:versions": "node ./scripts/check-manifest-versions.mjs && node ./scripts/sync-install-doc-versions.mjs --check",
+    "branch:create": "node ./scripts/create-branch.mjs",
     "pack:skill": "node ./scripts/pack-skills.mjs",
     "pack:skill:calle": "node ./scripts/pack-skills.mjs calle",
     "pack:dry-run": "pnpm -r --filter \"./packages/*\" run pack:dry-run",

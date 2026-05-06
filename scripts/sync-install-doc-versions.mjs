@@ -5,10 +5,9 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const checkOnly = process.argv.includes("--check");
 
-const versionedFiles = [
+const syncedInstallFiles = [
   "README.md",
   "docs/agent-integration-layout.md",
-  "docs/git-naming-conventions.md",
   "packages/codex-plugin/README.md",
   "packages/codex-plugin/plugin/README.md",
   "packages/codex-plugin/plugin/skills/calle/SKILL.md",
@@ -17,6 +16,15 @@ const versionedFiles = [
   "packages/openclaw-cli-skill/skills/phone-call-calle/SKILL.md",
   "packages/openclaw-cli-skill/skills/phone-call-calle/references/commands.md",
 ];
+
+const codexLatestInstallFiles = new Set([
+  "README.md",
+  "docs/agent-integration-layout.md",
+  "packages/codex-plugin/README.md",
+  "packages/codex-plugin/plugin/README.md",
+]);
+
+const codexLatestInstallRef = "--ref '@call-e/codex-plugin@latest'";
 
 const codexIntegrationFiles = new Set([
   "packages/codex-plugin/plugin/skills/calle/SKILL.md",
@@ -36,17 +44,6 @@ function readPackageVersion(packagePath) {
 }
 
 const replacements = [
-  {
-    label: "Codex marketplace --ref",
-    pattern: /(?<=--ref ')@call-e\/codex-plugin@\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?=')/g,
-    value: `@call-e/codex-plugin@${readPackageVersion("packages/codex-plugin")}`,
-  },
-  {
-    label: "Codex plugin install docs release tag",
-    pattern:
-      /`@call-e\/codex-plugin@\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?`(?= with the package release tag)/g,
-    value: `\`@call-e/codex-plugin@${readPackageVersion("packages/codex-plugin")}\``,
-  },
   {
     label: "npx CLI fallback",
     pattern: /npx -y @call-e\/cli@\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
@@ -71,11 +68,12 @@ const openclawCliSkillIntegrationReplacements = [
 ];
 
 const staleFiles = [];
+const validationFailures = [];
 
-for (const relativePath of versionedFiles) {
+for (const relativePath of syncedInstallFiles) {
   const filePath = path.join(repoRoot, relativePath);
   if (!fs.existsSync(filePath)) {
-    throw new Error(`Missing versioned install doc: ${relativePath}`);
+    throw new Error(`Missing synced install doc: ${relativePath}`);
   }
 
   const source = fs.readFileSync(filePath, "utf8");
@@ -95,6 +93,16 @@ for (const relativePath of versionedFiles) {
     nextSource = nextSource.replace(replacement.pattern, replacement.value);
   }
 
+  if (codexLatestInstallFiles.has(relativePath)) {
+    if (!nextSource.includes(codexLatestInstallRef)) {
+      validationFailures.push(`${relativePath} must install the Codex plugin with ${codexLatestInstallRef}.`);
+    }
+
+    if (/--ref\s+['"]?@call-e\/codex-plugin@\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?['"]?/u.test(nextSource)) {
+      validationFailures.push(`${relativePath} must not use a version-pinned Codex install ref by default.`);
+    }
+  }
+
   if (nextSource === source) {
     continue;
   }
@@ -108,14 +116,23 @@ for (const relativePath of versionedFiles) {
 
 if (staleFiles.length > 0) {
   for (const relativePath of staleFiles) {
-    console.error(`${relativePath} has stale versioned install command references.`);
+    console.error(`${relativePath} has stale install command references.`);
   }
   console.error("Run `node ./scripts/sync-install-doc-versions.mjs` to update them.");
+}
+
+if (validationFailures.length > 0) {
+  for (const failure of validationFailures) {
+    console.error(failure);
+  }
+}
+
+if (staleFiles.length > 0 || validationFailures.length > 0) {
   process.exit(1);
 }
 
 console.log(
   checkOnly
-    ? "Versioned install command references are in sync."
-    : "Versioned install command references have been synced.",
+    ? "Install command references are in sync."
+    : "Install command references have been synced.",
 );
