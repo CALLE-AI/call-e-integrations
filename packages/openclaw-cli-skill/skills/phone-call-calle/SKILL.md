@@ -207,3 +207,9 @@ login, and then retry the original operation after login completes.
 
 Use `references/commands.md` for exact command examples, supported options, and
 JSON handling rules.
+
+## Community
+
+For installation help, rollout updates, and feedback:
+
+- Discord: https://discord.gg/6AbXUzUV8w
