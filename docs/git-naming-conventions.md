@@ -41,6 +41,29 @@ docs/git-naming-conventions
 ci/release-workflow-token-check
 ```
 
+Before creating a branch, validate the candidate locally:
+
+```bash
+pnpm run check:branch-name -- --branch feat/codex-plugin-latest-ref
+```
+
+Or create it through the repository helper, which validates the name, checks
+for an existing local or fetched `origin` branch, then runs `git switch -c`:
+
+```bash
+pnpm run branch:create -- feat/codex-plugin-latest-ref
+```
+
+To enable the repository pre-push hook for this clone, run:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+When `pnpm run check:branch-name` discovers the current branch automatically, it
+skips long-lived branches such as `main` and the Changesets-generated release
+branch. Explicit candidates passed with `--branch` are always validated.
+
 Not recommended:
 
 ```text
@@ -155,14 +178,19 @@ Recommended examples:
 @call-e/codex-plugin@0.2.0-rc.1
 ```
 
-When referencing package-level tags that contain `@` and `/` in installation commands or scripts, prefer an explicit quoted `--ref`, for example:
+When intentionally pinning a Codex marketplace install to a package-level tag
+that contains `@` and `/`, prefer an explicit quoted `--ref`, for example:
 
 ```bash
 codex plugin marketplace add CALLE-AI/call-e-integrations \
-  --ref '@call-e/codex-plugin@0.1.6' \
+  --ref '<package release tag>' \
   --sparse .agents/plugins \
   --sparse packages/codex-plugin/plugin
 ```
+
+The release workflow also maintains `@call-e/codex-plugin@latest` as a mutable
+tag for the latest released Codex plugin. Treat it as an install alias, not an
+immutable release tag.
 
 Use repository-level version tags only when the entire repository uses one unified version and the tag represents a repository-level release:
 
