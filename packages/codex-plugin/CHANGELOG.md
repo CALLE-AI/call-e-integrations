@@ -1,5 +1,12 @@
 # @call-e/codex-plugin
 
+## 0.1.7
+
+### Patch Changes
+
+- [#18](https://github.com/CALLE-AI/call-e-integrations/pull/18) [`de30ea6`](https://github.com/CALLE-AI/call-e-integrations/commit/de30ea6039c415a4c9b6511753a6de57381d041a) Thanks [@Ray-56](https://github.com/Ray-56)! - Document latest Codex marketplace installation through the release-managed
+  `@call-e/codex-plugin@latest` Git ref.
+
 ## 0.1.6
 
 ### Patch Changes
