@@ -14,12 +14,12 @@ codex --version
 
 You do not need to install the shared CLI globally before installing the plugin.
 The plugin uses the repository-local CLI when available, then a global `calle`
-command when available, then falls back to `npx -y @call-e/cli@0.3.1`.
+command when available, then falls back to `npx -y @call-e/cli@0.3.2`.
 
 To authenticate before installing or using the plugin:
 
 ```bash
-npx -y @call-e/cli@0.3.1 auth login
+npx -y @call-e/cli@0.3.2 auth login
 ```
 
 ## Install

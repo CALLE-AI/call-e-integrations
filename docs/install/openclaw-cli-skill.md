@@ -13,13 +13,13 @@ The skill uses the repository-local CLI when available, then a global `calle`
 command when available, then falls back to:
 
 ```bash
-npx -y @call-e/cli@0.3.1
+npx -y @call-e/cli@0.3.2
 ```
 
 To authenticate before using the skill:
 
 ```bash
-npx -y @call-e/cli@0.3.1 auth login
+npx -y @call-e/cli@0.3.2 auth login
 ```
 
 ## Local Development

@@ -1,5 +1,12 @@
 # @call-e/codex-plugin
 
+## 0.1.8
+
+### Patch Changes
+
+- [#21](https://github.com/CALLE-AI/call-e-integrations/pull/21) [`bf8b95d`](https://github.com/CALLE-AI/call-e-integrations/commit/bf8b95d0c05addc1301c290aa048836890df8f73) Thanks [@Ray-56](https://github.com/Ray-56)! - Document the current CLI and Codex plugin install paths, link package READMEs to
+  the shared install docs, and add MCP client examples.
+
 ## 0.1.7
 
 ### Patch Changes
