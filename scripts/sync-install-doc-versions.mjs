@@ -7,6 +7,9 @@ const checkOnly = process.argv.includes("--check");
 
 const syncedInstallFiles = [
   "README.md",
+  "docs/install/cli.md",
+  "docs/install/codex-plugin.md",
+  "docs/install/openclaw-cli-skill.md",
   "docs/agent-integration-layout.md",
   "packages/codex-plugin/README.md",
   "packages/codex-plugin/plugin/README.md",
@@ -18,9 +21,8 @@ const syncedInstallFiles = [
 ];
 
 const codexLatestInstallFiles = new Set([
-  "README.md",
+  "docs/install/codex-plugin.md",
   "docs/agent-integration-layout.md",
-  "packages/codex-plugin/README.md",
   "packages/codex-plugin/plugin/README.md",
 ]);
 

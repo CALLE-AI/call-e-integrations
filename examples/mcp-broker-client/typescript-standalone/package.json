@@ -1,0 +1,16 @@
+{
+  "name": "calle-mcp-broker-client-example-ts-standalone",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/client.ts",
+    "check": "tsc --noEmit",
+    "test:e2e": "tsx --test test/e2e.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.0"
+  }
+}

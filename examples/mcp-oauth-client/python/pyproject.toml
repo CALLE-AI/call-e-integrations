@@ -1,0 +1,14 @@
+[project]
+name = "calle-mcp-oauth-client-example-python"
+version = "0.0.0"
+description = "Minimal standard MCP OAuth client example for CALL-E."
+requires-python = ">=3.10"
+dependencies = [
+  "httpx>=0.28.1",
+  "mcp>=1.27.0",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=9.0.0",
+]

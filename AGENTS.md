@@ -22,9 +22,9 @@ CALL-E Integrations is a multi-ecosystem agent integration monorepo.
 
 ## Project-Local Skills
 
-- `skills/calle`: local CALL-E OpenClaw skill packaging source.
 - `skills/github-ci-triage`: project-local skill for inspecting and diagnosing
   GitHub Actions CI, release, deploy, and workflow failures.
+  Productized OpenClaw skill source lives in `packages/openclaw-cli-skill/skills`.
 
 ## Repository Conventions
 
@@ -35,8 +35,8 @@ CALL-E Integrations is a multi-ecosystem agent integration monorepo.
 - Before creating a new branch, validate the candidate with
   `pnpm run check:branch-name -- --branch <type>/<short-kebab-summary>` or
   create it through `pnpm run branch:create -- <type>/<short-kebab-summary>`.
-- Keep user-facing installation steps in the root `README.md` and package
-  `README.md` files.
+- Keep user-facing installation steps in `docs/install/`, with root and package
+  `README.md` files linking to the relevant install guide.
 - Before changing marketplace entry points, plugin names, visible labels, or
   install commands, read and follow
   [docs/agent-integration-layout.md](./docs/agent-integration-layout.md).

@@ -22,13 +22,12 @@ packages/cli/
 Current OpenClaw layout:
 
 ```text
-packages/openclaw-plugin/
 packages/openclaw-cli-skill/skills/
 skills/
 ```
 
-Use `packages/openclaw-cli-skill/skills/` for the CLI-based OpenClaw skill
-source. Root `skills/` remains available for repository-local skills and should
+Use `packages/openclaw-cli-skill/skills/` for the OpenClaw CALL-E skill source.
+Root `skills/` remains available for repository-local helper skills and should
 not be the default place for new productized client-specific skill packages.
 
 ## Marketplace Naming Rules
