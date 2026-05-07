@@ -9,6 +9,7 @@
   "scripts": {
     "test": "pnpm -r --filter \"./packages/*\" run test",
     "check": "pnpm run check:branch-name && pnpm run check:versions && pnpm -r --filter \"./packages/*\" run check",
+    "check:examples": "node ./scripts/check-examples.mjs",
     "check:branch-name": "node ./scripts/check-branch-name.mjs",
     "check:versions": "node ./scripts/check-manifest-versions.mjs && node ./scripts/sync-install-doc-versions.mjs --check",
     "branch:create": "node ./scripts/create-branch.mjs",
@@ -21,7 +22,12 @@
     "release": "pnpm run version-packages"
   },
   "devDependencies": {
+    "@call-e/core": "workspace:^",
     "@changesets/changelog-github": "^0.6.0",
-    "@changesets/cli": "^2.30.0"
+    "@changesets/cli": "^2.30.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@types/node": "^22.19.17",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   }
 }

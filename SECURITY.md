@@ -1,8 +1,9 @@
 # Security Policy
 
-## Supported Package
+## Supported Packages
 
-Security fixes are provided for the latest published version of `@call-e/openagent`.
+Security fixes are provided for the latest published versions of maintained
+`@call-e/*` packages in this repository.
 
 ## Reporting A Vulnerability
 

@@ -150,5 +150,5 @@ Expected results:
 ## Compatibility notes
 
 - `calle` defaults to `openagent_oauth` and `/mcp/openagent_oauth`.
-- The existing OpenClaw plugin still defaults to `openagent_auth` and `/mcp/openagent_auth`.
+- OpenClaw support in this repository is provided through the CLI skill, which uses the same `calle` CLI defaults.
 - The `calle` CLI is not an OAuth server and not an MCP server; it is a local CLI wrapper over the existing broker API and MCP HTTP endpoint.

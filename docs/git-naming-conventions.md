@@ -5,10 +5,10 @@ This document defines the recommended formats for common Git names in this repos
 ## General Rules
 
 - Prefer English, ASCII, lowercase letters, numbers, and hyphens.
-- Use kebab-case for multiple words, for example `openagent-oauth-flow`.
+- Use kebab-case for multiple words, for example `cli-oauth-flow`.
 - Names should describe intent. Do not use only `new`, `update`, `wip`, `temp`, or `final`.
 - Avoid spaces, underscores, mixed case, special characters, and personal names.
-- When an existing package name or directory name can express the scope, prefer the existing name, for example `cli`, `codex-plugin`, `openclaw-plugin`, or `docs`.
+- When an existing package name or directory name can express the scope, prefer the existing name, for example `cli`, `codex-plugin`, `openclaw-cli-skill`, or `docs`.
 
 ## Branch Names
 
@@ -35,7 +35,7 @@ Common `type` values:
 Recommended examples:
 
 ```text
-feat/openagent-oauth-standardization
+feat/cli-oauth-standardization
 fix/codex-plugin-version-sync
 docs/git-naming-conventions
 ci/release-workflow-token-check
@@ -105,7 +105,7 @@ Recommended `scope` values:
 
 - `cli`
 - `codex-plugin`
-- `openclaw-plugin`
+- `openclaw-cli-skill`
 - `docs`
 - `release`
 - `deps`
@@ -113,7 +113,7 @@ Recommended `scope` values:
 Recommended examples:
 
 ```text
-feat(openclaw-plugin): add brokered oauth session exchange
+feat(openclaw-cli-skill): add phone call command guidance
 fix(codex-plugin): sync manifest version during release
 docs: add git naming conventions
 ci(release): verify npm scope access before publish
@@ -147,7 +147,7 @@ Recommended examples:
 
 ```text
 docs: add git naming conventions
-fix(openclaw-plugin): refresh auth after protected mcp failure
+fix(openclaw-cli-skill): clarify auth recovery steps
 ci(release): harden package publish workflow
 ```
 
@@ -174,7 +174,7 @@ Recommended examples:
 ```text
 @call-e/cli@0.1.0
 @call-e/codex-plugin@0.1.0
-@call-e/openagent@0.1.0
+@call-e/openclaw-cli-skill@0.1.0
 @call-e/codex-plugin@0.2.0-rc.1
 ```
 
@@ -241,7 +241,7 @@ Recommended examples:
 
 ```bash
 git stash push -m "docs: draft git naming conventions"
-git stash push -m "fix(openclaw-plugin): inspect auth retry state"
+git stash push -m "fix(openclaw-cli-skill): inspect auth retry guidance"
 ```
 
 Avoid undocumented stashes, because it becomes hard to decide later whether they can still be restored or deleted.

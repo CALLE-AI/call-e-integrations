@@ -1,0 +1,19 @@
+{
+  "name": "calle-mcp-oauth-client-example-ts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/client.ts",
+    "check": "tsc --noEmit",
+    "test:e2e": "tsx --test test/e2e.test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.0"
+  }
+}
