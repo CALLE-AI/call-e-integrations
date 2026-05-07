@@ -455,7 +455,7 @@ async function main() {
   pollTimeoutSeconds = parsePositiveIntegerEnv("CALLE_CLI_LIVE_POLL_TIMEOUT_SECONDS", 600);
   acceptedTerminalStatuses = acceptedStatuses();
 
-  log("Starting Calle CLI live E2E.");
+  log("Starting CALL-E CLI live E2E.");
   log(`Base URL: ${baseUrl}`);
   log(`Cache root: ${cacheRoot}`);
   log(`Marker: ${LIVE_MARKER}`);

@@ -1,4 +1,4 @@
-# Call-E CLI commands
+# CALL-E CLI commands
 
 Use the first command form that is available in the current workspace.
 

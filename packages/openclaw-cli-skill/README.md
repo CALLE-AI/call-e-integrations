@@ -1,7 +1,7 @@
 # @call-e/openclaw-cli-skill
 
 Make real outbound phone calls, run planned calls, and check call status in
-OpenClaw with Call-E through the `calle` CLI. New users get 20 free calls to
+OpenClaw with CALL-E through the `calle` CLI. New users get 20 free calls to
 get started.
 
 This package is separate from the self-contained OpenClaw plugin package. It
@@ -33,7 +33,7 @@ pnpm --filter @call-e/openclaw-cli-skill pack:dry-run
 ## OpenClaw use
 
 For local development from a clone, point OpenClaw skill loading at this
-package's `skills/` directory, or install the `Phone Call - Call-E` skill from
+package's `skills/` directory, or install the `Phone Call - CALL-E` skill from
 the `phone-call-calle` source directory through the normal skill distribution
 flow once published.
 
@@ -48,6 +48,6 @@ npx -y @call-e/cli@0.3.1 auth login
 
 ## Safety
 
-Call-E can place real phone calls. The skill always plans first, uses returned
+CALL-E can place real phone calls. The skill always plans first, uses returned
 credentials exactly as provided, and does not place a call unless the user
 clearly intends to do so.

@@ -41,7 +41,7 @@
 
 ### Patch Changes
 
-- [`23b69e8`](https://github.com/CALLE-AI/call-e-integrations/commit/23b69e8a67c1d5e8376bc81345df4a4f006c57f0) Thanks [@Ray-56](https://github.com/Ray-56)! - Allow the bundled Calle skill to fall back to `npx -y @call-e/cli@0.1.0` when no repository-local or global CLI is available.
+- [`23b69e8`](https://github.com/CALLE-AI/call-e-integrations/commit/23b69e8a67c1d5e8376bc81345df4a4f006c57f0) Thanks [@Ray-56](https://github.com/Ray-56)! - Allow the bundled CALL-E skill to fall back to `npx -y @call-e/cli@0.1.0` when no repository-local or global CLI is available.
 
 ## 0.1.0
 

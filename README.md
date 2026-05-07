@@ -1,6 +1,6 @@
-# Call-E Integrations
+# CALL-E Integrations
 
-Call-E Integrations is a public monorepo for shipping cross-platform agent integrations.
+CALL-E Integrations is a public monorepo for shipping cross-platform agent integrations.
 
 ## Packages
 
@@ -20,8 +20,8 @@ root and client-specific implementations under `packages/`.
 
 ```text
 .agents/plugins/marketplace.json          # Codex marketplace entry
-packages/codex-plugin/plugin/             # Calle for Codex
-packages/openclaw-cli-skill/skills/        # Calle CLI skill for OpenClaw
+packages/codex-plugin/plugin/             # CALL-E for Codex
+packages/openclaw-cli-skill/skills/        # CALL-E CLI skill for OpenClaw
 packages/cli/                             # Shared calle CLI
 packages/openclaw-plugin/                 # OpenClaw plugin
 skills/                                   # Repository-local skill source
@@ -59,7 +59,7 @@ pnpm --filter @call-e/openclaw-cli-skill check
 
 ## Telemetry / Usage Data
 
-The `calle` CLI sends best-effort usage telemetry to Call-E to diagnose installation, authentication, MCP tool availability, and early usage drop-off before a first `plan_call` reaches the server.
+The `calle` CLI sends best-effort usage telemetry to CALL-E to diagnose installation, authentication, MCP tool availability, and early usage drop-off before a first `plan_call` reaches the server.
 
 CLI telemetry includes an anonymous installation ID, CLI version, integration source such as `cli/cli/<version>` or `codex/codex_plugin/<version>`, command stage, outcome, error type, and server host/hash. It does not include phone numbers, call goals, OAuth tokens, broker login URLs, full argument JSON, transcripts, or contact data.
 
@@ -111,8 +111,8 @@ codex plugin marketplace add CALLE-AI/call-e-integrations \
 `@call-e/codex-plugin` publishes. For a reproducible install, replace it with a
 package-level release tag such as `@call-e/codex-plugin@<version>`.
 
-Open Codex, run `/plugins`, choose the `Call-E` marketplace, and
-install `Calle`.
+Open Codex, run `/plugins`, choose the `CALL-E` marketplace, and
+install `CALL-E`.
 
 If you are pinned to a Codex CLI older than `0.122.0` and cannot use
 `codex plugin marketplace add`, upgrade Codex when possible. As a manual
@@ -142,7 +142,7 @@ command when available, then falls back to `npx -y @call-e/cli@0.3.1`.
 
 For local development from a clone, point OpenClaw skill loading at
 `packages/openclaw-cli-skill/skills`, then start a new OpenClaw session and use
-the `Phone Call - Call-E` skill.
+the `Phone Call - CALL-E` skill.
 
 Validate the package with:
 

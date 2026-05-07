@@ -40,7 +40,7 @@ For Codex:
 
 - `.agents/plugins/marketplace.json` is the Codex marketplace entry point.
 - The marketplace `name` must stay `call-e-codex`.
-- The marketplace `interface.displayName` must stay `Call-E`.
+- The marketplace `interface.displayName` must stay `CALL-E`.
 - The Codex plugin entry name must stay `calle`.
 - The Codex plugin source path must stay `./packages/codex-plugin/plugin`.
 
@@ -53,10 +53,10 @@ call-e-copilot
 call-e-gemini
 ```
 
-Prefer the user-visible marketplace display name `Call-E` when public install
+Prefer the user-visible marketplace display name `CALL-E` when public install
 instructions use sparse checkout and expose only one ecosystem entry point. Add
 an ecosystem suffix to `interface.displayName` only when a single install path
-intentionally exposes multiple Call-E marketplaces in the same client UI.
+intentionally exposes multiple CALL-E marketplaces in the same client UI.
 
 ## Cross-Ecosystem Rules
 

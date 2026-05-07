@@ -36,8 +36,8 @@ codex plugin marketplace add CALLE-AI/call-e-integrations \
 `@call-e/codex-plugin` publishes. For a reproducible install, replace it with a
 package-level release tag such as `@call-e/codex-plugin@<version>`.
 
-Open Codex, run `/plugins`, choose the `Call-E` marketplace, and
-install `Calle`.
+Open Codex, run `/plugins`, choose the `CALL-E` marketplace, and
+install `CALL-E`.
 
 If you are pinned to a Codex CLI older than `0.122.0` and cannot use
 `codex plugin marketplace add`, upgrade Codex when possible. As a manual
@@ -62,8 +62,8 @@ pnpm --filter @call-e/codex-plugin test
 pnpm --filter @call-e/codex-plugin pack:dry-run
 ```
 
-Restart Codex from this repository, open `/plugins`, choose the `Call-E`
-marketplace, and install `Calle`.
+Restart Codex from this repository, open `/plugins`, choose the `CALL-E`
+marketplace, and install `CALL-E`.
 
 After installing the plugin, use:
 
@@ -71,7 +71,7 @@ After installing the plugin, use:
 $calle
 ```
 
-to let Codex handle Call-E setup checks, authentication recovery, call
+to let Codex handle CALL-E setup checks, authentication recovery, call
 planning, automatic call execution after planning completes, and call status
 checks.
 
@@ -82,7 +82,7 @@ completes.
 
 ## Telemetry / Usage Data
 
-When Codex runs the bundled Call-E skill, the skill invokes the shared `calle` CLI with source attribution environment variables so local telemetry and service-side call data can be grouped as `codex/codex_plugin/<version>`.
+When Codex runs the bundled CALL-E skill, the skill invokes the shared `calle` CLI with source attribution environment variables so local telemetry and service-side call data can be grouped as `codex/codex_plugin/<version>`.
 
 CLI telemetry is best-effort and is used to diagnose installation, authentication, MCP tool availability, and drop-off before a first `plan_call` reaches the server. It includes an anonymous installation ID, CLI version, integration source, command stage, outcome, error type, and server host/hash. It does not include phone numbers, call goals, OAuth tokens, broker login URLs, full argument JSON, transcripts, or contact data.
 

@@ -7,7 +7,7 @@ import {
 } from "./constants.js";
 
 export class AuthRequiredError extends Error {
-  constructor(message = "A usable Calle auth token is required.") {
+  constructor(message = "A usable CALL-E auth token is required.") {
     super(message);
     this.name = "AuthRequiredError";
   }
