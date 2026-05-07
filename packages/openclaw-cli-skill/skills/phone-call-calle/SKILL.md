@@ -1,13 +1,13 @@
 ---
-name: Phone Call - Call-E
+name: Phone Call - CALL-E
 description: New users get 20 free calls to get started. Make real outbound phone calls, run planned calls, and check call status in OpenClaw.
 license: MIT-0
-metadata: {"openclaw":{"requires":{"bins":["node"],"anyBins":["calle","npx"]},"install":[{"id":"call-e-cli","kind":"node","package":"@call-e/cli","bins":["calle"],"label":"Install Call-E CLI"}],"homepage":"https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/openclaw-cli-skill"}}
+metadata: {"openclaw":{"requires":{"bins":["node"],"anyBins":["calle","npx"]},"install":[{"id":"call-e-cli","kind":"node","package":"@call-e/cli","bins":["calle"],"label":"Install CALL-E CLI"}],"homepage":"https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/openclaw-cli-skill"}}
 ---
 
-# Phone Call - Call-E
+# Phone Call - CALL-E
 
-Make real outbound phone calls, continue active calls, and check call status with Call-E for OpenClaw.
+Make real outbound phone calls, continue active calls, and check call status with CALL-E for OpenClaw.
 
 Use this skill when the user wants to call a phone number, make a phone call,
 place an outbound call, follow up by phone, call a business, call a customer,
@@ -17,10 +17,10 @@ or check the status, summary, details, and transcript of a call.
 
 Use this skill for:
 
-- verifying Call-E setup in OpenClaw
+- verifying CALL-E setup in OpenClaw
 - checking whether the `calle` CLI is available
-- recovering from missing or expired Call-E authentication
-- listing available Call-E MCP tools through the CLI
+- recovering from missing or expired CALL-E authentication
+- listing available CALL-E MCP tools through the CLI
 - making a phone call or placing an outbound call
 - planning a phone call before execution
 - running a planned call after planning returns complete run credentials
@@ -29,7 +29,7 @@ Use this skill for:
   a terminal status
 
 Do not use this skill when the user only wants a call script, roleplay,
-simulated conversation, or general contact lookup that does not require Call-E.
+simulated conversation, or general contact lookup that does not require CALL-E.
 
 ## Safety and consent
 
@@ -45,7 +45,7 @@ simulated conversation, or general contact lookup that does not require Call-E.
 
 ## CLI selection
 
-All CLI commands run from this skill must include the Call-E integration
+All CLI commands run from this skill must include the CALL-E integration
 attribution environment:
 
 ```bash
@@ -79,8 +79,8 @@ command.
 ## Readiness flow
 
 Use this flow whenever this OpenClaw CLI skill is actively invoked for a
-Call-E request. Run it before call planning, before tool listing, when setup is
-uncertain, when auth fails, or when the user asks to verify Call-E setup:
+CALL-E request. Run it before call planning, before tool listing, when setup is
+uncertain, when auth fails, or when the user asks to verify CALL-E setup:
 
 1. Check CLI availability with `--help`.
 2. Run `auth status`.

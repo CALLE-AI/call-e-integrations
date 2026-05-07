@@ -96,7 +96,7 @@ Common options:
 
 ## Telemetry / Usage Data
 
-The CLI sends best-effort usage telemetry to the configured Call-E service at `<base-url>/api/ui-telemetry/track` to help diagnose installation, authentication, MCP tool availability, and drop-off before a first `plan_call` reaches the server.
+The CLI sends best-effort usage telemetry to the configured CALL-E service at `<base-url>/api/ui-telemetry/track` to help diagnose installation, authentication, MCP tool availability, and drop-off before a first `plan_call` reaches the server.
 
 Collected fields include an anonymous installation ID stored under the CLI cache root, CLI version, integration source, command stage, outcome, error type, and server host/hash. The payload does not include phone numbers, call goals, OAuth tokens, broker login URLs, full argument JSON, transcripts, or contact data.
 

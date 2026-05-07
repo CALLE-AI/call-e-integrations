@@ -236,6 +236,6 @@ test("OPENCLAW_CALL_PROGRESS_GUIDANCE forbids exec fallback when calle tools are
   );
   assert.match(
     OPENCLAW_CALL_PROGRESS_GUIDANCE,
-    /do not delegate Call-E call execution or polling to a subagent/i
+    /do not delegate CALL-E call execution or polling to a subagent/i
   );
 });

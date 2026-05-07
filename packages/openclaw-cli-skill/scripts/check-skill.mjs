@@ -8,7 +8,7 @@ const DEFAULT_REPO_ROOT = path.resolve(DEFAULT_PACKAGE_ROOT, "../..");
 
 const EXPECTED_PACKAGE_NAME = "@call-e/openclaw-cli-skill";
 const EXPECTED_SKILL_DIR = "phone-call-calle";
-const EXPECTED_SKILL_NAME = "Phone Call - Call-E";
+const EXPECTED_SKILL_NAME = "Phone Call - CALL-E";
 const BANNED_PLUGIN_STRINGS = [
   ["openclaw", "plugins", "install"].join(" "),
   ["openclaw-setup", "sh"].join("."),
@@ -257,7 +257,7 @@ function main() {
     process.exit(1);
   }
 
-  console.log("Call-E OpenClaw CLI skill metadata is valid.");
+  console.log("CALL-E OpenClaw CLI skill metadata is valid.");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

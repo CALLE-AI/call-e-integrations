@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Call-E Integrations is a multi-ecosystem agent integration monorepo.
+CALL-E Integrations is a multi-ecosystem agent integration monorepo.
 
 - Shared local CLI capability lives in `packages/cli`.
 - Client-specific integrations live under `packages/`.
@@ -22,7 +22,7 @@ Call-E Integrations is a multi-ecosystem agent integration monorepo.
 
 ## Project-Local Skills
 
-- `skills/calle`: local Call-E OpenClaw skill packaging source.
+- `skills/calle`: local CALL-E OpenClaw skill packaging source.
 - `skills/github-ci-triage`: project-local skill for inspecting and diagnosing
   GitHub Actions CI, release, deploy, and workflow failures.
 

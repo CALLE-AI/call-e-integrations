@@ -393,7 +393,7 @@ function callStatusCommand(config, runId) {
     .join(" ");
 }
 
-function authRequiredPayload(config, message = "A usable Calle auth token is required.") {
+function authRequiredPayload(config, message = "A usable CALL-E auth token is required.") {
   const pendingDocument = readJson(pendingCachePath(config.cacheRoot, config.serverUrl));
   const loginUrl = typeof pendingDocument?.login_url === "string" ? pendingDocument.login_url : null;
   const assistantHint = preAuthAssistantHint(loginUrl);

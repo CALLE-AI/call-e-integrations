@@ -1,6 +1,6 @@
-# Calle for Codex
+# CALL-E for Codex
 
-Use Call-E from Codex through the `calle` CLI.
+Use CALL-E from Codex through the `calle` CLI.
 
 This plugin provides the `$calle` skill for setup checks, authentication
 recovery, phone call planning, planned call execution, and call status checks.
@@ -13,7 +13,7 @@ The official marketplace install command requires `codex-cli >= 0.122.0`.
 Check your version with `codex --version`; older Codex releases are outside the
 primary support path for this command.
 
-Add the latest released Call-E Codex marketplace from the repository root:
+Add the latest released CALL-E Codex marketplace from the repository root:
 
 ```bash
 codex plugin marketplace add CALLE-AI/call-e-integrations \
@@ -26,8 +26,8 @@ codex plugin marketplace add CALLE-AI/call-e-integrations \
 `@call-e/codex-plugin` publishes. For a reproducible install, replace it with a
 package-level release tag such as `@call-e/codex-plugin@<version>`.
 
-Open Codex, run `/plugins`, choose the `Call-E` marketplace, and install
-`Calle`.
+Open Codex, run `/plugins`, choose the `CALL-E` marketplace, and install
+`CALL-E`.
 
 If you are pinned to a Codex CLI older than `0.122.0` and cannot use
 `codex plugin marketplace add`, upgrade Codex when possible. As a manual
@@ -60,6 +60,6 @@ completes.
 
 ## Safety
 
-Call-E can place real phone calls. The skill plans first, uses returned
+CALL-E can place real phone calls. The skill plans first, uses returned
 credentials exactly as provided, and does not place a call unless the user
 clearly intends to do so.

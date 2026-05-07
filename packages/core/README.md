@@ -1,8 +1,8 @@
 # @call-e/core
 
-`@call-e/core` contains shared Call-E runtime helpers for brokered authentication, private local token cache files, JSON HTTP requests, and MCP streamable HTTP tool calls.
+`@call-e/core` contains shared CALL-E runtime helpers for brokered authentication, private local token cache files, JSON HTTP requests, and MCP streamable HTTP tool calls.
 
-This package is used by Call-E integrations such as `@call-e/cli`. It is not a standalone CLI, OAuth server, or MCP server.
+This package is used by CALL-E integrations such as `@call-e/cli`. It is not a standalone CLI, OAuth server, or MCP server.
 
 ## Modules
 

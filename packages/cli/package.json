@@ -1,7 +1,7 @@
 {
   "name": "@call-e/cli",
   "version": "0.3.1",
-  "description": "CLI wrapper for brokered MCP login and Calle MCP client configuration.",
+  "description": "CLI wrapper for brokered MCP login and CALL-E MCP client configuration.",
   "type": "module",
   "license": "MIT",
   "repository": {

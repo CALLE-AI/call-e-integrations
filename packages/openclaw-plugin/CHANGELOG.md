@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Enforce Call-E tool routing so agents do not fall back to `exec` or subagents when the native `calle_*` tools are available.
+- Enforce CALL-E tool routing so agents do not fall back to `exec` or subagents when the native `calle_*` tools are available.
 
 ## 0.2.3
 

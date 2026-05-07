@@ -1,4 +1,4 @@
-# Calle CLI verification
+# CALL-E CLI verification
 
 This guide verifies the `calle` CLI shipped by `@call-e/cli`.
 

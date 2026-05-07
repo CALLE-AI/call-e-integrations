@@ -68,7 +68,7 @@ function mcpConfig(cacheRoot) {
   };
 }
 
-test("config helpers normalize Call-E endpoint URLs", () => {
+test("config helpers normalize CALL-E endpoint URLs", () => {
   assert.equal(normalizeBaseUrl("https://example.test///"), "https://example.test");
   assert.equal(expandHomePath("~"), os.homedir());
   assert.equal(expandHomePath("~/cache"), path.join(os.homedir(), "cache"));

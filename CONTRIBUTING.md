@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for contributing to Call-E Integrations.
+Thanks for contributing to CALL-E Integrations.
 
 ## Development Setup
 

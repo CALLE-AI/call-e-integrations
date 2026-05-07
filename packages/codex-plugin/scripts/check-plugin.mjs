@@ -140,9 +140,9 @@ function checkSkill({ skillName, skillDir, failures }) {
   if (fs.existsSync(skillInterfaceFile)) {
     const skillInterfaceSource = fs.readFileSync(skillInterfaceFile, "utf8");
     assert(
-      /display_name:\s*"Calle"/u.test(skillInterfaceSource),
+      /display_name:\s*"CALL-E"/u.test(skillInterfaceSource),
       failures,
-      `${skillInterfaceFile} must set interface.display_name to "Calle".`,
+      `${skillInterfaceFile} must set interface.display_name to "CALL-E".`,
     );
   }
 }
@@ -167,7 +167,7 @@ function checkManifest({ packageRoot, failures }) {
   assert(manifest.skills === "./skills/", failures, "plugin.json skills must be ./skills/.");
   assert(!Object.hasOwn(manifest, "mcpServers"), failures, "plugin.json must not declare mcpServers in v1.");
   assert(!fs.existsSync(path.join(pluginRoot, ".mcp.json")), failures, "plugin/.mcp.json must not exist in v1.");
-  assert(manifest.interface?.displayName === "Calle", failures, "plugin displayName must be Calle.");
+  assert(manifest.interface?.displayName === "CALL-E", failures, "plugin displayName must be CALL-E.");
 }
 
 function checkMarketplace({ repoRoot, failures }) {
@@ -179,9 +179,9 @@ function checkMarketplace({ repoRoot, failures }) {
 
   assert(marketplace.name === "call-e-codex", failures, "marketplace name must be call-e-codex.");
   assert(
-    marketplace.interface?.displayName === "Call-E",
+    marketplace.interface?.displayName === "CALL-E",
     failures,
-    "marketplace displayName must be Call-E.",
+    "marketplace displayName must be CALL-E.",
   );
 
   const entries = Array.isArray(marketplace.plugins) ? marketplace.plugins : [];
@@ -240,7 +240,7 @@ function main() {
     process.exit(1);
   }
 
-  console.log("Call-E Codex plugin metadata is valid.");
+  console.log("CALL-E Codex plugin metadata is valid.");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

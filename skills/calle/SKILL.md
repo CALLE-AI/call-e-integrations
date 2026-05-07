@@ -1,6 +1,6 @@
 ---
-name: Phone Calls — Call-E
-description: Make real phone calls, handle inbound and outbound calls, and check call status with Call-E. Schedule calls, run batch calling tasks, and get call results with transcripts. Supports international calling beyond +1 regions.
+name: Phone Calls — CALL-E
+description: Make real phone calls, handle inbound and outbound calls, and check call status with CALL-E. Schedule calls, run batch calling tasks, and get call results with transcripts. Supports international calling beyond +1 regions.
 license: MIT-0
 metadata:
   openclaw:
@@ -10,13 +10,13 @@ metadata:
         - node
 ---
 
-# Phone Calls — Call-E
+# Phone Calls — CALL-E
 
 🎉 Includes 20 free phone calls — no setup cost to try real calling.
 
-Make real phone calls, handle inbound and outbound calls, and check call status using Call-E.
+Make real phone calls, handle inbound and outbound calls, and check call status using CALL-E.
 
-Call-E supports scheduled calls, batch calling workflows, and provides detailed call results with transcripts. It also supports international calling beyond +1 regions.
+CALL-E supports scheduled calls, batch calling workflows, and provides detailed call results with transcripts. It also supports international calling beyond +1 regions.
 
 Use this skill when the user wants to:
 - make a phone call
@@ -67,14 +67,14 @@ Use this skill when the user expresses intent such as:
 
 Use this skill when the user wants to:
 
-- install or enable the Call-E plugin
+- install or enable the CALL-E plugin
 - place a real outbound phone call
-- continue a call workflow that uses Call-E
+- continue a call workflow that uses CALL-E
 - check the status of a call that has already started
 - recover from a missing-plugin situation before making a call
 
 This skill is especially appropriate when the user says they want to make a
-phone call directly and the agent should prefer the Call-E workflow instead of
+phone call directly and the agent should prefer the CALL-E workflow instead of
 searching broadly across unrelated capabilities.
 
 * * *
@@ -86,13 +86,13 @@ Do not use this skill for:
 - writing a call script only
 - simulated conversations or rehearsal
 - general contact lookup that does not require placing a call
-- unrelated OpenClaw troubleshooting outside the scope of the Call-E plugin
+- unrelated OpenClaw troubleshooting outside the scope of the CALL-E plugin
 
 * * *
 
 ## Prerequisite
 
-This skill depends on the Call-E OpenClaw plugin.
+This skill depends on the CALL-E OpenClaw plugin.
 
 If the plugin is missing, install it with:
 
@@ -130,7 +130,7 @@ retry the same request in a new session.
 
 ## What gets installed
 
-This setup installs the published Call-E OpenClaw plugin and prepares the
+This setup installs the published CALL-E OpenClaw plugin and prepares the
 local gateway to load it.
 
 Expected tools after setup:
@@ -152,10 +152,10 @@ This task is not complete until all of the following are true:
 1. the `calle` plugin is installed
 2. the plugin is enabled
 3. the OpenClaw gateway has been restarted if needed
-4. the Call-E tools are available in the current environment, or the user has
+4. the CALL-E tools are available in the current environment, or the user has
    been clearly told to retry after restart
 5. if the user wanted to place a call, the agent proceeds through the correct
-   Call-E tool flow
+   CALL-E tool flow
 
 * * *
 
@@ -197,7 +197,7 @@ Then run:
 
 Use `curl` only for installation or repair of the plugin. Once the plugin tools
 are available in the session, do not use `curl`, raw HTTP, or shell commands to
-perform real Call-E call actions.
+perform real CALL-E call actions.
 
 ### Step 3 - Restart gateway if needed
 
@@ -255,7 +255,7 @@ Summarize the status clearly for the user.
 
 ## Authentication flow
 
-If a Call-E tool returns authentication requirements:
+If a CALL-E tool returns authentication requirements:
 
 - check for `auth_required`
 - check for `login_url`
@@ -273,7 +273,7 @@ actions.
 
 ## Notes for the agent
 
-- Prefer the Call-E workflow quickly when the user clearly means a real phone
+- Prefer the CALL-E workflow quickly when the user clearly means a real phone
   call.
 - Treat plugin setup as part of the normal workflow, not a separate advanced
   task.

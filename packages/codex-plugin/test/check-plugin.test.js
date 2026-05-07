@@ -47,10 +47,10 @@ function createValidFixture(root) {
   writeJson(path.join(packageRoot, "plugin", ".codex-plugin", "plugin.json"), {
     name: "calle",
     version: "0.0.0",
-    description: "Use Call-E from Codex through the calle CLI.",
+    description: "Use CALL-E from Codex through the calle CLI.",
     skills: "./skills/",
     interface: {
-      displayName: "Calle",
+      displayName: "CALL-E",
     },
   });
 
@@ -60,7 +60,7 @@ function createValidFixture(root) {
   );
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "agents", "openai.yaml"),
-    'interface:\n  display_name: "Calle"\n',
+    'interface:\n  display_name: "CALL-E"\n',
   );
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "references", "commands.md"),
@@ -70,7 +70,7 @@ function createValidFixture(root) {
   writeJson(path.join(repoRoot, ".agents", "plugins", "marketplace.json"), {
     name: "call-e-codex",
     interface: {
-      displayName: "Call-E",
+      displayName: "CALL-E",
     },
     plugins: [
       {
