@@ -8,13 +8,13 @@ This repository is a multi-ecosystem integration monorepo.
 - Keep ecosystem-specific implementations under `packages/`.
 - Keep shared local capability in `packages/cli`.
 - Keep package-scoped, productized skills under their owning package.
-- Keep root `skills/` for repository-local skill source and legacy/local skill
-  packaging source.
+- Keep repository-local Codex helper skills in `.agents/skills/`.
 
 Current Codex layout:
 
 ```text
 .agents/plugins/marketplace.json
+.agents/skills/
 packages/codex-plugin/plugin/
 packages/cli/
 ```
@@ -23,12 +23,19 @@ Current OpenClaw layout:
 
 ```text
 packages/openclaw-cli-skill/skills/
-skills/
+```
+
+Current Claude Code layout:
+
+```text
+.claude-plugin/marketplace.json
+packages/claude-plugin/plugin/
 ```
 
 Use `packages/openclaw-cli-skill/skills/` for the OpenClaw CALL-E skill source.
-Root `skills/` remains available for repository-local helper skills and should
-not be the default place for new productized client-specific skill packages.
+Use `.agents/skills/` for repository-local Codex helper skills. Do not put
+productized client-specific skill packages there; keep them under their owning
+package.
 
 ## Marketplace Naming Rules
 
@@ -42,6 +49,15 @@ For Codex:
 - The marketplace `interface.displayName` must stay `CALL-E`.
 - The Codex plugin entry name must stay `calle`.
 - The Codex plugin source path must stay `./packages/codex-plugin/plugin`.
+
+For Claude Code:
+
+- `.claude-plugin/marketplace.json` is the Claude Code marketplace entry point.
+- The marketplace `name` must stay `call-e-claude`.
+- The Claude Code plugin entry name must stay `calle`.
+- The Claude Code plugin source path must stay `./packages/claude-plugin/plugin`.
+- The Claude Code CLI integration attribution must stay
+  `claude/claude_code_plugin/<version>`.
 
 Use ecosystem-specific internal marketplace names when adding other clients:
 
@@ -71,11 +87,18 @@ intentionally exposes multiple CALL-E marketplaces in the same client UI.
   so users get the latest released Codex plugin without typing a version
   number. Mention package-level release tags only as the reproducible
   pinned-install option.
+- Public Claude Code install docs should use
+  `#@call-e/claude-plugin@latest` in the marketplace Git URL so users get the
+  latest released Claude Code plugin without typing a version number. Mention
+  package-level release tags only as the reproducible pinned-install option.
 - Pinned package and CLI version references are synced during release PR
   versioning by `scripts/sync-install-doc-versions.mjs`.
 - The release workflow initializes `@call-e/codex-plugin@latest` from the
   current package release tag when missing, then updates it only after
   `@call-e/codex-plugin` publishes.
+- The release workflow initializes `@call-e/claude-plugin@latest` from the
+  current package release tag when missing, then updates it only after
+  `@call-e/claude-plugin` publishes.
 
 Latest Codex public install example:
 
@@ -101,3 +124,25 @@ codex plugin marketplace add CALLE-AI/call-e-integrations \
 
 For reproducible installs, replace `@call-e/codex-plugin@latest` with a
 package-level release tag such as `@call-e/codex-plugin@<version>`.
+
+Latest Claude Code public install example:
+
+Run these slash commands inside Claude Code. The marketplace entry resolves
+`./packages/claude-plugin/plugin` from the git-hosted marketplace root.
+
+```text
+/plugin marketplace add https://github.com/CALLE-AI/call-e-integrations.git#@call-e/claude-plugin@latest
+```
+
+Then install:
+
+```text
+/plugin install calle@call-e-claude
+```
+
+The installed `/calle:phone-call` skill uses the shared `calle` CLI for
+authentication checks, brokered login, tool discovery, and call workflow
+commands.
+
+For reproducible installs, replace `@call-e/claude-plugin@latest` with a
+package-level release tag such as `@call-e/claude-plugin@<version>`.

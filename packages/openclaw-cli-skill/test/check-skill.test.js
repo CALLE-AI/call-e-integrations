@@ -91,7 +91,7 @@ function createValidFixture(root) {
   writeFile(path.join(repoRoot, "README.md"), "packages/openclaw-cli-skill\n");
   writeFile(
     path.join(repoRoot, "docs", "agent-integration-layout.md"),
-    "packages/openclaw-cli-skill\n\nRoot `skills/` is for repository-local skill source.\n",
+    "packages/openclaw-cli-skill\n\nUse `.agents/skills/` for repository-local Codex helper skills.\n",
   );
 
   return { packageRoot, repoRoot };

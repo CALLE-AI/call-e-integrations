@@ -22,9 +22,12 @@ CALL-E Integrations is a multi-ecosystem agent integration monorepo.
 
 ## Project-Local Skills
 
-- `skills/github-ci-triage`: project-local skill for inspecting and diagnosing
+- `.agents/skills/github-ci-triage`: project-local skill for inspecting and diagnosing
   GitHub Actions CI, release, deploy, and workflow failures.
-  Productized OpenClaw skill source lives in `packages/openclaw-cli-skill/skills`.
+- `.agents/skills/claude-plugin-reinstall`: project-local skill for refreshing,
+  reinstalling, and locally testing the CALL-E Claude Code plugin.
+
+Productized OpenClaw skill source lives in `packages/openclaw-cli-skill/skills`.
 
 ## Repository Conventions
 

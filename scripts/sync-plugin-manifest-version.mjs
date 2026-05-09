@@ -20,6 +20,11 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
   const manifestPaths = [
     path.join(packageDir, "openclaw.plugin.json"),
     path.join(packageDir, "plugin", ".codex-plugin", "plugin.json"),
+    path.join(packageDir, "plugin", ".claude-plugin", "plugin.json"),
+  ];
+  const claudeCliIntegrationPaths = [
+    path.join(packageDir, "plugin", "skills", "phone-call", "SKILL.md"),
+    path.join(packageDir, "plugin", "skills", "phone-call", "references", "commands.md"),
   ];
   const indexPath = path.join(packageDir, "index.js");
   const cliConfigPath = path.join(packageDir, "lib", "config.js");
@@ -40,6 +45,35 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
     if (manifest.version !== version) {
       manifest.version = version;
       fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    }
+  }
+
+  if (packageJson.name === "@call-e/claude-plugin") {
+    for (const integrationPath of claudeCliIntegrationPaths) {
+      if (!fs.existsSync(integrationPath)) {
+        continue;
+      }
+
+      const source = fs.readFileSync(integrationPath, "utf8");
+      const nextSource = source.replace(
+        /CALLE_INTEGRATION_VERSION=\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
+        `CALLE_INTEGRATION_VERSION=${version}`,
+      );
+      if (nextSource !== source) {
+        fs.writeFileSync(integrationPath, nextSource);
+      }
+    }
+
+    const marketplacePath = path.join(repoRoot, ".claude-plugin", "marketplace.json");
+    if (fs.existsSync(marketplacePath)) {
+      const marketplace = JSON.parse(fs.readFileSync(marketplacePath, "utf8"));
+      const pluginEntry = Array.isArray(marketplace.plugins)
+        ? marketplace.plugins.find((plugin) => plugin?.name === "calle")
+        : null;
+      if (pluginEntry && pluginEntry.version !== version) {
+        pluginEntry.version = version;
+        fs.writeFileSync(marketplacePath, `${JSON.stringify(marketplace, null, 2)}\n`);
+      }
     }
   }
 

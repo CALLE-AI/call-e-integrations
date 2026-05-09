@@ -9,12 +9,17 @@ const syncedInstallFiles = [
   "README.md",
   "docs/install/cli.md",
   "docs/install/codex-plugin.md",
+  "docs/install/claude-plugin.md",
   "docs/install/openclaw-cli-skill.md",
   "docs/agent-integration-layout.md",
   "packages/codex-plugin/README.md",
   "packages/codex-plugin/plugin/README.md",
   "packages/codex-plugin/plugin/skills/calle/SKILL.md",
   "packages/codex-plugin/plugin/skills/calle/references/commands.md",
+  "packages/claude-plugin/README.md",
+  "packages/claude-plugin/plugin/README.md",
+  "packages/claude-plugin/plugin/skills/phone-call/SKILL.md",
+  "packages/claude-plugin/plugin/skills/phone-call/references/commands.md",
   "packages/openclaw-cli-skill/README.md",
   "packages/openclaw-cli-skill/skills/phone-call-calle/SKILL.md",
   "packages/openclaw-cli-skill/skills/phone-call-calle/references/commands.md",
@@ -28,6 +33,14 @@ const codexLatestInstallFiles = new Set([
 
 const codexLatestInstallRef = "--ref '@call-e/codex-plugin@latest'";
 
+const claudeLatestInstallFiles = new Set([
+  "README.md",
+  "docs/install/claude-plugin.md",
+  "docs/agent-integration-layout.md",
+]);
+
+const claudeLatestInstallRef = "#@call-e/claude-plugin@latest";
+
 const codexIntegrationFiles = new Set([
   "packages/codex-plugin/plugin/skills/calle/SKILL.md",
   "packages/codex-plugin/plugin/skills/calle/references/commands.md",
@@ -37,6 +50,14 @@ const openclawCliSkillIntegrationFiles = new Set([
   "packages/openclaw-cli-skill/README.md",
   "packages/openclaw-cli-skill/skills/phone-call-calle/SKILL.md",
   "packages/openclaw-cli-skill/skills/phone-call-calle/references/commands.md",
+]);
+
+const claudeCliIntegrationFiles = new Set([
+  "docs/install/claude-plugin.md",
+  "packages/claude-plugin/README.md",
+  "packages/claude-plugin/plugin/README.md",
+  "packages/claude-plugin/plugin/skills/phone-call/SKILL.md",
+  "packages/claude-plugin/plugin/skills/phone-call/references/commands.md",
 ]);
 
 function readPackageVersion(packagePath) {
@@ -69,6 +90,14 @@ const openclawCliSkillIntegrationReplacements = [
   },
 ];
 
+const claudeCliIntegrationReplacements = [
+  {
+    label: "Claude Code plugin CLI integration attribution version",
+    pattern: /CALLE_INTEGRATION_VERSION=\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
+    value: `CALLE_INTEGRATION_VERSION=${readPackageVersion("packages/claude-plugin")}`,
+  },
+];
+
 const staleFiles = [];
 const validationFailures = [];
 
@@ -89,7 +118,9 @@ for (const relativePath of syncedInstallFiles) {
     ? codexIntegrationReplacements
     : openclawCliSkillIntegrationFiles.has(relativePath)
       ? openclawCliSkillIntegrationReplacements
-      : [];
+      : claudeCliIntegrationFiles.has(relativePath)
+        ? claudeCliIntegrationReplacements
+        : [];
 
   for (const replacement of integrationReplacements) {
     nextSource = nextSource.replace(replacement.pattern, replacement.value);
@@ -102,6 +133,24 @@ for (const relativePath of syncedInstallFiles) {
 
     if (/--ref\s+['"]?@call-e\/codex-plugin@\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?['"]?/u.test(nextSource)) {
       validationFailures.push(`${relativePath} must not use a version-pinned Codex install ref by default.`);
+    }
+  }
+
+  if (claudeLatestInstallFiles.has(relativePath)) {
+    if (!nextSource.includes(claudeLatestInstallRef)) {
+      validationFailures.push(`${relativePath} must install the Claude Code plugin with ${claudeLatestInstallRef}.`);
+    }
+
+    if (nextSource.includes("claude plugin marketplace add") || nextSource.includes("claude plugin install")) {
+      validationFailures.push(`${relativePath} must use Claude Code slash commands, not shell plugin install commands.`);
+    }
+
+    if (/\/plugin marketplace add[^\n]*(?:\\\n[^\n]*)*--sparse/u.test(nextSource)) {
+      validationFailures.push(`${relativePath} must not use CLI-only --sparse options with Claude Code slash install commands.`);
+    }
+
+    if (/#@call-e\/claude-plugin@\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/u.test(nextSource)) {
+      validationFailures.push(`${relativePath} must not use a version-pinned Claude Code install ref by default.`);
     }
   }
 

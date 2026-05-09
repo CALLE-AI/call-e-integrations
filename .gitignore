@@ -15,6 +15,7 @@ coverage/
 .env
 .env.*
 .envrc
+.claude/
 .python-version
 .venv/
 venv/

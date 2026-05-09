@@ -27,6 +27,14 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
       label: "plugin/.codex-plugin/plugin.json",
       path: path.join(packageDir, "plugin", ".codex-plugin", "plugin.json"),
     },
+    {
+      label: "plugin/.claude-plugin/plugin.json",
+      path: path.join(packageDir, "plugin", ".claude-plugin", "plugin.json"),
+    },
+  ];
+  const claudeCliIntegrationPaths = [
+    path.join(packageDir, "plugin", "skills", "phone-call", "SKILL.md"),
+    path.join(packageDir, "plugin", "skills", "phone-call", "references", "commands.md"),
   ];
   const indexPath = path.join(packageDir, "index.js");
   const cliConfigPath = path.join(packageDir, "lib", "config.js");
@@ -50,6 +58,40 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
       failures.push(
         `${entry.name}: package.json version (${packageVersion}) does not match ${manifestPath.label} version (${manifestVersion}).`
       );
+    }
+  }
+
+  if (packageJson.name === "@call-e/claude-plugin") {
+    for (const integrationPath of claudeCliIntegrationPaths) {
+      if (!fs.existsSync(integrationPath)) {
+        continue;
+      }
+
+      const source = fs.readFileSync(integrationPath, "utf8");
+      const staleMatches = source.match(/CALLE_INTEGRATION_VERSION=(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/g) || [];
+      for (const match of staleMatches) {
+        const version = match.replace("CALLE_INTEGRATION_VERSION=", "");
+        if (version !== packageVersion) {
+          failures.push(
+            `${entry.name}: ${path.relative(packageDir, integrationPath)} ${match} does not match package.json version (${packageVersion}).`
+          );
+        }
+      }
+    }
+  }
+
+  if (packageJson.name === "@call-e/claude-plugin") {
+    const marketplacePath = path.join(repoRoot, ".claude-plugin", "marketplace.json");
+    if (fs.existsSync(marketplacePath)) {
+      const marketplace = JSON.parse(fs.readFileSync(marketplacePath, "utf8"));
+      const pluginEntry = Array.isArray(marketplace.plugins)
+        ? marketplace.plugins.find((plugin) => plugin?.name === "calle")
+        : null;
+      if (pluginEntry?.version !== packageVersion) {
+        failures.push(
+          `${entry.name}: .claude-plugin/marketplace.json calle version (${pluginEntry?.version}) does not match package.json version (${packageVersion}).`
+        );
+      }
     }
   }
 
