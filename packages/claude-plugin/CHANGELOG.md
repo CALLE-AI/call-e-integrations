@@ -1,0 +1,7 @@
+# @call-e/claude-plugin
+
+## 0.1.0
+
+### Minor Changes
+
+- [#23](https://github.com/CALLE-AI/call-e-integrations/pull/23) [`4c13b2e`](https://github.com/CALLE-AI/call-e-integrations/commit/4c13b2ec8926abdbe2aa2f4f298a60ceafb42a00) Thanks [@Ray-56](https://github.com/Ray-56)! - Switch the Claude Code plugin to the shared `calle` CLI flow so authentication can be checked and recovered on use instead of requiring manual remote MCP authorization.

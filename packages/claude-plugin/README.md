@@ -46,7 +46,7 @@ The skill prefers the repository-local CLI, then a global `calle`, then
 The skill runs CLI commands with this integration attribution:
 
 ```text
-CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.0.0
+CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.1.0
 ```
 
 The version segment must stay in sync with this package version.
