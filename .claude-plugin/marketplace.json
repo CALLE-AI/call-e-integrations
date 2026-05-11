@@ -11,7 +11,7 @@
       "name": "calle",
       "source": "./packages/claude-plugin/plugin",
       "description": "Use CALL-E phone call workflows from Claude Code through the calle CLI.",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "author": {
         "name": "CALLE AI",
         "url": "https://github.com/CALLE-AI"
