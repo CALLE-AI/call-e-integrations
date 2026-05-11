@@ -1,6 +1,6 @@
 {
   "name": "calle",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Use CALL-E from Claude Code through the calle CLI.",
   "author": {
     "name": "CALLE AI",
