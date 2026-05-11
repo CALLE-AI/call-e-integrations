@@ -1,0 +1,24 @@
+{
+  "name": "calle",
+  "version": "0.0.0",
+  "description": "Use CALL-E from Claude Code through the calle CLI.",
+  "author": {
+    "name": "CALLE AI",
+    "url": "https://github.com/CALLE-AI"
+  },
+  "homepage": "https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/claude-plugin",
+  "repository": "https://github.com/CALLE-AI/call-e-integrations",
+  "license": "MIT",
+  "keywords": [
+    "ai-agent",
+    "call-e",
+    "calle",
+    "claude",
+    "claude-code",
+    "claude-plugin",
+    "mcp",
+    "phone-call",
+    "voice-call"
+  ],
+  "skills": "./skills/"
+}

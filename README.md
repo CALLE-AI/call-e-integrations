@@ -12,6 +12,7 @@ Your agent can think, plan, and write. CALL-E picks up the phone — booking app
 
 ![npm](https://img.shields.io/npm/v/@call-e/cli?label=%40call-e%2Fcli)
 ![Codex](https://img.shields.io/badge/Codex-CALL--E-black)
+![Claude Code](https://img.shields.io/badge/Claude%20Code-CALL--E-orange)
 ![OpenClaw](https://img.shields.io/badge/OpenClaw-ClawHub-purple)
 ![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-blue)
 
@@ -24,12 +25,13 @@ Your agent can think, plan, and write. CALL-E picks up the phone — booking app
 
 For most users, the simplest path is to ask your agent to install the published CALL-E phone-call skill/plugin for its own environment.
 
-Copy this into Codex, OpenClaw, or another local agent that can run shell commands:
+Copy this into Claude Code, Codex, OpenClaw, or another local agent that can run shell commands:
 
 ```text
 Install the published CALL-E phone-call skill/plugin for this agent environment.
 
 Use the native release path when available:
+- Claude Code: add the CALL-E plugin marketplace from `CALLE-AI/call-e-integrations`, install `calle@call-e-claude`, then invoke `/calle:phone-call`.
 - OpenClaw: run `openclaw skills install phone-call-calle`.
 - Codex: add the CALL-E plugin marketplace from `CALLE-AI/call-e-integrations` using the official Codex command in this README.
 - CLI users: install `@call-e/cli`, then run `calle auth login`.
@@ -60,6 +62,30 @@ Then open Codex → `/plugins` → choose the `CALL-E` marketplace → install `
 ```text
 $calle
 ```
+
+### Claude Code
+
+In Claude Code, add the released CALL-E marketplace from this repository:
+
+```text
+/plugin marketplace add https://github.com/CALLE-AI/call-e-integrations.git#@call-e/claude-plugin@latest
+```
+
+Then install the plugin:
+
+```text
+/plugin install calle@call-e-claude
+```
+
+Open Claude Code and invoke:
+
+```text
+/calle:phone-call
+```
+
+The skill checks CLI authentication on use. If login is missing or expired, it
+runs blocking `calle auth login`, shows the browser authorization URL, and
+continues after authorization completes.
 
 ### OpenClaw
 
@@ -105,11 +131,12 @@ Then complete the client OAuth flow and verify the available tools include `plan
 - Codex marketplace install requires `codex-cli >= 0.122.0`; check with `codex --version`.
 - The Codex plugin uses the repository-local CLI when available, then a global `calle`, then `npx -y @call-e/cli`.
 - For reproducible Codex installs, replace `@call-e/codex-plugin@latest` with a package-level release tag such as `@call-e/codex-plugin@<version>`.
+- For reproducible Claude Code installs, replace `@call-e/claude-plugin@latest` with a package-level release tag such as `@call-e/claude-plugin@<version>`.
 - Optional pre-auth for CLI-based agent installs: `npx -y @call-e/cli auth login`.
 - OpenClaw user installs should use ClawHub: `openclaw skills install phone-call-calle`.
 - This repository keeps the OpenClaw skill source at `packages/openclaw-cli-skill/skills/phone-call-calle` for local development and validation.
 
-Install guides: [CLI](./docs/install/cli.md) · [Codex](./docs/install/codex-plugin.md) · [OpenClaw source](./docs/install/openclaw-cli-skill.md)
+Install guides: [CLI](./docs/install/cli.md) · [Codex](./docs/install/codex-plugin.md) · [Claude Code](./docs/install/claude-plugin.md) · [OpenClaw source](./docs/install/openclaw-cli-skill.md)
 
 </details>
 
@@ -128,7 +155,7 @@ plan_call → run_call → get_call_run
 | Call planning | `calle call plan` or MCP `plan_call` |
 | Real outbound call execution | `calle call run` or MCP `run_call` |
 | Status, activity, summary, details, transcript | `calle call status` or MCP `get_call_run` |
-| Agent-client UX | `$calle` in Codex; **Phone Call - CALL-E** in OpenClaw |
+| Agent-client UX | `$calle` in Codex; `/calle:phone-call` in Claude Code; **Phone Call - CALL-E** in OpenClaw |
 
 `plan_call` creates the call plan and returns run credentials. `run_call` starts the real outbound call. `get_call_run` returns progress and final results when available.
 
@@ -176,11 +203,14 @@ All command output is JSON except `--help`. Access tokens are read from the loca
 | `packages/core` | `@call-e/core` | Shared runtime helpers for brokered auth, private token cache files, JSON HTTP, and MCP Streamable HTTP calls. |
 | `packages/cli` | `@call-e/cli` | Shared `calle` command for auth, MCP config, tool listing, and phone-call workflow shortcuts. |
 | `packages/codex-plugin` | `@call-e/codex-plugin` | Codex plugin bundle that exposes CALL-E as the `$calle` skill. |
+| `packages/claude-plugin` | `@call-e/claude-plugin` | Claude Code plugin bundle that exposes CALL-E through the shared CLI and `/calle:phone-call`. |
 | `packages/openclaw-cli-skill` | `@call-e/openclaw-cli-skill` | Private validation/source package for the OpenClaw skill published through ClawHub. |
 
 ```text
 .agents/plugins/marketplace.json              # Codex marketplace entry
+.claude-plugin/marketplace.json               # Claude Code marketplace entry
 packages/codex-plugin/plugin/                 # Codex plugin source
+packages/claude-plugin/plugin/                # Claude Code plugin source
 packages/openclaw-cli-skill/skills/            # OpenClaw skill source
 packages/cli/                                  # Shared calle CLI
 packages/core/                                 # Shared runtime helpers
@@ -195,6 +225,10 @@ examples/                                      # Runnable MCP demos, not an SDK
 | Codex marketplace | display name | `CALL-E` |
 | Codex plugin entry | name | `calle` |
 | Codex plugin source | path | `./packages/codex-plugin/plugin` |
+| Claude Code marketplace | `name` | `call-e-claude` |
+| Claude Code plugin entry | name | `calle` |
+| Claude Code plugin source | path | `./packages/claude-plugin/plugin` |
+| Claude Code CLI attribution | env | `claude/claude_code_plugin/<version>` |
 | OpenClaw skill | slug | `phone-call-calle` |
 | OpenClaw skill | name | `Phone Call - CALL-E` |
 
@@ -210,9 +244,9 @@ These examples are runnable demos, not a CALL-E SDK or supported application API
 ## 🧭 Boundaries
 
 - The CLI is not an OAuth server and not an MCP server. It is a local wrapper over the CALL-E broker API and remote MCP HTTP endpoint.
-- Codex and OpenClaw integrations intentionally reuse the shared `calle` CLI for authentication, token caching, JSON output, MCP tool discovery, and call workflow shortcuts.
+- Codex, Claude Code, and OpenClaw integrations intentionally reuse the shared `calle` CLI for authentication, token caching, JSON output, MCP tool discovery, and call workflow shortcuts.
 - The OpenClaw route in this repository does not register OpenClaw-native tools and does not require a gateway restart from this repository.
-- Future Claude, Copilot, VS Code, Gemini, Cursor, Windsurf, Zed, Cline, Roo, Continue, or other ecosystem integrations should add their own ecosystem-specific entry point instead of sharing the Codex marketplace.
+- Future Copilot, VS Code, Gemini, Cursor, Windsurf, Zed, Cline, Roo, Continue, or other ecosystem integrations should add their own ecosystem-specific entry point instead of sharing the Codex or Claude Code marketplaces.
 
 See [docs/agent-integration-layout.md](./docs/agent-integration-layout.md) for layout and marketplace naming rules.
 
@@ -220,7 +254,7 @@ See [docs/agent-integration-layout.md](./docs/agent-integration-layout.md) for l
 
 The `calle` CLI sends best-effort usage telemetry to CALL-E to diagnose installation, authentication, MCP tool availability, and early usage drop-off before a first `plan_call` reaches the server.
 
-CLI telemetry includes an anonymous installation ID, CLI version, integration source such as `cli/cli/<version>`, `codex/codex_plugin/<version>`, or `openclaw/openclaw_cli_skill/<version>`, command stage, outcome, error type, and server host/hash. It does **not** include phone numbers, call goals, OAuth tokens, broker login URLs, full argument JSON, transcripts, or contact data.
+CLI telemetry includes an anonymous installation ID, CLI version, integration source such as `cli/cli/<version>`, `codex/codex_plugin/<version>`, `claude/claude_code_plugin/<version>`, or `openclaw/openclaw_cli_skill/<version>`, command stage, outcome, error type, and server host/hash. It does **not** include phone numbers, call goals, OAuth tokens, broker login URLs, full argument JSON, transcripts, or contact data.
 
 Disable CLI telemetry with any of:
 
@@ -252,12 +286,14 @@ pnpm --filter @call-e/cli check
 pnpm --filter @call-e/cli test
 pnpm --filter @call-e/codex-plugin check
 pnpm --filter @call-e/codex-plugin test
+pnpm --filter @call-e/claude-plugin check
+pnpm --filter @call-e/claude-plugin test
 pnpm --filter @call-e/openclaw-cli-skill check
 pnpm --filter @call-e/openclaw-cli-skill test
 pnpm run check:examples
 ```
 
-For user-visible package changes, add a changeset. The release workflow publishes changed `@call-e/*` packages to npm and maintains the `@call-e/codex-plugin@latest` install alias.
+For user-visible package changes, add a changeset. The release workflow publishes changed `@call-e/*` packages to npm and maintains the `@call-e/codex-plugin@latest` and `@call-e/claude-plugin@latest` install aliases.
 
 ## 💬 Community
 

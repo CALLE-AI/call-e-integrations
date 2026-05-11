@@ -232,7 +232,7 @@ function checkRepoDocs({ repoRoot, failures }) {
   if (fs.existsSync(layoutPath)) {
     const layout = fs.readFileSync(layoutPath, "utf8");
     assert(layout.includes("packages/openclaw-cli-skill"), failures, "docs/agent-integration-layout.md must mention packages/openclaw-cli-skill.");
-    assert(layout.includes("Root `skills/`"), failures, "docs/agent-integration-layout.md must describe the root skills boundary.");
+    assert(layout.includes(".agents/skills/"), failures, "docs/agent-integration-layout.md must describe the repo-local Codex skills boundary.");
   }
 }
 
