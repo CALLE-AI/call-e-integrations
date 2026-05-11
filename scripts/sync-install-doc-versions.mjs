@@ -18,8 +18,8 @@ const syncedInstallFiles = [
   "packages/codex-plugin/plugin/skills/calle/references/commands.md",
   "packages/claude-plugin/README.md",
   "packages/claude-plugin/plugin/README.md",
-  "packages/claude-plugin/plugin/skills/phone-call/SKILL.md",
-  "packages/claude-plugin/plugin/skills/phone-call/references/commands.md",
+  "packages/claude-plugin/plugin/skills/calle/SKILL.md",
+  "packages/claude-plugin/plugin/skills/calle/references/commands.md",
   "packages/openclaw-cli-skill/README.md",
   "packages/openclaw-cli-skill/skills/phone-call-calle/SKILL.md",
   "packages/openclaw-cli-skill/skills/phone-call-calle/references/commands.md",
@@ -56,8 +56,8 @@ const claudeCliIntegrationFiles = new Set([
   "docs/install/claude-plugin.md",
   "packages/claude-plugin/README.md",
   "packages/claude-plugin/plugin/README.md",
-  "packages/claude-plugin/plugin/skills/phone-call/SKILL.md",
-  "packages/claude-plugin/plugin/skills/phone-call/references/commands.md",
+  "packages/claude-plugin/plugin/skills/calle/SKILL.md",
+  "packages/claude-plugin/plugin/skills/calle/references/commands.md",
 ]);
 
 function readPackageVersion(packagePath) {

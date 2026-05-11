@@ -23,15 +23,15 @@ Your agent can think, plan, and write. CALL-E picks up the phone — booking app
 
 ## ✨ Ask an agent to install CALL-E
 
-For most users, the simplest path is to ask your agent to install the published CALL-E phone-call skill/plugin for its own environment.
+For most users, the simplest path is to ask your agent to install the published CALL-E phone call skill/plugin for its own environment.
 
 Copy this into Claude Code, Codex, OpenClaw, or another local agent that can run shell commands:
 
 ```text
-Install the published CALL-E phone-call skill/plugin for this agent environment.
+Install the published CALL-E phone call skill/plugin for this agent environment.
 
 Use the native release path when available:
-- Claude Code: add the CALL-E plugin marketplace from `CALLE-AI/call-e-integrations`, install `calle@call-e-claude`, then invoke `/calle:phone-call`.
+- Claude Code: add the CALL-E plugin marketplace from `CALLE-AI/call-e-integrations`, install `calle@call-e-claude`, then invoke `/calle:calle`.
 - OpenClaw: run `openclaw skills install phone-call-calle`.
 - Codex: add the CALL-E plugin marketplace from `CALLE-AI/call-e-integrations` using the official Codex command in this README.
 - CLI users: install `@call-e/cli`, then run `calle auth login`.
@@ -80,7 +80,7 @@ Then install the plugin:
 Open Claude Code and invoke:
 
 ```text
-/calle:phone-call
+/calle:calle
 ```
 
 The skill checks CLI authentication on use. If login is missing or expired, it
@@ -155,7 +155,7 @@ plan_call → run_call → get_call_run
 | Call planning | `calle call plan` or MCP `plan_call` |
 | Real outbound call execution | `calle call run` or MCP `run_call` |
 | Status, activity, summary, details, transcript | `calle call status` or MCP `get_call_run` |
-| Agent-client UX | `$calle` in Codex; `/calle:phone-call` in Claude Code; **Phone Call - CALL-E** in OpenClaw |
+| Agent-client UX | `$calle` in Codex; `/calle:calle` in Claude Code; **Phone Call - CALL-E** in OpenClaw |
 
 `plan_call` creates the call plan and returns run credentials. `run_call` starts the real outbound call. `get_call_run` returns progress and final results when available.
 
@@ -203,7 +203,7 @@ All command output is JSON except `--help`. Access tokens are read from the loca
 | `packages/core` | `@call-e/core` | Shared runtime helpers for brokered auth, private token cache files, JSON HTTP, and MCP Streamable HTTP calls. |
 | `packages/cli` | `@call-e/cli` | Shared `calle` command for auth, MCP config, tool listing, and phone-call workflow shortcuts. |
 | `packages/codex-plugin` | `@call-e/codex-plugin` | Codex plugin bundle that exposes CALL-E as the `$calle` skill. |
-| `packages/claude-plugin` | `@call-e/claude-plugin` | Claude Code plugin bundle that exposes CALL-E through the shared CLI and `/calle:phone-call`. |
+| `packages/claude-plugin` | `@call-e/claude-plugin` | Claude Code plugin bundle that exposes CALL-E through the shared CLI and `/calle:calle`. |
 | `packages/openclaw-cli-skill` | `@call-e/openclaw-cli-skill` | Private validation/source package for the OpenClaw skill published through ClawHub. |
 
 ```text

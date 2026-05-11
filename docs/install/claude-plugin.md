@@ -1,6 +1,6 @@
 # Install The CALL-E Claude Code Plugin
 
-The Claude Code plugin provides the `/calle:phone-call` skill. It uses the
+The Claude Code plugin provides the `/calle:calle` skill. It uses the
 shared `calle` CLI so authentication can be checked and recovered from Claude
 Code without opening the native remote MCP authorization menu.
 
@@ -31,7 +31,7 @@ Then install the plugin:
 
 ## Authorize
 
-The plugin checks authentication when `/calle:phone-call` is invoked. To
+The plugin checks authentication when `/calle:calle` is invoked. To
 pre-authorize before using the skill, run:
 
 ```bash
@@ -59,7 +59,7 @@ CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSI
 Invoke:
 
 ```text
-/calle:phone-call
+/calle:calle
 ```
 
 Claude Code will use CALL-E for setup checks, call planning, planned call

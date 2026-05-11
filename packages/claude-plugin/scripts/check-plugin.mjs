@@ -10,7 +10,9 @@ const EXPECTED_PACKAGE_NAME = "@call-e/claude-plugin";
 const EXPECTED_MARKETPLACE_NAME = "call-e-claude";
 const EXPECTED_MARKETPLACE_SOURCE = "./packages/claude-plugin/plugin";
 const EXPECTED_PLUGIN_NAME = "calle";
-const EXPECTED_SKILL_NAME = "phone-call";
+const EXPECTED_SKILL_NAME = "calle";
+const EXPECTED_SKILL_INVOCATION = `/${EXPECTED_PLUGIN_NAME}:${EXPECTED_SKILL_NAME}`;
+const LEGACY_SKILL_INVOCATION = `/${EXPECTED_PLUGIN_NAME}:phone-call`;
 const EXPECTED_CLI_SOURCE = "claude";
 const EXPECTED_CLI_INTEGRATION = "claude_code_plugin";
 const EXPECTED_REFERENCE_FILE = "references/commands.md";
@@ -220,6 +222,8 @@ function checkDocs({ packageRoot, repoRoot, failures }) {
     }
 
     const source = fs.readFileSync(docFile, "utf8");
+    assert(source.includes(EXPECTED_SKILL_INVOCATION), failures, `${docFile} must document ${EXPECTED_SKILL_INVOCATION}.`);
+    assert(!source.includes(LEGACY_SKILL_INVOCATION), failures, `${docFile} must not document legacy ${LEGACY_SKILL_INVOCATION}.`);
     assert(!source.includes("authorize the `calle` server"), failures, `${docFile} must not document native Claude MCP OAuth authorization.`);
   }
 

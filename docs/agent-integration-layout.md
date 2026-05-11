@@ -140,7 +140,7 @@ Then install:
 /plugin install calle@call-e-claude
 ```
 
-The installed `/calle:phone-call` skill uses the shared `calle` CLI for
+The installed `/calle:calle` skill uses the shared `calle` CLI for
 authentication checks, brokered login, tool discovery, and call workflow
 commands.
 

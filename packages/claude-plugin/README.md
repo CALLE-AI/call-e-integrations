@@ -4,7 +4,7 @@ Claude Code plugin bundle for using CALL-E through the shared `calle` CLI.
 
 The plugin provides:
 
-- a `/calle:phone-call` skill for setup checks, authentication recovery, phone
+- a `/calle:calle` skill for setup checks, authentication recovery, phone
   call planning, planned call execution, and call status handling
 
 The Claude Code integration uses the shared `calle` CLI as its primary path so
@@ -19,7 +19,7 @@ For user installation steps, see [docs/install/claude-plugin.md](../../docs/inst
 plugin/
   .claude-plugin/plugin.json
   skills/
-    phone-call/
+    calle/
       SKILL.md
       references/commands.md
 ```
@@ -37,7 +37,7 @@ pnpm --filter @call-e/claude-plugin pack:dry-run
 ```
 
 For local development from a clone, add this repository as a Claude Code
-marketplace, install `calle@call-e-claude`, then invoke `/calle:phone-call`.
+marketplace, install `calle@call-e-claude`, then invoke `/calle:calle`.
 The skill prefers the repository-local CLI, then a global `calle`, then
 `npx -y @call-e/cli@0.3.2`.
 

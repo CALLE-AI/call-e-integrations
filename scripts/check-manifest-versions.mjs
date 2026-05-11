@@ -33,8 +33,8 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
     },
   ];
   const claudeCliIntegrationPaths = [
-    path.join(packageDir, "plugin", "skills", "phone-call", "SKILL.md"),
-    path.join(packageDir, "plugin", "skills", "phone-call", "references", "commands.md"),
+    path.join(packageDir, "plugin", "skills", "calle", "SKILL.md"),
+    path.join(packageDir, "plugin", "skills", "calle", "references", "commands.md"),
   ];
   const indexPath = path.join(packageDir, "index.js");
   const cliConfigPath = path.join(packageDir, "lib", "config.js");
