@@ -1,5 +1,5 @@
 ---
-name: phone-call
+name: calle
 description: Use CALL-E from Claude Code through the calle CLI. Use for CALL-E setup checks, authentication recovery, phone call planning, planned call execution, and call status checks.
 ---
 

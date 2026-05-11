@@ -35,7 +35,7 @@ const VALID_PROGRESS_GUIDANCE =
   "[Status]\n\n" +
   "[Transcript]\n";
 const VALID_SKILL = `---
-name: phone-call
+name: calle
 description: Test CALL-E phone call skill.
 ---
 
@@ -83,13 +83,13 @@ function createValidFixture(root) {
     skills: "./skills/",
   });
 
-  writeFile(path.join(packageRoot, "plugin", "skills", "phone-call", "SKILL.md"), VALID_SKILL);
-  writeFile(path.join(packageRoot, "plugin", "skills", "phone-call", "references", "commands.md"), VALID_SKILL);
-  writeFile(path.join(packageRoot, "README.md"), "# Claude\n\ncalle auth login\n");
-  writeFile(path.join(packageRoot, "plugin", "README.md"), "# Claude plugin\n\ncalle auth login\n");
+  writeFile(path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"), VALID_SKILL);
+  writeFile(path.join(packageRoot, "plugin", "skills", "calle", "references", "commands.md"), VALID_SKILL);
+  writeFile(path.join(packageRoot, "README.md"), "# Claude\n\n/calle:calle\n\ncalle auth login\n");
+  writeFile(path.join(packageRoot, "plugin", "README.md"), "# Claude plugin\n\n/calle:calle\n\ncalle auth login\n");
   writeFile(
     path.join(repoRoot, "docs", "install", "claude-plugin.md"),
-    "# Install\n\n/plugin marketplace add https://example.test/repo.git#@call-e/claude-plugin@latest\n/plugin install calle@call-e-claude\ncalle auth login\nnpx -y @call-e/cli\n",
+    "# Install\n\n/plugin marketplace add https://example.test/repo.git#@call-e/claude-plugin@latest\n/plugin install calle@call-e-claude\n/calle:calle\ncalle auth login\nnpx -y @call-e/cli\n",
   );
 
   writeJson(path.join(repoRoot, ".claude-plugin", "marketplace.json"), {
@@ -154,15 +154,15 @@ test("reports mcpServers in plugin manifest", () => {
 
 test("reports a missing bundled skill", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-claude-plugin-missing-skill"));
-  fs.rmSync(path.join(packageRoot, "plugin", "skills", "phone-call"), { recursive: true, force: true });
+  fs.rmSync(path.join(packageRoot, "plugin", "skills", "calle"), { recursive: true, force: true });
 
   const failures = checkClaudePlugin({ packageRoot, repoRoot });
-  assert.ok(failures.some((failure) => failure.includes("skills/phone-call")));
+  assert.ok(failures.some((failure) => failure.includes("skills/calle")));
 });
 
 test("reports a missing command reference", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-claude-plugin-missing-reference"));
-  fs.rmSync(path.join(packageRoot, "plugin", "skills", "phone-call", "references"), { recursive: true, force: true });
+  fs.rmSync(path.join(packageRoot, "plugin", "skills", "calle", "references"), { recursive: true, force: true });
 
   const failures = checkClaudePlugin({ packageRoot, repoRoot });
   assert.ok(failures.some((failure) => failure.includes("references/commands.md")));
@@ -171,8 +171,8 @@ test("reports a missing command reference", () => {
 test("reports missing authorization guidance", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-claude-plugin-missing-auth-guidance"));
   writeFile(
-    path.join(packageRoot, "plugin", "skills", "phone-call", "SKILL.md"),
-    `---\nname: phone-call\ndescription: Test skill.\n---\n\n# Skill\n\n${VALID_PROGRESS_GUIDANCE}`,
+    path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"),
+    `---\nname: calle\ndescription: Test skill.\n---\n\n# Skill\n\n${VALID_PROGRESS_GUIDANCE}`,
   );
 
   const failures = checkClaudePlugin({ packageRoot, repoRoot });
@@ -185,8 +185,8 @@ test("reports missing authorization guidance", () => {
 test("reports missing call flow guidance", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-claude-plugin-missing-flow"));
   writeFile(
-    path.join(packageRoot, "plugin", "skills", "phone-call", "SKILL.md"),
-    `---\nname: phone-call\ndescription: Test skill.\n---\n\n# Skill\n\n${VALID_AUTH_GUIDANCE}`,
+    path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"),
+    `---\nname: calle\ndescription: Test skill.\n---\n\n# Skill\n\n${VALID_AUTH_GUIDANCE}`,
   );
 
   const failures = checkClaudePlugin({ packageRoot, repoRoot });
@@ -196,7 +196,7 @@ test("reports missing call flow guidance", () => {
 
 test("reports native MCP auth guidance", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-claude-plugin-native-auth-text"));
-  const skillPath = path.join(packageRoot, "plugin", "skills", "phone-call", "SKILL.md");
+  const skillPath = path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md");
   fs.appendFileSync(skillPath, "\nTell the user to open /mcp and authorize the `calle` server.\n");
 
   const failures = checkClaudePlugin({ packageRoot, repoRoot });
