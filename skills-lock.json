@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "handoff": {
+      "source": "zish-rob-crur/zish-skills",
+      "sourceType": "github",
+      "skillPath": "skills/handoff/SKILL.md",
+      "computedHash": "2bd8bbc52f248607a90fc64a4418478a8001ad7061f632711018a64a2474a675"
+    }
+  }
+}

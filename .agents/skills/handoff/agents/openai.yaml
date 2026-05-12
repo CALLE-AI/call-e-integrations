@@ -1,0 +1,4 @@
+interface:
+  display_name: "Handoff"
+  short_description: "Create concise Markdown handoff packages"
+  default_prompt: "Use $handoff to package the current work into a concise Markdown handoff with summary, status, next steps, evidence, and relevant context."
