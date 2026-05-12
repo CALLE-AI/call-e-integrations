@@ -8,12 +8,13 @@ Your agent can think, plan, and write. CALL-E picks up the phone — booking app
 
 **Less thinking. More doing. CALL-E handles the calls.**
 
-[Website](https://www.heycall-e.com/) · [Try on OpenClaw](https://clawhub.ai/call-e-dev/phone-call-calle) · [Quick install](#-quick-install) · [Docs](#-developer-docs) · [Discord](https://discord.gg/6AbXUzUV8w)
+[Website](https://www.heycall-e.com/) · [Try on ClawHub](https://clawhub.ai/call-e-dev/phone-call-calle) · [Quick install](#-quick-install) · [Docs](#-developer-docs) · [Discord](https://discord.gg/6AbXUzUV8w)
 
 ![npm](https://img.shields.io/npm/v/@call-e/cli?label=%40call-e%2Fcli)
 ![Codex](https://img.shields.io/badge/Codex-CALL--E-black)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-CALL--E-orange)
 ![OpenClaw](https://img.shields.io/badge/OpenClaw-ClawHub-purple)
+![Hermes Agent](https://img.shields.io/badge/Hermes%20Agent-ClawHub%20Prompt-green)
 ![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-blue)
 
 </div>
@@ -25,7 +26,7 @@ Your agent can think, plan, and write. CALL-E picks up the phone — booking app
 
 For most users, the simplest path is to ask your agent to install the published CALL-E phone call skill/plugin for its own environment.
 
-Copy this into Claude Code, Codex, OpenClaw, or another local agent that can run shell commands:
+Copy this into Claude Code, Codex, OpenClaw, Hermes Agent, or another local agent that can run shell commands:
 
 ```text
 Install the published CALL-E phone call skill/plugin for this agent environment.
@@ -33,6 +34,7 @@ Install the published CALL-E phone call skill/plugin for this agent environment.
 Use the native release path when available:
 - Claude Code: add the CALL-E plugin marketplace from `CALLE-AI/call-e-integrations`, install `calle@call-e-claude`, then invoke `/calle:calle`.
 - OpenClaw: run `openclaw skills install phone-call-calle`.
+- Hermes Agent: open `https://clawhub.ai/call-e-dev/phone-call-calle`, choose Prompt, and paste the ClawHub install prompt into Hermes.
 - Codex: add the CALL-E plugin marketplace from `CALLE-AI/call-e-integrations` using the official Codex command in this README.
 - CLI users: install `@call-e/cli`, then run `calle auth login`.
 - MCP-only clients: use Streamable HTTP with `https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth`.
@@ -97,6 +99,12 @@ openclaw skills install phone-call-calle
 
 Then start a new OpenClaw session and use **Phone Call - CALL-E**.
 
+### Hermes Agent
+
+Hermes Agent can use the ClawHub prompt flow directly, so there is no separate CALL-E Hermes plugin to install.
+
+Open [Phone Call - CALL-E on ClawHub](https://clawhub.ai/call-e-dev/phone-call-calle), choose **Prompt**, then paste the ClawHub install prompt into Hermes Agent.
+
 ### CLI
 
 Install the shared `calle` command:
@@ -134,6 +142,7 @@ Then complete the client OAuth flow and verify the available tools include `plan
 - For reproducible Claude Code installs, replace `@call-e/claude-plugin@latest` with a package-level release tag such as `@call-e/claude-plugin@<version>`.
 - Optional pre-auth for CLI-based agent installs: `npx -y @call-e/cli auth login`.
 - OpenClaw user installs should use ClawHub: `openclaw skills install phone-call-calle`.
+- Hermes Agent user installs should use the ClawHub Prompt flow from the same skill page; this repository does not publish a separate Hermes plugin.
 - This repository keeps the OpenClaw skill source at `packages/openclaw-cli-skill/skills/phone-call-calle` for local development and validation.
 
 Install guides: [CLI](./docs/install/cli.md) · [Codex](./docs/install/codex-plugin.md) · [Claude Code](./docs/install/claude-plugin.md) · [OpenClaw source](./docs/install/openclaw-cli-skill.md)
@@ -155,7 +164,7 @@ plan_call → run_call → get_call_run
 | Call planning | `calle call plan` or MCP `plan_call` |
 | Real outbound call execution | `calle call run` or MCP `run_call` |
 | Status, activity, summary, details, transcript | `calle call status` or MCP `get_call_run` |
-| Agent-client UX | `$calle` in Codex; `/calle:calle` in Claude Code; **Phone Call - CALL-E** in OpenClaw |
+| Agent-client UX | `$calle` in Codex; `/calle:calle` in Claude Code; **Phone Call - CALL-E** in OpenClaw; ClawHub Prompt flow in Hermes Agent |
 
 `plan_call` creates the call plan and returns run credentials. `run_call` starts the real outbound call. `get_call_run` returns progress and final results when available.
 
@@ -244,8 +253,9 @@ These examples are runnable demos, not a CALL-E SDK or supported application API
 ## 🧭 Boundaries
 
 - The CLI is not an OAuth server and not an MCP server. It is a local wrapper over the CALL-E broker API and remote MCP HTTP endpoint.
-- Codex, Claude Code, and OpenClaw integrations intentionally reuse the shared `calle` CLI for authentication, token caching, JSON output, MCP tool discovery, and call workflow shortcuts.
+- Codex, Claude Code, OpenClaw, and Hermes Agent integrations intentionally reuse the shared `calle` CLI for authentication, token caching, JSON output, MCP tool discovery, and call workflow shortcuts.
 - The OpenClaw route in this repository does not register OpenClaw-native tools and does not require a gateway restart from this repository.
+- Hermes Agent support uses the ClawHub Prompt flow for the published OpenClaw skill; this repository does not maintain a separate Hermes plugin.
 - Future Copilot, VS Code, Gemini, Cursor, Windsurf, Zed, Cline, Roo, Continue, or other ecosystem integrations should add their own ecosystem-specific entry point instead of sharing the Codex or Claude Code marketplaces.
 
 See [docs/agent-integration-layout.md](./docs/agent-integration-layout.md) for layout and marketplace naming rules.
@@ -298,5 +308,4 @@ For user-visible package changes, add a changeset. The release workflow publishe
 ## 💬 Community
 
 - Website: [heycall-e.com](https://www.heycall-e.com/)
-- OpenClaw: [Phone Call - CALL-E on ClawHub](https://clawhub.ai/call-e-dev/phone-call-calle)
 - Discord: [discord.gg/6AbXUzUV8w](https://discord.gg/6AbXUzUV8w)
