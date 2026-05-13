@@ -1,0 +1,43 @@
+{
+  "name": "@call-e/cursor-plugin",
+  "version": "0.1.0",
+  "description": "Cursor plugin bundle for CALL-E MCP workflows.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CALLE-AI/call-e-integrations.git",
+    "directory": "packages/cursor-plugin"
+  },
+  "homepage": "https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/cursor-plugin",
+  "bugs": {
+    "url": "https://github.com/CALLE-AI/call-e-integrations/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "README.md",
+    "plugin"
+  ],
+  "keywords": [
+    "ai-agent",
+    "calle",
+    "call-e",
+    "cursor",
+    "cursor-plugin",
+    "plugin",
+    "cli",
+    "mcp",
+    "phone-call",
+    "voice-call"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "check": "node ./scripts/check-plugin.mjs",
+    "test": "node --test ./test/*.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  }
+}

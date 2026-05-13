@@ -1,0 +1,35 @@
+{
+  "name": "calle",
+  "displayName": "CALL-E",
+  "version": "0.1.0",
+  "description": "Use CALL-E from Cursor through MCP, the calle CLI, and safety-aware agent skills.",
+  "author": {
+    "name": "CALLE AI"
+  },
+  "homepage": "https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/cursor-plugin",
+  "repository": "https://github.com/CALLE-AI/call-e-integrations",
+  "license": "MIT",
+  "keywords": [
+    "ai-agent",
+    "call-e",
+    "calle",
+    "cursor",
+    "cursor-plugin",
+    "cli",
+    "mcp",
+    "phone-call",
+    "voice-call"
+  ],
+  "category": "Productivity",
+  "tags": [
+    "call-e",
+    "calle",
+    "cursor",
+    "mcp",
+    "phone-call",
+    "voice-call"
+  ],
+  "skills": "./skills/",
+  "rules": "./rules/",
+  "mcpServers": "./mcp.json"
+}

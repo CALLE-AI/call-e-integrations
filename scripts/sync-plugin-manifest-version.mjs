@@ -21,8 +21,13 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
     path.join(packageDir, "openclaw.plugin.json"),
     path.join(packageDir, "plugin", ".codex-plugin", "plugin.json"),
     path.join(packageDir, "plugin", ".claude-plugin", "plugin.json"),
+    path.join(packageDir, "plugin", ".cursor-plugin", "plugin.json"),
   ];
   const claudeCliIntegrationPaths = [
+    path.join(packageDir, "plugin", "skills", "calle", "SKILL.md"),
+    path.join(packageDir, "plugin", "skills", "calle", "references", "commands.md"),
+  ];
+  const cursorCliIntegrationPaths = [
     path.join(packageDir, "plugin", "skills", "calle", "SKILL.md"),
     path.join(packageDir, "plugin", "skills", "calle", "references", "commands.md"),
   ];
@@ -75,6 +80,24 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
         fs.writeFileSync(marketplacePath, `${JSON.stringify(marketplace, null, 2)}\n`);
       }
     }
+  }
+
+  if (packageJson.name === "@call-e/cursor-plugin") {
+    for (const integrationPath of cursorCliIntegrationPaths) {
+      if (!fs.existsSync(integrationPath)) {
+        continue;
+      }
+
+      const source = fs.readFileSync(integrationPath, "utf8");
+      const nextSource = source.replace(
+        /CALLE_INTEGRATION_VERSION=\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
+        `CALLE_INTEGRATION_VERSION=${version}`,
+      );
+      if (nextSource !== source) {
+        fs.writeFileSync(integrationPath, nextSource);
+      }
+    }
+
   }
 
   if (fs.existsSync(indexPath)) {

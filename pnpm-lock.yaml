@@ -42,6 +42,8 @@ importers:
 
   packages/core: {}
 
+  packages/cursor-plugin: {}
+
   packages/openclaw-cli-skill: {}
 
 packages:

@@ -13,6 +13,7 @@ Your agent can think, plan, and write. CALL-E picks up the phone — booking app
 ![npm](https://img.shields.io/npm/v/@call-e/cli?label=%40call-e%2Fcli)
 ![Codex](https://img.shields.io/badge/Codex-CALL--E-black)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-CALL--E-orange)
+![Cursor](https://img.shields.io/badge/Cursor-CALL--E-blue)
 ![OpenClaw](https://img.shields.io/badge/OpenClaw-ClawHub-purple)
 ![Hermes Agent](https://img.shields.io/badge/Hermes%20Agent-ClawHub%20Prompt-green)
 ![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-blue)
@@ -24,15 +25,17 @@ Your agent can think, plan, and write. CALL-E picks up the phone — booking app
 
 ## ✨ Ask an agent to install CALL-E
 
-For most users, the simplest path is to ask your agent to install the published CALL-E phone call skill/plugin for its own environment.
+For most users, the simplest path is to ask your agent to install or configure
+the CALL-E phone call skill/plugin for its own environment.
 
-Copy this into Claude Code, Codex, OpenClaw, Hermes Agent, or another local agent that can run shell commands:
+Copy this into Claude Code, Codex, Cursor, OpenClaw, Hermes Agent, or another local agent that can run shell commands:
 
 ```text
-Install the published CALL-E phone call skill/plugin for this agent environment.
+Install or configure the CALL-E phone call skill/plugin for this agent environment.
 
 Use the native release path when available:
 - Claude Code: add the CALL-E plugin marketplace from `CALLE-AI/call-e-integrations`, install `calle@call-e-claude`, then invoke `/calle:calle`.
+- Cursor: configure `.cursor/mcp.json` or `~/.cursor/mcp.json` with the CALL-E MCP server, or load the Cursor plugin from this repository for the bundled MCP config, skill, and safety rule.
 - OpenClaw: run `openclaw skills install phone-call-calle`.
 - Hermes Agent: open `https://clawhub.ai/call-e-dev/phone-call-calle`, choose Prompt, and paste the ClawHub install prompt into Hermes.
 - Codex: add the CALL-E plugin marketplace from `CALLE-AI/call-e-integrations` using the official Codex command in this README.
@@ -89,6 +92,42 @@ The skill checks CLI authentication on use. If login is missing or expired, it
 runs blocking `calle auth login`, shows the browser authorization URL, and
 continues after authorization completes.
 
+### Cursor
+
+Use the Cursor plugin payload from this repository when you want the full
+integration. Cursor reads `.cursor-plugin/marketplace.json`, which points the
+`calle` plugin entry at `./packages/cursor-plugin/plugin`. That plugin bundles
+the MCP server config, the `calle` skill, and the real-call safety rule, so you
+do not need to create `.cursor/mcp.json` manually for the plugin path.
+
+For local testing from a clone:
+
+```bash
+mkdir -p ~/.cursor/plugins/local
+ln -s /path/to/call-e-integrations/packages/cursor-plugin/plugin ~/.cursor/plugins/local/calle
+```
+
+Reload Cursor, authorize the `calle` MCP server, and verify `plan_call`,
+`run_call`, and `get_call_run` are available.
+
+For plugin package details, see
+[docs/install/cursor-plugin.md](./docs/install/cursor-plugin.md). The plugin is
+prepared for Cursor Marketplace submission, but publication is outside this
+repository change.
+
+For lightweight MCP-only setup without the plugin skill or safety rule, create
+or edit `.cursor/mcp.json` in a project, or `~/.cursor/mcp.json` globally:
+
+```json
+{
+  "mcpServers": {
+    "calle": {
+      "url": "https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth"
+    }
+  }
+}
+```
+
 ### OpenClaw
 
 Install the published ClawHub skill:
@@ -140,12 +179,13 @@ Then complete the client OAuth flow and verify the available tools include `plan
 - The Codex plugin uses the repository-local CLI when available, then a global `calle`, then `npx -y @call-e/cli`.
 - For reproducible Codex installs, replace `@call-e/codex-plugin@latest` with a package-level release tag such as `@call-e/codex-plugin@<version>`.
 - For reproducible Claude Code installs, replace `@call-e/claude-plugin@latest` with a package-level release tag such as `@call-e/claude-plugin@<version>`.
+- Cursor quick setup uses MCP config directly; the Cursor plugin adds a bundled skill and safety rule around the same remote MCP server.
 - Optional pre-auth for CLI-based agent installs: `npx -y @call-e/cli auth login`.
 - OpenClaw user installs should use ClawHub: `openclaw skills install phone-call-calle`.
 - Hermes Agent user installs should use the ClawHub Prompt flow from the same skill page; this repository does not publish a separate Hermes plugin.
 - This repository keeps the OpenClaw skill source at `packages/openclaw-cli-skill/skills/phone-call-calle` for local development and validation.
 
-Install guides: [CLI](./docs/install/cli.md) · [Codex](./docs/install/codex-plugin.md) · [Claude Code](./docs/install/claude-plugin.md) · [OpenClaw source](./docs/install/openclaw-cli-skill.md)
+Install guides: [CLI](./docs/install/cli.md) · [Codex](./docs/install/codex-plugin.md) · [Claude Code](./docs/install/claude-plugin.md) · [Cursor MCP](./docs/install/cursor.md) · [Cursor plugin](./docs/install/cursor-plugin.md) · [OpenClaw source](./docs/install/openclaw-cli-skill.md)
 
 </details>
 
@@ -164,7 +204,7 @@ plan_call → run_call → get_call_run
 | Call planning | `calle call plan` or MCP `plan_call` |
 | Real outbound call execution | `calle call run` or MCP `run_call` |
 | Status, activity, summary, details, transcript | `calle call status` or MCP `get_call_run` |
-| Agent-client UX | `$calle` in Codex; `/calle:calle` in Claude Code; **Phone Call - CALL-E** in OpenClaw; ClawHub Prompt flow in Hermes Agent |
+| Agent-client UX | `$calle` in Codex; `/calle:calle` in Claude Code; `calle` MCP/skill in Cursor; **Phone Call - CALL-E** in OpenClaw; ClawHub Prompt flow in Hermes Agent |
 
 `plan_call` creates the call plan and returns run credentials. `run_call` starts the real outbound call. `get_call_run` returns progress and final results when available.
 
@@ -213,13 +253,16 @@ All command output is JSON except `--help`. Access tokens are read from the loca
 | `packages/cli` | `@call-e/cli` | Shared `calle` command for auth, MCP config, tool listing, and phone-call workflow shortcuts. |
 | `packages/codex-plugin` | `@call-e/codex-plugin` | Codex plugin bundle that exposes CALL-E as the `$calle` skill. |
 | `packages/claude-plugin` | `@call-e/claude-plugin` | Claude Code plugin bundle that exposes CALL-E through the shared CLI and `/calle:calle`. |
+| `packages/cursor-plugin` | `@call-e/cursor-plugin` | Cursor plugin bundle that exposes CALL-E through MCP, a `calle` skill, and a safety rule. |
 | `packages/openclaw-cli-skill` | `@call-e/openclaw-cli-skill` | Private validation/source package for the OpenClaw skill published through ClawHub. |
 
 ```text
 .agents/plugins/marketplace.json              # Codex marketplace entry
 .claude-plugin/marketplace.json               # Claude Code marketplace entry
+.cursor-plugin/marketplace.json               # Cursor marketplace entry
 packages/codex-plugin/plugin/                 # Codex plugin source
 packages/claude-plugin/plugin/                # Claude Code plugin source
+packages/cursor-plugin/plugin/                # Cursor plugin source
 packages/openclaw-cli-skill/skills/            # OpenClaw skill source
 packages/cli/                                  # Shared calle CLI
 packages/core/                                 # Shared runtime helpers
@@ -238,6 +281,12 @@ examples/                                      # Runnable MCP demos, not an SDK
 | Claude Code plugin entry | name | `calle` |
 | Claude Code plugin source | path | `./packages/claude-plugin/plugin` |
 | Claude Code CLI attribution | env | `claude/claude_code_plugin/<version>` |
+| Cursor marketplace | `name` | `call-e-cursor` |
+| Cursor plugin entry | name | `calle` |
+| Cursor plugin display name | displayName | `CALL-E` |
+| Cursor plugin source | path | `./packages/cursor-plugin/plugin` |
+| Cursor MCP server | key | `calle` |
+| Cursor CLI attribution | env | `cursor/cursor_plugin/<version>` |
 | OpenClaw skill | slug | `phone-call-calle` |
 | OpenClaw skill | name | `Phone Call - CALL-E` |
 
@@ -254,9 +303,10 @@ These examples are runnable demos, not a CALL-E SDK or supported application API
 
 - The CLI is not an OAuth server and not an MCP server. It is a local wrapper over the CALL-E broker API and remote MCP HTTP endpoint.
 - Codex, Claude Code, OpenClaw, and Hermes Agent integrations intentionally reuse the shared `calle` CLI for authentication, token caching, JSON output, MCP tool discovery, and call workflow shortcuts.
+- The Cursor plugin reuses the existing remote CALL-E MCP server and does not implement a new local MCP server or backend.
 - The OpenClaw route in this repository does not register OpenClaw-native tools and does not require a gateway restart from this repository.
 - Hermes Agent support uses the ClawHub Prompt flow for the published OpenClaw skill; this repository does not maintain a separate Hermes plugin.
-- Future Copilot, VS Code, Gemini, Cursor, Windsurf, Zed, Cline, Roo, Continue, or other ecosystem integrations should add their own ecosystem-specific entry point instead of sharing the Codex or Claude Code marketplaces.
+- Future Copilot, VS Code, Gemini, Windsurf, Zed, Cline, Roo, Continue, or other ecosystem integrations should add their own ecosystem-specific entry point instead of sharing the Codex, Claude Code, or Cursor marketplaces.
 
 See [docs/agent-integration-layout.md](./docs/agent-integration-layout.md) for layout and marketplace naming rules.
 
@@ -264,7 +314,7 @@ See [docs/agent-integration-layout.md](./docs/agent-integration-layout.md) for l
 
 The `calle` CLI sends best-effort usage telemetry to CALL-E to diagnose installation, authentication, MCP tool availability, and early usage drop-off before a first `plan_call` reaches the server.
 
-CLI telemetry includes an anonymous installation ID, CLI version, integration source such as `cli/cli/<version>`, `codex/codex_plugin/<version>`, `claude/claude_code_plugin/<version>`, or `openclaw/openclaw_cli_skill/<version>`, command stage, outcome, error type, and server host/hash. It does **not** include phone numbers, call goals, OAuth tokens, broker login URLs, full argument JSON, transcripts, or contact data.
+CLI telemetry includes an anonymous installation ID, CLI version, integration source such as `cli/cli/<version>`, `codex/codex_plugin/<version>`, `claude/claude_code_plugin/<version>`, `cursor/cursor_plugin/<version>`, or `openclaw/openclaw_cli_skill/<version>`, command stage, outcome, error type, and server host/hash. It does **not** include phone numbers, call goals, OAuth tokens, broker login URLs, full argument JSON, transcripts, or contact data.
 
 Disable CLI telemetry with any of:
 
@@ -298,6 +348,8 @@ pnpm --filter @call-e/codex-plugin check
 pnpm --filter @call-e/codex-plugin test
 pnpm --filter @call-e/claude-plugin check
 pnpm --filter @call-e/claude-plugin test
+pnpm --filter @call-e/cursor-plugin check
+pnpm --filter @call-e/cursor-plugin test
 pnpm --filter @call-e/openclaw-cli-skill check
 pnpm --filter @call-e/openclaw-cli-skill test
 pnpm run check:examples
