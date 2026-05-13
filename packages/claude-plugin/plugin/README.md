@@ -14,5 +14,5 @@ then `npx -y @call-e/cli@0.3.2`.
 CLI commands run with:
 
 ```text
-CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.0
+CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.1
 ```

@@ -58,7 +58,7 @@ then the pinned npm fallback above. CLI commands run by the skill include this
 CALL-E attribution:
 
 ```text
-CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.0
+CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.1
 ```
 
 ## Use

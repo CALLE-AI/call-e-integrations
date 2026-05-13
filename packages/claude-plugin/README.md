@@ -46,7 +46,7 @@ marketplace, install `calle@call-e-claude`, run `/reload-plugins`, then invoke
 The skill runs CLI commands with this integration attribution:
 
 ```text
-CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.0
+CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.1
 ```
 
 The version segment must stay in sync with this package version.

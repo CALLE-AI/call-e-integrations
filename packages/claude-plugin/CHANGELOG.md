@@ -1,5 +1,11 @@
 # @call-e/claude-plugin
 
+## 0.2.1
+
+### Patch Changes
+
+- [`d4e6703`](https://github.com/CALLE-AI/call-e-integrations/commit/d4e6703db69dc5f1f21ee0d5dbb27c891dda0f51) Thanks [@github-actions[bot]](https://github.com/github-actions%5Bbot%5D)! - Document `/reload-plugins` as a Claude Code install step so the installed CALL-E skill is available in the current session.
+
 ## 0.2.0
 
 ### Minor Changes
