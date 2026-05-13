@@ -7,6 +7,12 @@ recovery, phone call planning, planned call execution, and call status checks.
 The CLI remains responsible for authentication, token caching, JSON output, and
 MCP error handling.
 
+If a same-name CALL-E ChatGPT App is also installed in Codex, disable that App
+for Codex sessions where `$calle` should use this plugin. The plugin skill
+routes through the local CLI and includes guardrails against ChatGPT
+App/connector tool namespaces, but Codex configuration is the hard isolation
+boundary.
+
 For user installation steps, see
 [docs/install/codex-plugin.md](../../docs/install/codex-plugin.md).
 

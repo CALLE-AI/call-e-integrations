@@ -15,6 +15,10 @@ const VALID_AUTH_GUIDANCE =
   "do not ask the user to reply after browser authorization.\n\n" +
   "Before we start, please complete authorization here\n\n" +
   "Great, authorization is complete\n\n";
+const VALID_ROUTING_GUIDANCE =
+  "Use only the `calle` CLI flow.\n\n" +
+  "Do not call ChatGPT App or connector tools.\n\n" +
+  "mcp__codex_apps__\n\n";
 const VALID_PROGRESS_GUIDANCE =
   "Phone call is in progress! Progress:\n\n" +
   "Do not stay silent until a terminal status.\n\n" +
@@ -56,7 +60,7 @@ function createValidFixture(root) {
 
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"),
-    `---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\n${VALID_AUTH_GUIDANCE}${VALID_PROGRESS_GUIDANCE}`,
+    `---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\n${VALID_AUTH_GUIDANCE}${VALID_ROUTING_GUIDANCE}${VALID_PROGRESS_GUIDANCE}`,
   );
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "agents", "openai.yaml"),
@@ -64,7 +68,7 @@ function createValidFixture(root) {
   );
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "references", "commands.md"),
-    `# Commands\n\n${VALID_AUTH_GUIDANCE}Phone call is in progress! Progress:\n\nWait 10 seconds.\n`,
+    `# Commands\n\n${VALID_AUTH_GUIDANCE}${VALID_ROUTING_GUIDANCE}Use the \`calle\` CLI flow.\n\nPhone call is in progress! Progress:\n\nWait 10 seconds.\n`,
   );
 
   writeJson(path.join(repoRoot, ".agents", "plugins", "marketplace.json"), {
@@ -123,7 +127,7 @@ test("reports missing authorization guidance", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-codex-plugin-missing-auth-guidance"));
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"),
-    `---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\nUse assistant_hint.message to include a brief post-auth help note after auth login.\n\n${VALID_PROGRESS_GUIDANCE}`,
+    `---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\nUse assistant_hint.message to include a brief post-auth help note after auth login.\n\n${VALID_ROUTING_GUIDANCE}${VALID_PROGRESS_GUIDANCE}`,
   );
 
   const failures = checkCodexPlugin({ packageRoot, repoRoot });
@@ -133,11 +137,22 @@ test("reports missing authorization guidance", () => {
   assert.ok(failures.some((failure) => failure.includes("post-authorization success")));
 });
 
+test("reports missing ChatGPT App routing boundary guidance", () => {
+  const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-codex-plugin-missing-routing"));
+  writeFile(
+    path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"),
+    `---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\n${VALID_AUTH_GUIDANCE}${VALID_PROGRESS_GUIDANCE}`,
+  );
+
+  const failures = checkCodexPlugin({ packageRoot, repoRoot });
+  assert.ok(failures.some((failure) => failure.includes("ChatGPT App tools")));
+});
+
 test("reports missing non-terminal call progress guidance", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-codex-plugin-missing-progress"));
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"),
-    `---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\n${VALID_AUTH_GUIDANCE}`,
+    `---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\n${VALID_AUTH_GUIDANCE}${VALID_ROUTING_GUIDANCE}`,
   );
 
   const failures = checkCodexPlugin({ packageRoot, repoRoot });
@@ -148,7 +163,7 @@ test("reports missing non-terminal call polling interval guidance", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-codex-plugin-missing-polling"));
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"),
-    `---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\n${VALID_AUTH_GUIDANCE}Phone call is in progress! Progress:\n\nDo not stay silent until a terminal status.\n`,
+    `---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\n${VALID_AUTH_GUIDANCE}${VALID_ROUTING_GUIDANCE}Phone call is in progress! Progress:\n\nDo not stay silent until a terminal status.\n`,
   );
 
   const failures = checkCodexPlugin({ packageRoot, repoRoot });
