@@ -13,6 +13,7 @@ const syncedInstallFiles = [
   "docs/install/cursor.md",
   "docs/install/cursor-plugin.md",
   "docs/install/openclaw-cli-skill.md",
+  "docs/install/skills-sh-skill.md",
   "docs/agent-integration-layout.md",
   "packages/codex-plugin/README.md",
   "packages/codex-plugin/plugin/README.md",
@@ -29,6 +30,9 @@ const syncedInstallFiles = [
   "packages/openclaw-cli-skill/README.md",
   "packages/openclaw-cli-skill/skills/phone-call-calle/SKILL.md",
   "packages/openclaw-cli-skill/skills/phone-call-calle/references/commands.md",
+  "packages/skills-sh-skill/README.md",
+  "packages/skills-sh-skill/skills/calle/SKILL.md",
+  "packages/skills-sh-skill/skills/calle/references/commands.md",
 ];
 
 const codexLatestInstallFiles = new Set([
@@ -56,6 +60,13 @@ const openclawCliSkillIntegrationFiles = new Set([
   "packages/openclaw-cli-skill/README.md",
   "packages/openclaw-cli-skill/skills/phone-call-calle/SKILL.md",
   "packages/openclaw-cli-skill/skills/phone-call-calle/references/commands.md",
+]);
+
+const skillsShSkillIntegrationFiles = new Set([
+  "docs/install/skills-sh-skill.md",
+  "packages/skills-sh-skill/README.md",
+  "packages/skills-sh-skill/skills/calle/SKILL.md",
+  "packages/skills-sh-skill/skills/calle/references/commands.md",
 ]);
 
 const claudeCliIntegrationFiles = new Set([
@@ -104,6 +115,14 @@ const openclawCliSkillIntegrationReplacements = [
   },
 ];
 
+const skillsShSkillIntegrationReplacements = [
+  {
+    label: "skills.sh skill integration attribution version",
+    pattern: /CALLE_INTEGRATION_VERSION=\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
+    value: `CALLE_INTEGRATION_VERSION=${readPackageVersion("packages/skills-sh-skill")}`,
+  },
+];
+
 const claudeCliIntegrationReplacements = [
   {
     label: "Claude Code plugin CLI integration attribution version",
@@ -140,11 +159,13 @@ for (const relativePath of syncedInstallFiles) {
     ? codexIntegrationReplacements
     : openclawCliSkillIntegrationFiles.has(relativePath)
       ? openclawCliSkillIntegrationReplacements
-      : claudeCliIntegrationFiles.has(relativePath)
-        ? claudeCliIntegrationReplacements
-        : cursorCliIntegrationFiles.has(relativePath)
-          ? cursorCliIntegrationReplacements
-        : [];
+      : skillsShSkillIntegrationFiles.has(relativePath)
+        ? skillsShSkillIntegrationReplacements
+        : claudeCliIntegrationFiles.has(relativePath)
+          ? claudeCliIntegrationReplacements
+          : cursorCliIntegrationFiles.has(relativePath)
+            ? cursorCliIntegrationReplacements
+            : [];
 
   for (const replacement of integrationReplacements) {
     nextSource = nextSource.replace(replacement.pattern, replacement.value);

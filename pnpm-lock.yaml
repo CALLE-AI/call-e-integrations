@@ -46,6 +46,8 @@ importers:
 
   packages/openclaw-cli-skill: {}
 
+  packages/skills-sh-skill: {}
+
 packages:
 
   '@babel/runtime@7.29.2':

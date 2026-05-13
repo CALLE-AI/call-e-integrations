@@ -25,6 +25,12 @@ Current OpenClaw layout:
 packages/openclaw-cli-skill/skills/
 ```
 
+Current skills.sh layout:
+
+```text
+packages/skills-sh-skill/skills/
+```
+
 Current Claude Code layout:
 
 ```text
@@ -40,6 +46,8 @@ packages/cursor-plugin/plugin/
 ```
 
 Use `packages/openclaw-cli-skill/skills/` for the OpenClaw CALL-E skill source.
+Use `packages/skills-sh-skill/skills/` for the skills.sh compatible CALL-E
+skill source.
 Use `.agents/skills/` for repository-local Codex helper skills. Do not put
 productized client-specific skill packages there; keep them under their owning
 package.
@@ -76,6 +84,14 @@ For Cursor:
 - The Cursor MCP server key must stay `calle`.
 - The Cursor CLI fallback attribution must stay
   `cursor/cursor_plugin/<version>`.
+
+For skills.sh:
+
+- The skills.sh package path must stay `packages/skills-sh-skill`.
+- The skills.sh skill directory must stay `packages/skills-sh-skill/skills/calle`.
+- The skills.sh skill frontmatter `name` must stay `calle`.
+- The skills.sh CLI integration attribution must stay
+  `skills_sh/skills_sh_skill/<version>`.
 
 Use ecosystem-specific internal marketplace names when adding other clients:
 
@@ -201,3 +217,18 @@ packages/cursor-plugin/plugin/
 The plugin bundles the same remote MCP server with a `calle` skill and an
 always-on real-call safety rule. It is prepared for Cursor Marketplace
 submission; publication is a separate operational step.
+
+skills.sh install example:
+
+Use the direct GitHub tree path so `skills` installs only the portable `calle`
+skill and does not discover repository-local helper skills:
+
+```bash
+npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/skills-sh-skill/skills/calle -a codex
+```
+
+Or install from the skills package directory and select `calle`:
+
+```bash
+npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/skills-sh-skill/skills --skill calle -a codex
+```
