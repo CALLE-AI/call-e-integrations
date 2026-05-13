@@ -32,6 +32,13 @@ Current Claude Code layout:
 packages/claude-plugin/plugin/
 ```
 
+Current Cursor layout:
+
+```text
+.cursor-plugin/marketplace.json
+packages/cursor-plugin/plugin/
+```
+
 Use `packages/openclaw-cli-skill/skills/` for the OpenClaw CALL-E skill source.
 Use `.agents/skills/` for repository-local Codex helper skills. Do not put
 productized client-specific skill packages there; keep them under their owning
@@ -59,11 +66,23 @@ For Claude Code:
 - The Claude Code CLI integration attribution must stay
   `claude/claude_code_plugin/<version>`.
 
+For Cursor:
+
+- `.cursor-plugin/marketplace.json` is the Cursor marketplace entry point.
+- The marketplace `name` must stay `call-e-cursor`.
+- The Cursor plugin entry name must stay `calle`.
+- The Cursor plugin display name must stay `CALL-E`.
+- The Cursor plugin source path must stay `./packages/cursor-plugin/plugin`.
+- The Cursor MCP server key must stay `calle`.
+- The Cursor CLI fallback attribution must stay
+  `cursor/cursor_plugin/<version>`.
+
 Use ecosystem-specific internal marketplace names when adding other clients:
 
 ```text
 call-e-codex
 call-e-claude
+call-e-cursor
 call-e-copilot
 call-e-gemini
 ```
@@ -91,6 +110,10 @@ intentionally exposes multiple CALL-E marketplaces in the same client UI.
   `#@call-e/claude-plugin@latest` in the marketplace Git URL so users get the
   latest released Claude Code plugin without typing a version number. Mention
   package-level release tags only as the reproducible pinned-install option.
+- Public Cursor quick-start docs should document `.cursor/mcp.json` and
+  `~/.cursor/mcp.json` for direct MCP configuration. Cursor plugin docs must
+  not claim public marketplace availability until the Cursor plugin has been
+  submitted, reviewed, and accepted.
 - Pinned package and CLI version references are synced during release PR
   versioning by `scripts/sync-install-doc-versions.mjs`.
 - The release workflow initializes `@call-e/codex-plugin@latest` from the
@@ -146,3 +169,29 @@ commands.
 
 For reproducible installs, replace `@call-e/claude-plugin@latest` with a
 package-level release tag such as `@call-e/claude-plugin@<version>`.
+
+Cursor MCP quick install example:
+
+Create `.cursor/mcp.json` in a project, or `~/.cursor/mcp.json` for global
+Cursor configuration:
+
+```json
+{
+  "mcpServers": {
+    "calle": {
+      "url": "https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth"
+    }
+  }
+}
+```
+
+The full Cursor plugin payload lives at:
+
+```text
+.cursor-plugin/marketplace.json
+packages/cursor-plugin/plugin/
+```
+
+The plugin bundles the same remote MCP server with a `calle` skill and an
+always-on real-call safety rule. It is prepared for Cursor Marketplace
+submission; publication is a separate operational step.

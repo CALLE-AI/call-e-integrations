@@ -10,6 +10,8 @@ const syncedInstallFiles = [
   "docs/install/cli.md",
   "docs/install/codex-plugin.md",
   "docs/install/claude-plugin.md",
+  "docs/install/cursor.md",
+  "docs/install/cursor-plugin.md",
   "docs/install/openclaw-cli-skill.md",
   "docs/agent-integration-layout.md",
   "packages/codex-plugin/README.md",
@@ -20,6 +22,10 @@ const syncedInstallFiles = [
   "packages/claude-plugin/plugin/README.md",
   "packages/claude-plugin/plugin/skills/calle/SKILL.md",
   "packages/claude-plugin/plugin/skills/calle/references/commands.md",
+  "packages/cursor-plugin/README.md",
+  "packages/cursor-plugin/plugin/README.md",
+  "packages/cursor-plugin/plugin/skills/calle/SKILL.md",
+  "packages/cursor-plugin/plugin/skills/calle/references/commands.md",
   "packages/openclaw-cli-skill/README.md",
   "packages/openclaw-cli-skill/skills/phone-call-calle/SKILL.md",
   "packages/openclaw-cli-skill/skills/phone-call-calle/references/commands.md",
@@ -60,6 +66,14 @@ const claudeCliIntegrationFiles = new Set([
   "packages/claude-plugin/plugin/skills/calle/references/commands.md",
 ]);
 
+const cursorCliIntegrationFiles = new Set([
+  "docs/install/cursor-plugin.md",
+  "packages/cursor-plugin/README.md",
+  "packages/cursor-plugin/plugin/README.md",
+  "packages/cursor-plugin/plugin/skills/calle/SKILL.md",
+  "packages/cursor-plugin/plugin/skills/calle/references/commands.md",
+]);
+
 function readPackageVersion(packagePath) {
   const packageJsonPath = path.join(repoRoot, packagePath, "package.json");
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
@@ -98,6 +112,14 @@ const claudeCliIntegrationReplacements = [
   },
 ];
 
+const cursorCliIntegrationReplacements = [
+  {
+    label: "Cursor plugin CLI integration attribution version",
+    pattern: /CALLE_INTEGRATION_VERSION=\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
+    value: `CALLE_INTEGRATION_VERSION=${readPackageVersion("packages/cursor-plugin")}`,
+  },
+];
+
 const staleFiles = [];
 const validationFailures = [];
 
@@ -120,6 +142,8 @@ for (const relativePath of syncedInstallFiles) {
       ? openclawCliSkillIntegrationReplacements
       : claudeCliIntegrationFiles.has(relativePath)
         ? claudeCliIntegrationReplacements
+        : cursorCliIntegrationFiles.has(relativePath)
+          ? cursorCliIntegrationReplacements
         : [];
 
   for (const replacement of integrationReplacements) {

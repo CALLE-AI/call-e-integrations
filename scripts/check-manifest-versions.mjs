@@ -31,8 +31,16 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
       label: "plugin/.claude-plugin/plugin.json",
       path: path.join(packageDir, "plugin", ".claude-plugin", "plugin.json"),
     },
+    {
+      label: "plugin/.cursor-plugin/plugin.json",
+      path: path.join(packageDir, "plugin", ".cursor-plugin", "plugin.json"),
+    },
   ];
   const claudeCliIntegrationPaths = [
+    path.join(packageDir, "plugin", "skills", "calle", "SKILL.md"),
+    path.join(packageDir, "plugin", "skills", "calle", "references", "commands.md"),
+  ];
+  const cursorCliIntegrationPaths = [
     path.join(packageDir, "plugin", "skills", "calle", "SKILL.md"),
     path.join(packageDir, "plugin", "skills", "calle", "references", "commands.md"),
   ];
@@ -63,6 +71,25 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
 
   if (packageJson.name === "@call-e/claude-plugin") {
     for (const integrationPath of claudeCliIntegrationPaths) {
+      if (!fs.existsSync(integrationPath)) {
+        continue;
+      }
+
+      const source = fs.readFileSync(integrationPath, "utf8");
+      const staleMatches = source.match(/CALLE_INTEGRATION_VERSION=(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/g) || [];
+      for (const match of staleMatches) {
+        const version = match.replace("CALLE_INTEGRATION_VERSION=", "");
+        if (version !== packageVersion) {
+          failures.push(
+            `${entry.name}: ${path.relative(packageDir, integrationPath)} ${match} does not match package.json version (${packageVersion}).`
+          );
+        }
+      }
+    }
+  }
+
+  if (packageJson.name === "@call-e/cursor-plugin") {
+    for (const integrationPath of cursorCliIntegrationPaths) {
       if (!fs.existsSync(integrationPath)) {
         continue;
       }

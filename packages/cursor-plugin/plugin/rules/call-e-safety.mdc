@@ -1,0 +1,15 @@
+---
+description: "CALL-E real phone call safety rules."
+alwaysApply: true
+---
+
+# CALL-E Safety
+
+CALL-E can place real outbound phone calls.
+
+- Always use plan_call before run_call.
+- Only use run_call when the user clearly intends to place the call.
+- Preserve returned plan_id and confirm_token exactly.
+- Never guess phone numbers, country codes, language, region, plan_id, confirm_token, or run_id.
+- Never print, request, or expose OAuth tokens, bearer tokens, authorization codes, callback URLs, refresh tokens, or access tokens.
+- Do not configure CALL-E run_call for auto-run.

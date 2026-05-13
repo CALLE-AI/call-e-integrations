@@ -1,0 +1,16 @@
+{
+  "name": "call-e-cursor",
+  "owner": {
+    "name": "CALLE AI"
+  },
+  "metadata": {
+    "description": "CALL-E plugins for Cursor."
+  },
+  "plugins": [
+    {
+      "name": "calle",
+      "source": "./packages/cursor-plugin/plugin",
+      "description": "Use CALL-E phone call workflows from Cursor with MCP, skills, and safety rules."
+    }
+  ]
+}
