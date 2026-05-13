@@ -233,6 +233,7 @@ function checkDocs({ packageRoot, repoRoot, failures }) {
     assert(source.includes("@call-e/claude-plugin@latest"), failures, "Claude install doc must use @call-e/claude-plugin@latest by default.");
     assert(source.includes("/plugin marketplace add"), failures, "Claude install doc must use the Claude Code slash-command marketplace install path.");
     assert(source.includes("/plugin install calle@call-e-claude"), failures, "Claude install doc must use the Claude Code slash-command plugin install path.");
+    assert(source.includes("/reload-plugins"), failures, "Claude install doc must document /reload-plugins after plugin installation.");
     assert(!source.includes("claude plugin marketplace add"), failures, "Claude install doc must not use unavailable shell marketplace commands.");
     assert(!source.includes("claude plugin install"), failures, "Claude install doc must not use unavailable shell plugin install commands.");
     assert(!source.includes("--sparse"), failures, "Claude install doc must not use CLI-only --sparse options with slash commands.");

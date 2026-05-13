@@ -27,6 +27,13 @@ Then install the plugin:
 /plugin install calle@call-e-claude
 ```
 
+Reload plugins in the current Claude Code session so the installed skill is
+available without restarting:
+
+```text
+/reload-plugins
+```
+
 `@call-e/claude-plugin@latest` is a Git tag updated by the release workflow after `@call-e/claude-plugin` publishes. For a reproducible install, replace it with a package-level release tag such as `@call-e/claude-plugin@<version>`.
 
 ## Authorize

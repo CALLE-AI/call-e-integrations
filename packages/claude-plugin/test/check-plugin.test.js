@@ -89,7 +89,7 @@ function createValidFixture(root) {
   writeFile(path.join(packageRoot, "plugin", "README.md"), "# Claude plugin\n\n/calle:calle\n\ncalle auth login\n");
   writeFile(
     path.join(repoRoot, "docs", "install", "claude-plugin.md"),
-    "# Install\n\n/plugin marketplace add https://example.test/repo.git#@call-e/claude-plugin@latest\n/plugin install calle@call-e-claude\n/calle:calle\ncalle auth login\nnpx -y @call-e/cli\n",
+    "# Install\n\n/plugin marketplace add https://example.test/repo.git#@call-e/claude-plugin@latest\n/plugin install calle@call-e-claude\n/reload-plugins\n/calle:calle\ncalle auth login\nnpx -y @call-e/cli\n",
   );
 
   writeJson(path.join(repoRoot, ".claude-plugin", "marketplace.json"), {
@@ -230,7 +230,7 @@ test("reports shell plugin install commands in docs", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-claude-plugin-shell-install-docs"));
   writeFile(
     path.join(repoRoot, "docs", "install", "claude-plugin.md"),
-    "# Install\n\nclaude plugin marketplace add https://example.test/repo.git#@call-e/claude-plugin@latest\nclaude plugin install calle@call-e-claude\ncalle auth login\nnpx -y @call-e/cli\n",
+    "# Install\n\nclaude plugin marketplace add https://example.test/repo.git#@call-e/claude-plugin@latest\nclaude plugin install calle@call-e-claude\n/reload-plugins\ncalle auth login\nnpx -y @call-e/cli\n",
   );
 
   const failures = checkClaudePlugin({ packageRoot, repoRoot });
@@ -243,9 +243,20 @@ test("reports sparse options in slash install docs", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-claude-plugin-sparse-slash-docs"));
   writeFile(
     path.join(repoRoot, "docs", "install", "claude-plugin.md"),
-    "# Install\n\n/plugin marketplace add https://example.test/repo.git#@call-e/claude-plugin@latest --sparse .claude-plugin packages/claude-plugin/plugin\n/plugin install calle@call-e-claude\ncalle auth login\nnpx -y @call-e/cli\n",
+    "# Install\n\n/plugin marketplace add https://example.test/repo.git#@call-e/claude-plugin@latest --sparse .claude-plugin packages/claude-plugin/plugin\n/plugin install calle@call-e-claude\n/reload-plugins\ncalle auth login\nnpx -y @call-e/cli\n",
   );
 
   const failures = checkClaudePlugin({ packageRoot, repoRoot });
   assert.ok(failures.some((failure) => failure.includes("CLI-only --sparse")));
+});
+
+test("reports missing reload command in install docs", () => {
+  const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-claude-plugin-missing-reload-docs"));
+  writeFile(
+    path.join(repoRoot, "docs", "install", "claude-plugin.md"),
+    "# Install\n\n/plugin marketplace add https://example.test/repo.git#@call-e/claude-plugin@latest\n/plugin install calle@call-e-claude\n/calle:calle\ncalle auth login\nnpx -y @call-e/cli\n",
+  );
+
+  const failures = checkClaudePlugin({ packageRoot, repoRoot });
+  assert.ok(failures.some((failure) => failure.includes("/reload-plugins")));
 });

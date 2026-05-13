@@ -82,7 +82,13 @@ Then install the plugin:
 /plugin install calle@call-e-claude
 ```
 
-Open Claude Code and invoke:
+Then reload plugins in the current Claude Code session:
+
+```text
+/reload-plugins
+```
+
+Invoke:
 
 ```text
 /calle:calle

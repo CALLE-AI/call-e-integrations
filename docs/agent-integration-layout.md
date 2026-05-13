@@ -163,6 +163,12 @@ Then install:
 /plugin install calle@call-e-claude
 ```
 
+Then reload plugins in the current Claude Code session:
+
+```text
+/reload-plugins
+```
+
 The installed `/calle:calle` skill uses the shared `calle` CLI for
 authentication checks, brokered login, tool discovery, and call workflow
 commands.
