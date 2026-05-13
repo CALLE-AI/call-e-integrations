@@ -1,5 +1,11 @@
 # @call-e/codex-plugin
 
+## 0.1.9
+
+### Patch Changes
+
+- [#29](https://github.com/CALLE-AI/call-e-integrations/pull/29) [`c20b409`](https://github.com/CALLE-AI/call-e-integrations/commit/c20b4099dae59bc32d4f3f2e81f3f133e1c60854) Thanks [@Ray-56](https://github.com/Ray-56)! - Document and enforce that the Codex plugin routes through the calle CLI instead of same-name ChatGPT App connector tools.
+
 ## 0.1.8
 
 ### Patch Changes
