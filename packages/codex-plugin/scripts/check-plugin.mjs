@@ -62,6 +62,13 @@ function checkSkill({ skillName, skillDir, failures }) {
     `${skillFile} must document blocking authorization login for the default Codex plugin flow.`,
   );
   assert(
+    source.includes("Do not call ChatGPT App or connector tools") &&
+      source.includes("mcp__codex_apps__") &&
+      source.toLowerCase().includes("use only the `calle` cli flow"),
+    failures,
+    `${skillFile} must document that the Codex plugin does not route through ChatGPT App tools.`,
+  );
+  assert(
     source.includes("do not ask the user to reply"),
     failures,
     `${skillFile} must document that browser authorization should continue without a manual chat reply.`,
@@ -103,6 +110,13 @@ function checkSkill({ skillName, skillDir, failures }) {
       referenceSource.includes("Run blocking `auth login`"),
       failures,
       `${referenceFile} must document blocking authorization login for the default Codex plugin flow.`,
+    );
+    assert(
+      referenceSource.includes("Do not call ChatGPT App or connector tools") &&
+        referenceSource.includes("mcp__codex_apps__") &&
+        referenceSource.includes("Use the `calle` CLI flow"),
+      failures,
+      `${referenceFile} must document that the Codex plugin does not route through ChatGPT App tools.`,
     );
     assert(
       referenceSource.includes("do not ask the user to reply"),

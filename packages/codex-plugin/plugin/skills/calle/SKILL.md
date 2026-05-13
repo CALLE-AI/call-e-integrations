@@ -27,6 +27,18 @@ Use this skill for:
 Do not use this skill when the user only wants a call script, roleplay,
 simulated conversation, or general contact lookup that does not require CALL-E.
 
+## Tool routing
+
+When this Codex plugin skill is active, use only the `calle` CLI flow documented
+below. Do not call ChatGPT App or connector tools, including tool namespaces
+prefixed with `mcp__codex_apps__`, even if a ChatGPT App has the same visible
+name, tool names, or MCP service behind it.
+
+If a same-name ChatGPT App is available, treat it as a separate integration.
+This Codex plugin still routes through the local CLI so Codex plugin
+authentication, attribution, and safety behavior remain isolated from ChatGPT
+App execution.
+
 ## Safety and consent
 
 - Real phone calls may contact external people or businesses.

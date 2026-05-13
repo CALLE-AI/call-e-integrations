@@ -64,6 +64,28 @@ $calle
 Codex will use CALL-E for setup checks, authentication recovery, call planning,
 planned call execution, and call status checks.
 
+## ChatGPT App Boundary
+
+If you also have a CALL-E ChatGPT App or connector installed in Codex, disable
+that App for sessions where `$calle` should use the Codex plugin path:
+
+```toml
+[apps.<app-id>]
+enabled = false
+```
+
+To disable all ChatGPT Apps/connectors in a Codex profile:
+
+```toml
+[features]
+apps = false
+```
+
+The plugin itself does not configure Codex to connect directly to the remote MCP
+server and its skill tells Codex not to call ChatGPT App/connector tools while
+the plugin is active. Disabling the App in Codex configuration is still the hard
+isolation boundary.
+
 ## More
 
 See [packages/codex-plugin/README.md](../../packages/codex-plugin/README.md) for
