@@ -20,6 +20,14 @@ function writeFile(filePath, source) {
   fs.writeFileSync(filePath, source);
 }
 
+function mirrorSkillsShSkill({ packageRoot, repoRoot }) {
+  fs.cpSync(
+    path.join(packageRoot, "skills", "calle"),
+    path.join(repoRoot, "skills", "calle"),
+    { recursive: true },
+  );
+}
+
 function makeTempRoot(name) {
   return fs.mkdtempSync(path.join(os.tmpdir(), `${name}-`));
 }
@@ -100,9 +108,10 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
     ].join("\n"),
   );
 
-  writeFile(path.join(repoRoot, "README.md"), "packages/skills-sh-skill\ndocs/install/skills-sh-skill.md\n");
+  writeFile(path.join(repoRoot, "README.md"), "packages/skills-sh-skill\nskills/calle\ndocs/install/skills-sh-skill.md\n");
   writeFile(path.join(repoRoot, "docs", "install", "skills-sh-skill.md"), "# Install\n");
-  writeFile(path.join(repoRoot, "docs", "agent-integration-layout.md"), "skills.sh\npackages/skills-sh-skill\n");
+  writeFile(path.join(repoRoot, "docs", "agent-integration-layout.md"), "skills.sh\npackages/skills-sh-skill\nskills/calle\n");
+  mirrorSkillsShSkill({ packageRoot, repoRoot });
 
   return { packageRoot, repoRoot };
 }
@@ -147,4 +156,14 @@ test("reports stale integration version", () => {
 
   const failures = checkSkillsShSkill({ packageRoot, repoRoot });
   assert.ok(failures.some((failure) => failure.includes("CALLE_INTEGRATION_VERSION=9.8.7")));
+});
+
+test("reports a stale public discovery mirror", () => {
+  const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-skills-sh-skill-stale-mirror"));
+  const mirrorSkillFile = path.join(repoRoot, "skills", "calle", "SKILL.md");
+  const source = fs.readFileSync(mirrorSkillFile, "utf8");
+  fs.writeFileSync(mirrorSkillFile, source.replace("Test CALL-E skills.sh skill.", "Stale CALL-E skills.sh skill."));
+
+  const failures = checkSkillsShSkill({ packageRoot, repoRoot });
+  assert.ok(failures.some((failure) => failure.includes("public discovery mirror is stale")));
 });

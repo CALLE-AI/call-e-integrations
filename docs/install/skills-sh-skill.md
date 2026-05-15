@@ -1,21 +1,22 @@
 # Install The CALL-E skills.sh Skill
 
 The skills.sh compatible integration path in this repository is the `calle`
-skill at `packages/skills-sh-skill/skills/calle`. It teaches any compatible
-agent to use CALL-E through the shared `calle` CLI.
+skill. The package source lives at `packages/skills-sh-skill/skills/calle`, and
+the repository root mirrors it at `skills/calle` so skills.sh can index the
+public skill page and search results.
 
 ## Install From GitHub
 
-Install the direct skill path:
+Install from the repository root and select the public `calle` skill:
+
+```bash
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -a codex
+```
+
+Or install the direct package skill path:
 
 ```bash
 npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/skills-sh-skill/skills/calle -a codex
-```
-
-Or install from the package skills directory and select `calle`:
-
-```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/skills-sh-skill/skills --skill calle -a codex
 ```
 
 Replace `codex` with another supported agent when needed.
@@ -42,7 +43,9 @@ pnpm --filter @call-e/skills-sh-skill check
 pnpm --filter @call-e/skills-sh-skill test
 pnpm --filter @call-e/skills-sh-skill pack:dry-run
 npx -y skills-ref validate ./packages/skills-sh-skill/skills/calle
+npx -y skills add ./skills/calle --list
 npx -y skills add ./packages/skills-sh-skill/skills/calle --list
+npx -y skills add https://github.com/CALLE-AI/call-e-integrations --skill calle --list
 ```
 
 ## More
