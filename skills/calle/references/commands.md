@@ -50,6 +50,10 @@ Rules:
 
 - Treat all command output as JSON except `--help`.
 - Do not print or ask for access tokens.
+- Do not call ChatGPT App or connector tools, including tool namespaces
+  prefixed with `mcp__codex_apps__`, when this skill is active in Codex. Use
+  the `calle` CLI flow instead, even if a ChatGPT App has the same visible
+  name, tool names, or MCP service behind it.
 - Whenever this skill is actively invoked, run `auth status` before call
   planning or tool listing.
 - If `auth status` reports `usable: false`, do not call `mcp tools` or

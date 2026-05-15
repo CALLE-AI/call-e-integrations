@@ -11,6 +11,18 @@ CALL-E can place real outbound phone calls. Always plan first, preserve returned
 credentials exactly, and only run a planned call when the user clearly intends
 to place that call.
 
+## Tool Routing
+
+When this skill is active in Codex, use only the `calle` CLI flow documented
+below. Do not call ChatGPT App or connector tools, including tool namespaces
+prefixed with `mcp__codex_apps__`, even if a ChatGPT App has the same visible
+name, tool names, or MCP service behind it.
+
+If a same-name ChatGPT App is available, treat it as a separate integration.
+This skills.sh skill still routes through the local CLI so skill
+authentication, attribution, and safety behavior remain isolated from ChatGPT
+App execution.
+
 ## Safety
 
 - Real calls may contact external people or businesses.
