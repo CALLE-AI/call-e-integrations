@@ -33,6 +33,8 @@ const syncedInstallFiles = [
   "packages/skills-sh-skill/README.md",
   "packages/skills-sh-skill/skills/calle/SKILL.md",
   "packages/skills-sh-skill/skills/calle/references/commands.md",
+  "skills/calle/SKILL.md",
+  "skills/calle/references/commands.md",
 ];
 
 const codexLatestInstallFiles = new Set([
@@ -67,6 +69,8 @@ const skillsShSkillIntegrationFiles = new Set([
   "packages/skills-sh-skill/README.md",
   "packages/skills-sh-skill/skills/calle/SKILL.md",
   "packages/skills-sh-skill/skills/calle/references/commands.md",
+  "skills/calle/SKILL.md",
+  "skills/calle/references/commands.md",
 ]);
 
 const claudeCliIntegrationFiles = new Set([

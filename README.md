@@ -39,7 +39,7 @@ Use the native release path when available:
 - OpenClaw: run `openclaw skills install phone-call-calle`.
 - Hermes Agent: open `https://clawhub.ai/call-e-dev/phone-call-calle`, choose Prompt, and paste the ClawHub install prompt into Hermes.
 - Codex: add the CALL-E plugin marketplace from `CALLE-AI/call-e-integrations` using the official Codex command in this README.
-- skills.sh compatible agents: install the `calle` skill from `packages/skills-sh-skill/skills/calle`.
+- skills.sh compatible agents: install the `calle` skill from `CALLE-AI/call-e-integrations`; the public discovery mirror lives at `skills/calle`.
 - CLI users: install `@call-e/cli`, then run `calle auth login`.
 - MCP-only clients: use Streamable HTTP with `https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth`.
 
@@ -74,11 +74,12 @@ $calle
 Install the portable `calle` skill with the skills CLI:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/skills-sh-skill/skills/calle -a codex
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -a codex
 ```
 
 Use another supported `-a <agent>` value when installing for a different
-skills.sh compatible agent.
+skills.sh compatible agent. For direct source installs, use
+`https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/skills-sh-skill/skills/calle`.
 
 ### Claude Code
 
@@ -202,7 +203,7 @@ Then complete the client OAuth flow and verify the available tools include `plan
 - OpenClaw user installs should use ClawHub: `openclaw skills install phone-call-calle`.
 - Hermes Agent user installs should use the ClawHub Prompt flow from the same skill page; this repository does not publish a separate Hermes plugin.
 - This repository keeps the OpenClaw skill source at `packages/openclaw-cli-skill/skills/phone-call-calle` for local development and validation.
-- skills.sh compatible installs should use the direct GitHub tree path for `packages/skills-sh-skill/skills/calle`.
+- skills.sh compatible installs should use the repository root with `--skill calle`; the root `skills/calle` mirror exists so skills.sh search and detail pages can index the same portable skill. The package source remains at `packages/skills-sh-skill/skills/calle`.
 
 Install guides: [CLI](./docs/install/cli.md) · [Codex](./docs/install/codex-plugin.md) · [skills.sh](./docs/install/skills-sh-skill.md) · [Claude Code](./docs/install/claude-plugin.md) · [Cursor MCP](./docs/install/cursor.md) · [Cursor plugin](./docs/install/cursor-plugin.md) · [OpenClaw source](./docs/install/openclaw-cli-skill.md)
 
@@ -285,6 +286,7 @@ packages/claude-plugin/plugin/                # Claude Code plugin source
 packages/cursor-plugin/plugin/                # Cursor plugin source
 packages/openclaw-cli-skill/skills/            # OpenClaw skill source
 packages/skills-sh-skill/skills/               # skills.sh compatible skill source
+skills/calle/                                  # skills.sh public discovery mirror
 packages/cli/                                  # Shared calle CLI
 packages/core/                                 # Shared runtime helpers
 examples/                                      # Runnable MCP demos, not an SDK
@@ -312,6 +314,7 @@ examples/                                      # Runnable MCP demos, not an SDK
 | OpenClaw skill | name | `Phone Call - CALL-E` |
 | skills.sh skill | name | `calle` |
 | skills.sh skill source | path | `packages/skills-sh-skill/skills/calle` |
+| skills.sh public discovery mirror | path | `skills/calle` |
 | skills.sh CLI attribution | env | `skills_sh/skills_sh_skill/<version>` |
 
 ## 🧪 Examples
