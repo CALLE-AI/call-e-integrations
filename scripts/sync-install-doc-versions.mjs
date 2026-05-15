@@ -7,6 +7,7 @@ const checkOnly = process.argv.includes("--check");
 
 const syncedInstallFiles = [
   "README.md",
+  "docs/install/install-guide.md",
   "docs/install/cli.md",
   "docs/install/codex-plugin.md",
   "docs/install/claude-plugin.md",
@@ -38,6 +39,7 @@ const syncedInstallFiles = [
 ];
 
 const codexLatestInstallFiles = new Set([
+  "docs/install/install-guide.md",
   "docs/install/codex-plugin.md",
   "docs/agent-integration-layout.md",
   "packages/codex-plugin/plugin/README.md",
@@ -47,6 +49,7 @@ const codexLatestInstallRef = "--ref '@call-e/codex-plugin@latest'";
 
 const claudeLatestInstallFiles = new Set([
   "README.md",
+  "docs/install/install-guide.md",
   "docs/install/claude-plugin.md",
   "docs/agent-integration-layout.md",
 ]);

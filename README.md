@@ -23,191 +23,28 @@ Your agent can think, plan, and write. CALL-E picks up the phone — booking app
 > [!IMPORTANT]
 > CALL-E can place real outbound phone calls. Integrations must **plan first**, preserve returned `plan_id` / `confirm_token` exactly, and only run a planned call when the user clearly intends to place that call.
 
-## ✨ Ask an agent to install CALL-E
-
-For most users, the simplest path is to ask your agent to install or configure
-the CALL-E phone call skill/plugin for its own environment.
-
-Copy this into Claude Code, Codex, Cursor, OpenClaw, Hermes Agent, or another local agent that can run shell commands:
-
-```text
-Install or configure the CALL-E phone call skill/plugin for this agent environment.
-
-Use the native release path when available:
-- Claude Code: add the CALL-E plugin marketplace from `CALLE-AI/call-e-integrations`, install `calle@call-e-claude`, then invoke `/calle:calle`.
-- Cursor: configure `.cursor/mcp.json` or `~/.cursor/mcp.json` with the CALL-E MCP server, or load the Cursor plugin from this repository for the bundled MCP config, skill, and safety rule.
-- OpenClaw: run `openclaw skills install phone-call-calle`.
-- Hermes Agent: open `https://clawhub.ai/call-e-dev/phone-call-calle`, choose Prompt, and paste the ClawHub install prompt into Hermes.
-- Codex: add the CALL-E plugin marketplace from `CALLE-AI/call-e-integrations` using the official Codex command in this README.
-- skills.sh compatible agents: install the `calle` skill from `CALLE-AI/call-e-integrations`; the public discovery mirror lives at `skills/calle`.
-- CLI users: install `@call-e/cli`, then run `calle auth login`.
-- MCP-only clients: use Streamable HTTP with `https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth`.
-
-After install or MCP configuration, authenticate with CALL-E, verify `plan_call`, `run_call`, and `get_call_run`, and never print OAuth tokens.
-```
-
 ## 🚀 Quick install
 
-Choose the surface your agent uses.
+For most users, the simplest path is to ask your agent to install the portable
+CALL-E skill.
+
+Copy this prompt into a local agent that can run shell commands or install
+skills:
+
+```text
+Please install the CALL-E skill using the following command:
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle
+```
 
 New users get 20 free calls to get started.
 
-### Codex
+If the prompt flow is not supported in your client, use the
+[manual install guide](./docs/install/install-guide.md). It covers Codex,
+Claude Code, Cursor, OpenClaw, Hermes Agent, CLI-only, and MCP-only setup.
+The native Claude Code plugin path uses
+`/plugin marketplace add https://github.com/CALLE-AI/call-e-integrations.git#@call-e/claude-plugin@latest`.
 
-Add the released CALL-E marketplace from this repository:
-
-```bash
-codex plugin marketplace add CALLE-AI/call-e-integrations \
-  --ref '@call-e/codex-plugin@latest' \
-  --sparse .agents/plugins \
-  --sparse packages/codex-plugin/plugin
-```
-
-Then open Codex → `/plugins` → choose the `CALL-E` marketplace → install `CALL-E` → invoke:
-
-```text
-$calle
-```
-
-### skills.sh
-
-Install the portable `calle` skill with the skills CLI:
-
-```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -a codex
-```
-
-Use another supported `-a <agent>` value when installing for a different
-skills.sh compatible agent. For direct source installs, use
-`https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/skills-sh-skill/skills/calle`.
-
-### Claude Code
-
-In Claude Code, add the released CALL-E marketplace from this repository:
-
-```text
-/plugin marketplace add https://github.com/CALLE-AI/call-e-integrations.git#@call-e/claude-plugin@latest
-```
-
-Then install the plugin:
-
-```text
-/plugin install calle@call-e-claude
-```
-
-Then reload plugins in the current Claude Code session:
-
-```text
-/reload-plugins
-```
-
-Invoke:
-
-```text
-/calle:calle
-```
-
-The skill checks CLI authentication on use. If login is missing or expired, it
-runs blocking `calle auth login`, shows the browser authorization URL, and
-continues after authorization completes.
-
-### Cursor
-
-Use the Cursor plugin payload from this repository when you want the full
-integration. Cursor reads `.cursor-plugin/marketplace.json`, which points the
-`calle` plugin entry at `./packages/cursor-plugin/plugin`. That plugin bundles
-the MCP server config, the `calle` skill, and the real-call safety rule, so you
-do not need to create `.cursor/mcp.json` manually for the plugin path.
-
-For local testing from a clone:
-
-```bash
-mkdir -p ~/.cursor/plugins/local
-ln -s /path/to/call-e-integrations/packages/cursor-plugin/plugin ~/.cursor/plugins/local/calle
-```
-
-Reload Cursor, authorize the `calle` MCP server, and verify `plan_call`,
-`run_call`, and `get_call_run` are available.
-
-For plugin package details, see
-[docs/install/cursor-plugin.md](./docs/install/cursor-plugin.md). The plugin is
-prepared for Cursor Marketplace submission, but publication is outside this
-repository change.
-
-For lightweight MCP-only setup without the plugin skill or safety rule, create
-or edit `.cursor/mcp.json` in a project, or `~/.cursor/mcp.json` globally:
-
-```json
-{
-  "mcpServers": {
-    "calle": {
-      "url": "https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth"
-    }
-  }
-}
-```
-
-### OpenClaw
-
-Install the published ClawHub skill:
-
-```bash
-openclaw skills install phone-call-calle
-```
-
-Then start a new OpenClaw session and use **Phone Call - CALL-E**.
-
-### Hermes Agent
-
-Hermes Agent can use the ClawHub prompt flow directly, so there is no separate CALL-E Hermes plugin to install.
-
-Open [Phone Call - CALL-E on ClawHub](https://clawhub.ai/call-e-dev/phone-call-calle), choose **Prompt**, then paste the ClawHub install prompt into Hermes Agent.
-
-### CLI
-
-Install the shared `calle` command:
-
-```bash
-npm install -g @call-e/cli
-calle auth login
-calle auth status
-calle mcp tools
-```
-
-One-off usage without a global install:
-
-```bash
-npx -y @call-e/cli --help
-```
-
-### MCP
-
-For MCP-capable clients, configure a Streamable HTTP server:
-
-```text
-Transport: Streamable HTTP
-URL:       https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth
-```
-
-Then complete the client OAuth flow and verify the available tools include `plan_call`, `run_call`, and `get_call_run`.
-
-<details>
-<summary><strong>Install notes</strong></summary>
-
-- Codex marketplace install requires `codex-cli >= 0.122.0`; check with `codex --version`.
-- The Codex plugin uses the repository-local CLI when available, then a global `calle`, then `npx -y @call-e/cli`.
-- For reproducible Codex installs, replace `@call-e/codex-plugin@latest` with a package-level release tag such as `@call-e/codex-plugin@<version>`.
-- For reproducible Claude Code installs, replace `@call-e/claude-plugin@latest` with a package-level release tag such as `@call-e/claude-plugin@<version>`.
-- Cursor quick setup uses MCP config directly; the Cursor plugin adds a bundled skill and safety rule around the same remote MCP server.
-- Optional pre-auth for CLI-based agent installs: `npx -y @call-e/cli auth login`.
-- OpenClaw user installs should use ClawHub: `openclaw skills install phone-call-calle`.
-- Hermes Agent user installs should use the ClawHub Prompt flow from the same skill page; this repository does not publish a separate Hermes plugin.
-- This repository keeps the OpenClaw skill source at `packages/openclaw-cli-skill/skills/phone-call-calle` for local development and validation.
-- skills.sh compatible installs should use the repository root with `--skill calle`; the root `skills/calle` mirror exists so skills.sh search and detail pages can index the same portable skill. The package source remains at `packages/skills-sh-skill/skills/calle`.
-
-Install guides: [CLI](./docs/install/cli.md) · [Codex](./docs/install/codex-plugin.md) · [skills.sh](./docs/install/skills-sh-skill.md) · [Claude Code](./docs/install/claude-plugin.md) · [Cursor MCP](./docs/install/cursor.md) · [Cursor plugin](./docs/install/cursor-plugin.md) · [OpenClaw source](./docs/install/openclaw-cli-skill.md)
-
-</details>
+Install guides: [Manual](./docs/install/install-guide.md) · [CLI](./docs/install/cli.md) · [Codex](./docs/install/codex-plugin.md) · [skills.sh](./docs/install/skills-sh-skill.md) · [Claude Code](./docs/install/claude-plugin.md) · [Cursor MCP](./docs/install/cursor.md) · [Cursor plugin](./docs/install/cursor-plugin.md) · [OpenClaw source](./docs/install/openclaw-cli-skill.md)
 
 ## 🧠 What CALL-E gives your agent
 

@@ -7,19 +7,31 @@ public skill page and search results.
 
 ## Install From GitHub
 
-Install from the repository root and select the public `calle` skill:
+For most users, the recommended path is to ask the agent to install the skill:
+
+```text
+Please install the CALL-E skill using the following command:
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle
+```
+
+Or run the same command directly from the repository root source:
+
+```bash
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle
+```
+
+If your skills CLI requires an explicit target agent, add the supported
+`-a <agent>` value for that client:
 
 ```bash
 npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -a codex
 ```
 
-Or install the direct package skill path:
+Or install the direct package skill path with the appropriate target agent:
 
 ```bash
 npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/skills-sh-skill/skills/calle -a codex
 ```
-
-Replace `codex` with another supported agent when needed.
 
 ## CLI Availability
 
