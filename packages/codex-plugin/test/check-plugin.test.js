@@ -55,8 +55,14 @@ function createValidFixture(root) {
     skills: "./skills/",
     interface: {
       displayName: "CALL-E",
+      composerIcon: "./assets/CALL-E-Icon-Black.svg",
     },
   });
+
+  writeFile(
+    path.join(packageRoot, "plugin", "assets", "CALL-E-Icon-Black.svg"),
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><path d="M0 0h1v1H0z"/></svg>\n',
+  );
 
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"),
@@ -105,6 +111,25 @@ test("reports a missing plugin manifest", () => {
 
   const failures = checkCodexPlugin({ packageRoot, repoRoot });
   assert.ok(failures.some((failure) => failure.includes("plugin.json")));
+});
+
+test("reports missing composer icon metadata", () => {
+  const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-codex-plugin-missing-icon"));
+  const manifestPath = path.join(packageRoot, "plugin", ".codex-plugin", "plugin.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  delete manifest.interface.composerIcon;
+  writeJson(manifestPath, manifest);
+
+  const failures = checkCodexPlugin({ packageRoot, repoRoot });
+  assert.ok(failures.some((failure) => failure.includes("composerIcon")));
+});
+
+test("reports missing composer icon asset", () => {
+  const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-codex-plugin-missing-icon-asset"));
+  fs.rmSync(path.join(packageRoot, "plugin", "assets", "CALL-E-Icon-Black.svg"));
+
+  const failures = checkCodexPlugin({ packageRoot, repoRoot });
+  assert.ok(failures.some((failure) => failure.includes("composerIcon asset")));
 });
 
 test("reports a missing bundled skill", () => {

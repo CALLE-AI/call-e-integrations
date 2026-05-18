@@ -182,6 +182,16 @@ function checkManifest({ packageRoot, failures }) {
   assert(!Object.hasOwn(manifest, "mcpServers"), failures, "plugin.json must not declare mcpServers in v1.");
   assert(!fs.existsSync(path.join(pluginRoot, ".mcp.json")), failures, "plugin/.mcp.json must not exist in v1.");
   assert(manifest.interface?.displayName === "CALL-E", failures, "plugin displayName must be CALL-E.");
+  assert(
+    manifest.interface?.composerIcon === "./assets/CALL-E-Icon-Black.svg",
+    failures,
+    "plugin composerIcon must reference ./assets/CALL-E-Icon-Black.svg.",
+  );
+  assert(
+    fs.existsSync(path.join(pluginRoot, "assets", "CALL-E-Icon-Black.svg")),
+    failures,
+    "plugin composerIcon asset must exist.",
+  );
 }
 
 function checkMarketplace({ repoRoot, failures }) {
