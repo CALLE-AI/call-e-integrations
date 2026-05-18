@@ -144,6 +144,33 @@ intentionally exposes multiple CALL-E marketplaces in the same client UI.
   current package release tag when missing, then updates it only after
   `@call-e/claude-plugin` publishes.
 
+## External Codex Directory Follow-Up
+
+CALL-E is also listed in
+[`hashgraph-online/awesome-codex-plugins`](https://github.com/hashgraph-online/awesome-codex-plugins)
+as `Call-E` under `Tools & Integrations`. Treat that listing as a downstream
+discovery surface, not as the source of truth.
+
+When changing the Codex plugin's visible metadata, source path, install payload,
+or icon assets in this repository, check whether the external directory needs a
+matching PR. Keep these fields aligned:
+
+- `packages/codex-plugin/plugin/.codex-plugin/plugin.json`
+  `interface.composerIcon`.
+- `plugins/CALLE-AI/call-e-integrations/.codex-plugin/plugin.json` in
+  `awesome-codex-plugins`.
+- The `calle` entry in
+  `awesome-codex-plugins/.agents/plugins/marketplace.json`.
+- The mirrored icon asset path
+  `plugins/CALLE-AI/call-e-integrations/assets/CALL-E-Icon-Black.svg`.
+
+Current tracking references:
+
+- CALL-E issue:
+  [`CALLE-AI/call-e-integrations#35`](https://github.com/CALLE-AI/call-e-integrations/issues/35).
+- External directory PR:
+  [`hashgraph-online/awesome-codex-plugins#125`](https://github.com/hashgraph-online/awesome-codex-plugins/pull/125).
+
 Latest Codex public install example:
 
 This command is the official Codex plugin install path and requires
