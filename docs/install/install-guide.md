@@ -8,8 +8,16 @@ when you need a client-specific setup path.
 For most users, copy this into your agent:
 
 ```text
-Please install the CALL-E skill using the following command:
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle
+To install the CALL-E skill for your agent, use the following command.
+Replace <agent> with the name of your current agent:
+
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -y --agent <agent>
+
+Steps:
+1. Replace <agent> with the name of your current agent.
+2. Run the command in your terminal to install the skill.
+3. If dependencies are not automatically installed, navigate to the skill folder and run `npm install`.
+4. Reload or restart your agent according to its instructions to make the skill available.
 ```
 
 This is the preferred path for local agents that can run shell commands. It
@@ -23,20 +31,20 @@ the setup in its own environment.
 Install the portable `calle` skill from the repository root:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -y --agent <agent>
 ```
 
-If your skills CLI requires an explicit target agent, add the supported
-`-a <agent>` value for that client:
+Replace `<agent>` with the target agent name, such as `codex`, `openclaw`, or
+another value supported by your local skills CLI.
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -a codex
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -y --agent codex
 ```
 
 For direct source installs, use:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/skills-sh-skill/skills/calle -a codex
+npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/skills-sh-skill/skills/calle -y --agent <agent>
 ```
 
 ### Codex

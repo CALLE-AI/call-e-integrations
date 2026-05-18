@@ -256,11 +256,11 @@ Use the repository root with `--skill calle` so skills.sh installs the portable
 `calle` skill from the root public discovery mirror:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -a codex
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -y --agent <agent>
 ```
 
 Or install the package source directly:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/skills-sh-skill/skills/calle -a codex
+npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/skills-sh-skill/skills/calle -y --agent <agent>
 ```

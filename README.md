@@ -32,8 +32,16 @@ Copy this prompt into a local agent that can run shell commands or install
 skills:
 
 ```text
-Please install the CALL-E skill using the following command:
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle
+To install the CALL-E skill for your agent, use the following command.
+Replace <agent> with the name of your current agent:
+
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -y --agent <agent>
+
+Steps:
+1. Replace <agent> with the name of your current agent.
+2. Run the command in your terminal to install the skill.
+3. If dependencies are not automatically installed, navigate to the skill folder and run `npm install`.
+4. Reload or restart your agent according to its instructions to make the skill available.
 ```
 
 New users get 20 free calls to get started.
