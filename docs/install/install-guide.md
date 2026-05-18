@@ -44,7 +44,7 @@ npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -y 
 For direct source installs, use:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/skills-sh-skill/skills/calle -y --agent <agent>
+npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -y --agent <agent>
 ```
 
 ### Codex

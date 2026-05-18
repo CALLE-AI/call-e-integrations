@@ -8,6 +8,7 @@ This repository is a multi-ecosystem integration monorepo.
 - Keep ecosystem-specific implementations under `packages/`.
 - Keep shared local capability in `packages/cli`.
 - Keep package-scoped, productized skills under their owning package.
+- Keep the skills.sh public `calle` skill at the repository root in `skills/`.
 - Keep repository-local Codex helper skills in `.agents/skills/`.
 
 Current Codex layout:
@@ -28,7 +29,6 @@ packages/openclaw-cli-skill/skills/
 Current skills.sh layout:
 
 ```text
-packages/skills-sh-skill/skills/
 skills/calle/
 ```
 
@@ -47,10 +47,9 @@ packages/cursor-plugin/plugin/
 ```
 
 Use `packages/openclaw-cli-skill/skills/` for the OpenClaw CALL-E skill source.
-Use `packages/skills-sh-skill/skills/` for the skills.sh compatible CALL-E
-skill source. Keep `skills/calle/` as the repository-root mirror of that source
-so skills.sh public search and detail pages can index the portable `calle`
-skill from the default repository install path.
+Use `skills/calle/` for the skills.sh compatible CALL-E skill source so
+skills.sh public search and detail pages can index the portable `calle` skill
+from the default repository install path.
 Use `.agents/skills/` for repository-local Codex helper skills. Do not put
 productized client-specific skill packages there; keep them under their owning
 package.
@@ -91,9 +90,7 @@ For Cursor:
 For skills.sh:
 
 - The skills.sh package path must stay `packages/skills-sh-skill`.
-- The skills.sh skill directory must stay `packages/skills-sh-skill/skills/calle`.
-- The skills.sh public discovery mirror must stay `skills/calle` and match the
-  package skill directory.
+- The skills.sh skill directory must stay `skills/calle`.
 - The skills.sh skill frontmatter `name` must stay `calle`.
 - The skills.sh CLI integration attribution must stay
   `skills_sh/skills_sh_skill/<version>`.
@@ -253,14 +250,14 @@ submission; publication is a separate operational step.
 skills.sh install example:
 
 Use the repository root with `--skill calle` so skills.sh installs the portable
-`calle` skill from the root public discovery mirror:
+`calle` skill from the root skill source:
 
 ```bash
 npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -y --agent <agent>
 ```
 
-Or install the package source directly:
+Or install the root skill source directly:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/skills-sh-skill/skills/calle -y --agent <agent>
+npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -y --agent <agent>
 ```

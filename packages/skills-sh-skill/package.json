@@ -18,8 +18,7 @@
     "node": ">=22"
   },
   "files": [
-    "README.md",
-    "skills"
+    "README.md"
   ],
   "keywords": [
     "ai-agent",

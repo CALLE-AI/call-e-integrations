@@ -120,7 +120,7 @@ All command output is JSON except `--help`. Access tokens are read from the loca
 | `packages/claude-plugin` | `@call-e/claude-plugin` | Claude Code plugin bundle that exposes CALL-E through the shared CLI and `/calle:calle`. |
 | `packages/cursor-plugin` | `@call-e/cursor-plugin` | Cursor plugin bundle that exposes CALL-E through MCP, a `calle` skill, and a safety rule. |
 | `packages/openclaw-cli-skill` | `@call-e/openclaw-cli-skill` | Private validation/source package for the OpenClaw skill published through ClawHub. |
-| `packages/skills-sh-skill` | `@call-e/skills-sh-skill` | Private validation/source package for the portable skills.sh `calle` skill. |
+| `packages/skills-sh-skill` | `@call-e/skills-sh-skill` | Private validation package for the portable skills.sh `calle` skill. |
 
 ```text
 .agents/plugins/marketplace.json              # Codex marketplace entry
@@ -130,8 +130,7 @@ packages/codex-plugin/plugin/                 # Codex plugin source
 packages/claude-plugin/plugin/                # Claude Code plugin source
 packages/cursor-plugin/plugin/                # Cursor plugin source
 packages/openclaw-cli-skill/skills/            # OpenClaw skill source
-packages/skills-sh-skill/skills/               # skills.sh compatible skill source
-skills/calle/                                  # skills.sh public discovery mirror
+skills/calle/                                  # skills.sh compatible skill source
 packages/cli/                                  # Shared calle CLI
 packages/core/                                 # Shared runtime helpers
 examples/                                      # Runnable MCP demos, not an SDK
@@ -158,8 +157,7 @@ examples/                                      # Runnable MCP demos, not an SDK
 | OpenClaw skill | slug | `phone-call-calle` |
 | OpenClaw skill | name | `Phone Call - CALL-E` |
 | skills.sh skill | name | `calle` |
-| skills.sh skill source | path | `packages/skills-sh-skill/skills/calle` |
-| skills.sh public discovery mirror | path | `skills/calle` |
+| skills.sh skill source | path | `skills/calle` |
 | skills.sh CLI attribution | env | `skills_sh/skills_sh_skill/<version>` |
 
 ## 🧪 Examples

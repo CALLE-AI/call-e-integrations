@@ -20,14 +20,6 @@ function writeFile(filePath, source) {
   fs.writeFileSync(filePath, source);
 }
 
-function mirrorSkillsShSkill({ packageRoot, repoRoot }) {
-  fs.cpSync(
-    path.join(packageRoot, "skills", "calle"),
-    path.join(repoRoot, "skills", "calle"),
-    { recursive: true },
-  );
-}
-
 function makeTempRoot(name) {
   return fs.mkdtempSync(path.join(os.tmpdir(), `${name}-`));
 }
@@ -40,7 +32,7 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
     name: "@call-e/skills-sh-skill",
     version: packageVersion,
     private: true,
-    files: ["README.md", "skills"],
+    files: ["README.md"],
     scripts: {
       check: "node ./scripts/check-skill.mjs",
       test: "node --test ./test/*.test.js",
@@ -49,7 +41,7 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
   });
 
   writeFile(
-    path.join(packageRoot, "skills", "calle", "SKILL.md"),
+    path.join(repoRoot, "skills", "calle", "SKILL.md"),
     [
       "---",
       "name: calle",
@@ -76,7 +68,7 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
   );
 
   writeFile(
-    path.join(packageRoot, "skills", "calle", "agents", "openai.yaml"),
+    path.join(repoRoot, "skills", "calle", "agents", "openai.yaml"),
     [
       "interface:",
       '  display_name: "calle"',
@@ -87,7 +79,7 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
   );
 
   writeFile(
-    path.join(packageRoot, "skills", "calle", "references", "commands.md"),
+    path.join(repoRoot, "skills", "calle", "references", "commands.md"),
     [
       "# Commands",
       "",
@@ -111,7 +103,6 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
   writeFile(path.join(repoRoot, "README.md"), "packages/skills-sh-skill\nskills/calle\ndocs/install/skills-sh-skill.md\n");
   writeFile(path.join(repoRoot, "docs", "install", "skills-sh-skill.md"), "# Install\n");
   writeFile(path.join(repoRoot, "docs", "agent-integration-layout.md"), "skills.sh\npackages/skills-sh-skill\nskills/calle\n");
-  mirrorSkillsShSkill({ packageRoot, repoRoot });
 
   return { packageRoot, repoRoot };
 }
@@ -122,7 +113,7 @@ test("current skills.sh skill metadata is valid", () => {
 
 test("reports a missing calle skill", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-skills-sh-skill-missing"));
-  fs.rmSync(path.join(packageRoot, "skills", "calle"), { recursive: true, force: true });
+  fs.rmSync(path.join(repoRoot, "skills", "calle"), { recursive: true, force: true });
 
   const failures = checkSkillsShSkill({ packageRoot, repoRoot });
   assert.ok(failures.some((failure) => failure.includes("skills/calle")));
@@ -130,7 +121,7 @@ test("reports a missing calle skill", () => {
 
 test("reports a non-standard skill name", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-skills-sh-skill-bad-name"));
-  const skillFile = path.join(packageRoot, "skills", "calle", "SKILL.md");
+  const skillFile = path.join(repoRoot, "skills", "calle", "SKILL.md");
   const source = fs.readFileSync(skillFile, "utf8");
   fs.writeFileSync(skillFile, source.replace("name: calle", "name: Phone Call - CALL-E"));
 
@@ -140,7 +131,7 @@ test("reports a non-standard skill name", () => {
 
 test("reports stale integration attribution", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-skills-sh-skill-stale-attribution"));
-  const referenceFile = path.join(packageRoot, "skills", "calle", "references", "commands.md");
+  const referenceFile = path.join(repoRoot, "skills", "calle", "references", "commands.md");
   const source = fs.readFileSync(referenceFile, "utf8");
   fs.writeFileSync(referenceFile, source.replaceAll("CALLE_SOURCE=skills_sh", "CALLE_SOURCE=openclaw"));
 
@@ -158,12 +149,14 @@ test("reports stale integration version", () => {
   assert.ok(failures.some((failure) => failure.includes("CALLE_INTEGRATION_VERSION=9.8.7")));
 });
 
-test("reports a stale public discovery mirror", () => {
-  const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-skills-sh-skill-stale-mirror"));
-  const mirrorSkillFile = path.join(repoRoot, "skills", "calle", "SKILL.md");
-  const source = fs.readFileSync(mirrorSkillFile, "utf8");
-  fs.writeFileSync(mirrorSkillFile, source.replace("Test CALL-E skills.sh skill.", "Stale CALL-E skills.sh skill."));
+test("reports a duplicate package-local skill copy", () => {
+  const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-skills-sh-skill-duplicate"));
+  fs.cpSync(
+    path.join(repoRoot, "skills", "calle"),
+    path.join(packageRoot, "skills", "calle"),
+    { recursive: true },
+  );
 
   const failures = checkSkillsShSkill({ packageRoot, repoRoot });
-  assert.ok(failures.some((failure) => failure.includes("public discovery mirror is stale")));
+  assert.ok(failures.some((failure) => failure.includes("Remove duplicate skills.sh skill copy")));
 });

@@ -62,27 +62,6 @@ function integrationVersionSnippet(packageJson) {
     : null;
 }
 
-function listRelativeFiles(rootDir) {
-  const files = [];
-
-  function walk(currentDir) {
-    for (const dirent of fs.readdirSync(currentDir, { withFileTypes: true })) {
-      const absolutePath = path.join(currentDir, dirent.name);
-      if (dirent.isDirectory()) {
-        walk(absolutePath);
-        continue;
-      }
-
-      if (dirent.isFile()) {
-        files.push(path.relative(rootDir, absolutePath).split(path.sep).join("/"));
-      }
-    }
-  }
-
-  walk(rootDir);
-  return files.sort();
-}
-
 function checkPackage({ packageRoot, failures }) {
   const packageJsonPath = path.join(packageRoot, "package.json");
   const packageJson = readJson(packageJsonPath, failures);
@@ -94,7 +73,7 @@ function checkPackage({ packageRoot, failures }) {
   assert(typeof packageJson.version === "string" && packageJson.version.length > 0, failures, "package.json must include a version.");
   assert(packageJson.private === true, failures, "package.json must keep this validation package private.");
   assert(packageJson.files?.includes("README.md"), failures, "package.json files must include README.md.");
-  assert(packageJson.files?.includes("skills"), failures, "package.json files must include skills.");
+  assert(!packageJson.files?.includes("skills"), failures, "package.json files must not include the removed package-local skills directory.");
   assert(packageJson.scripts?.check === "node ./scripts/check-skill.mjs", failures, "package.json must expose the package check script.");
   assert(packageJson.scripts?.test, failures, "package.json must expose a test script.");
   assert(packageJson.scripts?.["pack:dry-run"], failures, "package.json must expose a pack:dry-run script.");
@@ -102,8 +81,8 @@ function checkPackage({ packageRoot, failures }) {
   return packageJson;
 }
 
-function checkSkill({ packageRoot, packageJson, failures }) {
-  const skillDir = path.join(packageRoot, "skills", EXPECTED_SKILL_DIR);
+function checkSkill({ repoRoot, packageJson, failures }) {
+  const skillDir = path.join(repoRoot, "skills", EXPECTED_SKILL_DIR);
   const skillFile = path.join(skillDir, "SKILL.md");
   const skillInterfaceFile = path.join(skillDir, "agents", "openai.yaml");
   const referenceFile = path.join(skillDir, "references", "commands.md");
@@ -197,34 +176,9 @@ function checkSkill({ packageRoot, packageJson, failures }) {
   });
 }
 
-function checkPublicDiscoveryMirror({ packageRoot, repoRoot, failures }) {
-  const sourceDir = path.join(packageRoot, "skills", EXPECTED_SKILL_DIR);
-  const mirrorDir = path.join(repoRoot, "skills", EXPECTED_SKILL_DIR);
-
-  assert(fs.existsSync(mirrorDir), failures, `Missing skills.sh public discovery mirror: ${mirrorDir}`);
-
-  if (!fs.existsSync(sourceDir) || !fs.existsSync(mirrorDir)) {
-    return;
-  }
-
-  const sourceFiles = listRelativeFiles(sourceDir);
-  const mirrorFiles = listRelativeFiles(mirrorDir);
-  const sourceFileSet = new Set(sourceFiles);
-  const mirrorFileSet = new Set(mirrorFiles);
-  const allFiles = [...new Set([...sourceFiles, ...mirrorFiles])].sort();
-
-  for (const relativeFile of allFiles) {
-    assert(sourceFileSet.has(relativeFile), failures, `skills.sh public discovery mirror has unexpected file: ${path.join(mirrorDir, relativeFile)}`);
-    assert(mirrorFileSet.has(relativeFile), failures, `skills.sh public discovery mirror is missing file: ${path.join(mirrorDir, relativeFile)}`);
-
-    if (!sourceFileSet.has(relativeFile) || !mirrorFileSet.has(relativeFile)) {
-      continue;
-    }
-
-    const source = fs.readFileSync(path.join(sourceDir, relativeFile), "utf8");
-    const mirror = fs.readFileSync(path.join(mirrorDir, relativeFile), "utf8");
-    assert(source === mirror, failures, `skills.sh public discovery mirror is stale: ${path.join(mirrorDir, relativeFile)} must match ${path.join(sourceDir, relativeFile)}.`);
-  }
+function checkNoPackageSkillCopy({ packageRoot, failures }) {
+  const duplicateSkillsDir = path.join(packageRoot, "skills");
+  assert(!fs.existsSync(duplicateSkillsDir), failures, `Remove duplicate skills.sh skill copy: ${duplicateSkillsDir}. Keep the source in the repository root at skills/${EXPECTED_SKILL_DIR}.`);
 }
 
 function checkRepoDocs({ repoRoot, failures }) {
@@ -237,15 +191,22 @@ function checkRepoDocs({ repoRoot, failures }) {
   if (fs.existsSync(readmePath)) {
     const readme = fs.readFileSync(readmePath, "utf8");
     assert(readme.includes("packages/skills-sh-skill"), failures, "README.md must mention packages/skills-sh-skill.");
-    assert(readme.includes("skills/calle"), failures, "README.md must mention the skills.sh public discovery mirror at skills/calle.");
+    assert(readme.includes("skills/calle"), failures, "README.md must mention the skills.sh source at skills/calle.");
     assert(readme.includes("docs/install/skills-sh-skill.md"), failures, "README.md must link to the skills.sh install guide.");
+    assert(!readme.includes("packages/skills-sh-skill/skills"), failures, "README.md must not reference the removed package-local skills directory.");
   }
 
   if (fs.existsSync(layoutPath)) {
     const layout = fs.readFileSync(layoutPath, "utf8");
     assert(layout.includes("packages/skills-sh-skill"), failures, "docs/agent-integration-layout.md must mention packages/skills-sh-skill.");
-    assert(layout.includes("skills/calle"), failures, "docs/agent-integration-layout.md must mention the skills.sh public discovery mirror at skills/calle.");
+    assert(layout.includes("skills/calle"), failures, "docs/agent-integration-layout.md must mention the skills.sh source at skills/calle.");
     assert(layout.includes("skills.sh"), failures, "docs/agent-integration-layout.md must describe the skills.sh skill boundary.");
+    assert(!layout.includes("packages/skills-sh-skill/skills"), failures, "docs/agent-integration-layout.md must not reference the removed package-local skills directory.");
+  }
+
+  if (fs.existsSync(installDocPath)) {
+    const installDoc = fs.readFileSync(installDocPath, "utf8");
+    assert(!installDoc.includes("packages/skills-sh-skill/skills"), failures, "docs/install/skills-sh-skill.md must not reference the removed package-local skills directory.");
   }
 }
 
@@ -255,8 +216,8 @@ export function checkSkillsShSkill({
 } = {}) {
   const failures = [];
   const packageJson = checkPackage({ packageRoot, failures });
-  checkSkill({ packageRoot, packageJson, failures });
-  checkPublicDiscoveryMirror({ packageRoot, repoRoot, failures });
+  checkSkill({ repoRoot, packageJson, failures });
+  checkNoPackageSkillCopy({ packageRoot, failures });
   checkRepoDocs({ repoRoot, failures });
   return failures;
 }

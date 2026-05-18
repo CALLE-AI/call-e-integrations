@@ -2,8 +2,9 @@
 
 skills.sh compatible CALL-E skill for making real outbound phone calls,
 running planned calls, and checking call status through the `calle` CLI.
-This package remains the source of truth; the repository root mirrors it at
-`skills/calle` for skills.sh public discovery and search indexing.
+The skill source of truth lives at the repository root in `skills/calle`;
+this package only keeps validation and packaging-related checks for that
+portable skills.sh surface.
 
 For setup steps, see
 [docs/install/skills-sh-skill.md](../../docs/install/skills-sh-skill.md).
@@ -11,7 +12,7 @@ For setup steps, see
 ## Layout
 
 ```text
-skills/
+../../skills/
   calle/
     SKILL.md
     agents/
@@ -28,9 +29,8 @@ From the repository root:
 pnpm --filter @call-e/skills-sh-skill check
 pnpm --filter @call-e/skills-sh-skill test
 pnpm --filter @call-e/skills-sh-skill pack:dry-run
-npx -y skills-ref validate ./packages/skills-sh-skill/skills/calle
+npx -y skills-ref validate ./skills/calle
 npx -y skills add ./skills/calle --list
-npx -y skills add ./packages/skills-sh-skill/skills/calle --list
 ```
 
 ## CLI Selection
