@@ -21,7 +21,7 @@ Your agent can think, plan, and write. CALL-E picks up the phone — booking app
 </div>
 
 > [!IMPORTANT]
-> CALL-E can place real outbound phone calls. Integrations must **plan first**, preserve returned `plan_id` / `confirm_token` exactly, and only run a planned call when the user clearly intends to place that call.
+> CALL-E can place real outbound phone calls. Integrations must **plan first** and only start a real call when the user clearly intends to place that call. Agent-facing flows should prefer `calle call start` so execution confirmation data stays inside the CLI.
 
 ## 🚀 Quick install
 
@@ -67,7 +67,7 @@ plan_call → run_call → get_call_run
 | MCP client configuration | Streamable HTTP URL or `calle mcp config` |
 | Tool discovery | `calle mcp tools` |
 | Call planning | `calle call plan` or MCP `plan_call` |
-| Real outbound call execution | `calle call run` or MCP `run_call` |
+| Real outbound call execution | `calle call start`, `calle call run`, or MCP `run_call` |
 | Status, activity, summary, details, transcript | `calle call status` or MCP `get_call_run` |
 | Agent-client UX | `$calle` in Codex; `calle` through skills.sh; `/calle:calle` in Claude Code; `calle` MCP/skill in Cursor; **Phone Call - CALL-E** in OpenClaw; ClawHub Prompt flow in Hermes Agent |
 
@@ -86,6 +86,7 @@ calle mcp tools
 calle mcp call plan_call --args-json '{"to_phones":["+15551234567"],"goal":"Confirm the appointment"}'
 
 calle call plan --to-phone +15551234567 --goal "Confirm the appointment"
+calle call start --to-phone +15551234567 --goal "Confirm the appointment"
 calle call run --plan-id <plan_id> --confirm-token <confirm_token>
 calle call status --run-id <run_id>
 ```
@@ -105,9 +106,9 @@ All command output is JSON except `--help`. Access tokens are read from the loca
 
 - Real calls may contact external people or businesses.
 - Always plan first.
-- If the user asked to place a call, run it after planning returns a valid `plan_id` and `confirm_token`.
+- If the user asked to place a call from an agent-facing flow, prefer `calle call start` so planning and execution confirmation stay inside the CLI.
 - If the user only asked to verify setup or draft a plan, do not place the call.
-- Do not guess phone numbers, country codes, language, region, `plan_id`, `confirm_token`, or `run_id`.
+- Do not guess phone numbers, country codes, language, region, execution confirmation data, or `run_id`.
 - Do not print, request, or expose access tokens.
 
 ## 📦 Developer docs

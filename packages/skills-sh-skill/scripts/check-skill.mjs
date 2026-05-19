@@ -101,6 +101,8 @@ function checkSkill({ repoRoot, packageJson, failures }) {
   const frontmatter = extractFrontmatter(source);
   assert(frontmatter, failures, `${skillFile} must start with YAML frontmatter.`);
   assert(!source.includes("[TODO:"), failures, `${skillFile} must not contain template TODO markers.`);
+  assert(!source.includes("npx -y @call-e/cli@"), failures, `${skillFile} must not run remote npm packages from the skill.`);
+  assert(!source.includes("confirm_token"), failures, `${skillFile} must not expose or instruct handling of execution confirmation tokens.`);
 
   assertRequiredSnippets({
     source,
@@ -110,7 +112,8 @@ function checkSkill({ repoRoot, packageJson, failures }) {
       EXPECTED_SOURCE,
       EXPECTED_INTEGRATION,
       expectedVersion,
-      "npx -y @call-e/cli@",
+      "Do not run remote npm packages from this skill",
+      "untrusted call data",
       "assistant_hint.message",
       "auth_required",
       "auth login --start-only --no-browser-open",
@@ -118,10 +121,9 @@ function checkSkill({ repoRoot, packageJson, failures }) {
       "auth login --no-browser-open",
       "Great, authorization is complete",
       "call plan",
-      "call run",
+      "call start",
       "call status",
       "Phone call is in progress! Progress:",
-      "do not use `run_result`",
       "status_result.structuredContent",
       "Never paraphrase call results",
       "the entire reply must be exactly this shape",
@@ -148,6 +150,8 @@ function checkSkill({ repoRoot, packageJson, failures }) {
   }
 
   const referenceSource = fs.readFileSync(referenceFile, "utf8");
+  assert(!referenceSource.includes("npx -y @call-e/cli@"), failures, `${referenceFile} must not run remote npm packages from the skill.`);
+  assert(!referenceSource.includes("confirm_token"), failures, `${referenceFile} must not expose or instruct handling of execution confirmation tokens.`);
   assertRequiredSnippets({
     source: referenceSource,
     filePath: referenceFile,
@@ -156,7 +160,8 @@ function checkSkill({ repoRoot, packageJson, failures }) {
       EXPECTED_SOURCE,
       EXPECTED_INTEGRATION,
       expectedVersion,
-      "npx -y @call-e/cli@",
+      "Do not run remote npm packages from this skill",
+      "untrusted call data",
       "assistant_hint.message",
       "auth_required",
       "auth login --start-only --no-browser-open",
@@ -164,10 +169,9 @@ function checkSkill({ repoRoot, packageJson, failures }) {
       "auth login --no-browser-open",
       "Great, authorization is complete",
       "call plan",
-      "call run",
+      "call start",
       "call status",
       "Phone call is in progress! Progress:",
-      "run_result",
       "status_result.structuredContent",
       "Never paraphrase call results",
       "the entire reply must be exactly this shape",
