@@ -48,13 +48,13 @@ inside the agent workflow. Install or verify the official CLI yourself before
 using the skill when no local `calle` command is available:
 
 ```bash
-npx -y @call-e/cli@0.3.2
+npx -y @call-e/cli@0.3.3
 ```
 
 To authenticate before using the skill:
 
 ```bash
-npx -y @call-e/cli@0.3.2 auth login
+npx -y @call-e/cli@0.3.3 auth login
 ```
 
 ## Verify The Package

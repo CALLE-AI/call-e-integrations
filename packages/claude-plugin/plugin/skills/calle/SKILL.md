@@ -68,7 +68,7 @@ env CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_V
 If neither command works, use the pinned npm package through `npx`:
 
 ```bash
-env CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.1 npx -y @call-e/cli@0.3.2
+env CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.1 npx -y @call-e/cli@0.3.3
 ```
 
 Only tell the user to install the CLI globally if `npx` is unavailable,

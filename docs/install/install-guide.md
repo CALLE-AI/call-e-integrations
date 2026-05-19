@@ -143,7 +143,7 @@ calle mcp tools
 One-off usage without a global install:
 
 ```bash
-npx -y @call-e/cli@0.3.2 --help
+npx -y @call-e/cli@0.3.3 --help
 ```
 
 ### MCP-Only Clients
@@ -168,14 +168,14 @@ get_call_run
 CLI-based integrations can pre-authorize with:
 
 ```bash
-npx -y @call-e/cli@0.3.2 auth login
+npx -y @call-e/cli@0.3.3 auth login
 ```
 
 Then verify:
 
 ```bash
-npx -y @call-e/cli@0.3.2 auth status
-npx -y @call-e/cli@0.3.2 mcp tools
+npx -y @call-e/cli@0.3.3 auth status
+npx -y @call-e/cli@0.3.3 mcp tools
 ```
 
 The Codex, Claude Code, Cursor plugin, OpenClaw, and skills.sh skills use the
