@@ -550,6 +550,52 @@ test("runs a planned call and fetches status once", async (t) => {
   assert.deepEqual(fake.state.failures, []);
 });
 
+test("starts a call without exposing plan confirmation data", async (t) => {
+  const fake = await startFakeServer();
+  const cacheRoot = makeTempCacheRoot();
+  t.after(() => fake.close());
+  t.after(() => fs.rmSync(cacheRoot, { recursive: true, force: true }));
+  writeToken(cacheRoot, fake.baseUrl);
+
+  const result = await runCalle([
+    "call",
+    "start",
+    "--to-phone",
+    "+15551234567",
+    "--goal",
+    "Confirm appointment",
+    "--timezone",
+    "Asia/Shanghai",
+    "--base-url",
+    fake.baseUrl,
+    "--cache-root",
+    cacheRoot,
+  ]);
+  const payload = parseJson(result.stdout);
+
+  assert.equal(result.code, 0);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.run_id, "run-1");
+  assert.equal(payload.run_result, undefined);
+  assert.equal(payload.status_result.structuredContent.status, "IN_PROGRESS");
+  assert.match(payload.next_command, /calle call status --run-id run-1/);
+  assertNoLeak(`${result.stdout}\n${result.stderr}`, ["confirm-1", "plan-1", accessToken]);
+  assert.deepEqual(fake.state.telemetryEvents, []);
+  assert.deepEqual(fake.state.toolCalls, [
+    {
+      name: "plan_call",
+      arguments: { to_phones: ["+15551234567"], goal: "Confirm appointment" },
+      _meta: {
+        "openai/userLocation": { timezone: "Asia/Shanghai" },
+        timezone_offset_minutes: -480,
+      },
+    },
+    { name: "run_call", arguments: { plan_id: "plan-1", confirm_token: "confirm-1" } },
+    { name: "get_call_run", arguments: { run_id: "run-1" } },
+  ]);
+  assert.deepEqual(fake.state.failures, []);
+});
+
 test("maps call status flags to get_call_run arguments", async (t) => {
   const fake = await startFakeServer();
   const cacheRoot = makeTempCacheRoot();

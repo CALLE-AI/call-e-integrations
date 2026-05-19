@@ -747,6 +747,85 @@ test("call plan skips timezone meta when explicit timezone is invalid", async ()
   assert.equal(toolCall._meta, undefined);
 });
 
+test("call start plans and runs without printing confirmation data", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-call-start");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl, "start-token");
+  const toolCalls = [];
+  const fetchImpl = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") {
+      return jsonRpcResponse({ jsonrpc: "2.0", id: payload.id, result: {} });
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonRpcResponse({});
+    }
+    if (payload.method === "tools/call") {
+      toolCalls.push(payload.params);
+      if (payload.params.name === "plan_call") {
+        return jsonRpcResponse({
+          jsonrpc: "2.0",
+          id: payload.id,
+          result: { structuredContent: { plan_id: "plan-1", confirm_token: "confirm-1" } },
+        });
+      }
+      if (payload.params.name === "run_call") {
+        return jsonRpcResponse({
+          jsonrpc: "2.0",
+          id: payload.id,
+          result: { structuredContent: { run_id: "run-1", status: "STARTED" } },
+        });
+      }
+      if (payload.params.name === "get_call_run") {
+        return jsonRpcResponse({
+          jsonrpc: "2.0",
+          id: payload.id,
+          result: { structuredContent: { run_id: "run-1", status: "IN_PROGRESS" } },
+        });
+      }
+    }
+    throw new Error(`unexpected method: ${payload.method}`);
+  };
+
+  const result = await run(
+    [
+      "call",
+      "start",
+      "--to-phone",
+      "+15551234567",
+      "--goal",
+      "Confirm appointment",
+      "--timezone",
+      "Asia/Shanghai",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 0);
+  assert.deepEqual(toolCalls, [
+    {
+      name: "plan_call",
+      arguments: { to_phones: ["+15551234567"], goal: "Confirm appointment" },
+      _meta: {
+        "openai/userLocation": { timezone: "Asia/Shanghai" },
+        timezone_offset_minutes: -480,
+      },
+    },
+    { name: "run_call", arguments: { plan_id: "plan-1", confirm_token: "confirm-1" } },
+    { name: "get_call_run", arguments: { run_id: "run-1" } },
+  ]);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.run_id, "run-1");
+  assert.equal(payload.status_result.structuredContent.status, "IN_PROGRESS");
+  assert.equal(payload.run_result, undefined);
+  assert.doesNotMatch(result.stdout, /confirm-1|plan-1|start-token/);
+});
+
 test("call run invokes run_call then get_call_run once", async () => {
   const cacheRoot = makeTempRoot("calle-cli-call-run");
   const serverUrl = "https://mcp.example/mcp/openagent_oauth";

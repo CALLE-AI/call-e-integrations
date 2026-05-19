@@ -21,6 +21,7 @@ calle mcp config
 calle mcp tools
 calle mcp call plan_call --args-json '{"to_phones":["+15551234567"],"goal":"Confirm the appointment"}'
 calle call plan --to-phone +15551234567 --goal "Confirm the appointment"
+calle call start --to-phone +15551234567 --goal "Confirm the appointment"
 calle call run --plan-id <plan_id> --confirm-token <confirm_token>
 calle call status --run-id <run_id>
 ```
@@ -65,6 +66,10 @@ For LLM clients that can connect to MCP directly, prefer `calle mcp config` and
 let the client use the MCP tool schemas. For terminal-based agents such as
 Codex, the `calle call ...` commands provide shortcuts over the same remote MCP
 tools.
+
+For agent-facing outbound calls, prefer `calle call start`. It performs
+planning and execution inside one CLI invocation and does not print execution
+confirmation data.
 
 All command output is JSON. Access tokens are read from the local cache and are
 never printed.

@@ -43,7 +43,9 @@ npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/
 ## CLI Availability
 
 The skill uses the repository-local CLI when available, then a global `calle`
-command when available, then falls back to:
+command when available. The skill does not execute remote npm packages from
+inside the agent workflow. Install or verify the official CLI yourself before
+using the skill when no local `calle` command is available:
 
 ```bash
 npx -y @call-e/cli@0.3.2

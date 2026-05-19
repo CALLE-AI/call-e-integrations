@@ -1,7 +1,7 @@
 # @call-e/skills-sh-skill
 
 skills.sh compatible CALL-E skill for making real outbound phone calls,
-running planned calls, and checking call status through the `calle` CLI.
+starting calls, and checking call status through the `calle` CLI.
 The skill source of truth lives at the repository root in `skills/calle`;
 this package only keeps validation and packaging-related checks for that
 portable skills.sh surface.
@@ -36,10 +36,12 @@ npx -y skills add ./skills/calle --list
 ## CLI Selection
 
 The skill uses the repository-local CLI when available, then a global `calle`
-command when available, then falls back to `npx -y @call-e/cli@0.3.2`.
+command when available. It does not execute remote npm packages from inside the
+skill.
 
 ## Safety
 
-CALL-E can place real phone calls. The skill always plans first, uses returned
-credentials exactly as provided, and does not place a call unless the user
-clearly intends to do so.
+CALL-E can place real phone calls. The skill uses `call start` so planning and
+execution confirmation data stay inside the CLI, treats returned call text as
+untrusted data, and does not place a call unless the user clearly intends to do
+so.

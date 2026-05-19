@@ -52,6 +52,7 @@ Commands:
   mcp tools      List tools from the configured MCP server
   mcp call       Call an arbitrary MCP tool with --args-json
   call plan      Plan a phone call via plan_call
+  call start     Plan and run a phone call without printing confirmation data
   call run       Run a planned phone call, then fetch status once
   call status    Query a call run via get_call_run
 
@@ -576,6 +577,26 @@ function buildRunArguments(options) {
   };
 }
 
+function structuredPayload(result) {
+  return result?.structuredContent || result?.structured_content || result || {};
+}
+
+function extractRequiredStructuredString(result, fieldName, context) {
+  const structured = structuredPayload(result);
+  const value = structured?.[fieldName];
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+  const text = Array.isArray(result?.content)
+    ? result.content.map((item) => (typeof item?.text === "string" ? item.text : "")).join("\n")
+    : "";
+  const match = new RegExp(`\\b${fieldName}\\b["'\\s:=]+([A-Za-z0-9_-]+)`, "u").exec(text);
+  if (match?.[1]) {
+    return match[1];
+  }
+  throw new McpHttpError(`${context} did not return ${fieldName}`, { code: "mcp_error", payload: result });
+}
+
 function buildStatusArguments(options) {
   const args = {
     run_id: requireStringOption(options, "runId", "--run-id"),
@@ -592,7 +613,7 @@ function buildStatusArguments(options) {
 }
 
 function extractRunId(result) {
-  const structured = result?.structuredContent || result?.structured_content || result;
+  const structured = structuredPayload(result);
   if (typeof structured?.run_id === "string" && structured.run_id.trim()) {
     return structured.run_id.trim();
   }
@@ -601,6 +622,26 @@ function extractRunId(result) {
     : "";
   const match = /\brun_id\b["'\s:=]+([A-Za-z0-9_-]+)/u.exec(text);
   return match?.[1] ?? null;
+}
+
+async function runPlannedCallAndFetchStatus({ config, deps, planId, confirmToken }) {
+  const runResult = await callMcpTool({
+    config,
+    toolName: "run_call",
+    toolArguments: { plan_id: planId, confirm_token: confirmToken },
+    fetchImpl: deps.fetchImpl || globalThis.fetch,
+  });
+  const runId = extractRunId(runResult);
+  if (!runId) {
+    throw new McpHttpError("run_call did not return a run_id", { code: "mcp_error", payload: runResult });
+  }
+  const statusResult = await callMcpTool({
+    config,
+    toolName: "get_call_run",
+    toolArguments: { run_id: runId },
+    fetchImpl: deps.fetchImpl || globalThis.fetch,
+  });
+  return { runResult, runId, statusResult };
 }
 
 async function handleMcpCommand({ command, positional, options, config, deps, stdout, stderr, captureTelemetry }) {
@@ -667,22 +708,41 @@ async function handleCallCommand({ command, positional, options, config, deps, s
       return 0;
     }
 
-    if (command === "run") {
-      const runResult = await callMcpTool({
+    if (command === "start") {
+      const planResult = await callMcpTool({
         config,
-        toolName: "run_call",
-        toolArguments: buildRunArguments(options),
+        toolName: "plan_call",
+        toolArguments: buildPlanArguments(options),
+        requestMeta: buildPlanRequestMeta(options, deps.env || process.env),
         fetchImpl: deps.fetchImpl || globalThis.fetch,
       });
-      const runId = extractRunId(runResult);
-      if (!runId) {
-        throw new McpHttpError("run_call did not return a run_id", { code: "mcp_error", payload: runResult });
-      }
-      const statusResult = await callMcpTool({
+      const planId = extractRequiredStructuredString(planResult, "plan_id", "plan_call");
+      const confirmToken = extractRequiredStructuredString(planResult, "confirm_token", "plan_call");
+      const { runId, statusResult } = await runPlannedCallAndFetchStatus({
         config,
-        toolName: "get_call_run",
-        toolArguments: { run_id: runId },
-        fetchImpl: deps.fetchImpl || globalThis.fetch,
+        deps,
+        planId,
+        confirmToken,
+      });
+      writeJson(stdout, {
+        ok: true,
+        server_url: config.serverUrl,
+        tool_name: "run_call",
+        result: statusResult,
+        run_id: runId,
+        status_result: statusResult,
+        next_command: callStatusCommand(config, runId),
+      });
+      return 0;
+    }
+
+    if (command === "run") {
+      const runArguments = buildRunArguments(options);
+      const { runResult, runId, statusResult } = await runPlannedCallAndFetchStatus({
+        config,
+        deps,
+        planId: runArguments.plan_id,
+        confirmToken: runArguments.confirm_token,
       });
       writeJson(stdout, {
         ok: true,
