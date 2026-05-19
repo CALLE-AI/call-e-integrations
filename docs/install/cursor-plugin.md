@@ -75,8 +75,8 @@ commands, it uses the repository-local CLI when available, then a global
 `calle`, then the pinned npm fallback:
 
 ```bash
-npx -y @call-e/cli@0.3.2 auth status
-npx -y @call-e/cli@0.3.2 mcp tools
+npx -y @call-e/cli@0.3.3 auth status
+npx -y @call-e/cli@0.3.3 mcp tools
 ```
 
 CLI commands run by the Cursor skill include this CALL-E attribution:

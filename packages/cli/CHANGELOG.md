@@ -1,5 +1,11 @@
 # @call-e/cli
 
+## 0.3.3
+
+### Patch Changes
+
+- [#38](https://github.com/CALLE-AI/call-e-integrations/pull/38) [`5e788f8`](https://github.com/CALLE-AI/call-e-integrations/commit/5e788f881e2d855b27d8cd19d4a0c914cda70d58) Thanks [@Ray-56](https://github.com/Ray-56)! - Add `calle call start` so agent-facing skills can plan and run calls without exposing execution confirmation data.
+
 ## 0.3.2
 
 ### Patch Changes
