@@ -9,19 +9,12 @@ public skill page and search results directly from the repository root.
 For most users, the recommended path is to ask the agent to install the skill:
 
 ```text
-To install the CALL-E skill for your agent, use the following command.
-Replace <agent> with the name of your current agent:
-
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -y --agent <agent>
-
-Steps:
-1. Replace <agent> with the name of your current agent.
-2. Run the command in your terminal to install the skill.
-3. If dependencies are not automatically installed, navigate to the skill folder and run `npm install`.
-4. Reload or restart your agent according to its instructions to make the skill available.
+Install CALL-E for me: https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/docs/install/CALL-E-installation-guide.md
 ```
 
-Or run the same command directly from the repository root source:
+The stable prompt points to the latest
+[CALL-E installation guide](./CALL-E-installation-guide.md). Or run the same
+command directly from the repository root source:
 
 ```bash
 npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -y --agent <agent>

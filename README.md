@@ -28,15 +28,15 @@ Your agent can think, plan, and write. CALL-E picks up the phone — booking app
 For most users, the simplest path is to ask your agent to install the portable
 CALL-E skill.
 
-Copy this prompt into a local agent that can run shell commands or install
-skills:
+Copy this stable prompt into a local agent that can run shell commands or
+install skills:
 
 ```text
-Please install the CALL-E skill for your agent, use the following command.
-Replace <agent> with the name of your current agent:
-
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle --agent <agent>
+Install CALL-E for me: https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/docs/install/CALL-E-installation-guide.md
 ```
+
+The linked guide contains the install steps, so the prompt can stay unchanged
+when those steps need to evolve.
 
 New users get 20 free calls to get started.
 

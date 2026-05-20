@@ -7,6 +7,7 @@ const checkOnly = process.argv.includes("--check");
 
 const syncedInstallFiles = [
   "README.md",
+  "docs/install/CALL-E-installation-guide.md",
   "docs/install/install-guide.md",
   "docs/install/cli.md",
   "docs/install/codex-plugin.md",
@@ -66,6 +67,7 @@ const openclawCliSkillIntegrationFiles = new Set([
 ]);
 
 const skillsShSkillIntegrationFiles = new Set([
+  "docs/install/CALL-E-installation-guide.md",
   "docs/install/skills-sh-skill.md",
   "packages/skills-sh-skill/README.md",
   "skills/calle/SKILL.md",

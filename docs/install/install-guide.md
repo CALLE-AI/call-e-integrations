@@ -8,21 +8,14 @@ when you need a client-specific setup path.
 For most users, copy this into your agent:
 
 ```text
-To install the CALL-E skill for your agent, use the following command.
-Replace <agent> with the name of your current agent:
-
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -y --agent <agent>
-
-Steps:
-1. Replace <agent> with the name of your current agent.
-2. Run the command in your terminal to install the skill.
-3. If dependencies are not automatically installed, navigate to the skill folder and run `npm install`.
-4. Reload or restart your agent according to its instructions to make the skill available.
+Install CALL-E for me: https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/docs/install/CALL-E-installation-guide.md
 ```
 
-This is the preferred path for local agents that can run shell commands. It
-keeps the install request client-agnostic and lets the receiving agent complete
-the setup in its own environment.
+This is the preferred path for local agents that can run shell commands. The
+stable prompt points to the latest
+[CALL-E installation guide](./CALL-E-installation-guide.md), keeping the install
+request client-agnostic while letting the receiving agent complete the setup in
+its own environment.
 
 ## Manual Install Options
 
