@@ -11,15 +11,6 @@ const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "../..");
 const VERSION = "0.1.0";
 const REMOTE_MCP_URL = "https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth";
-const VALID_CLI_GUIDANCE =
-  "CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0\n\n" +
-  "node packages/cli/bin/calle.js\n\n" +
-  "npx -y @call-e/cli\n\n" +
-  "auth status\n\n" +
-  "mcp tools\n\n" +
-  "call plan\n\n" +
-  "call run\n\n" +
-  "call status\n\n";
 const VALID_CALL_GUIDANCE =
   "Prefer the Cursor MCP tools when available.\n\n" +
   "Use plan_call, run_call, and get_call_run.\n\n" +
@@ -30,15 +21,29 @@ const VALID_CALL_GUIDANCE =
   "Do not expose OAuth tokens, bearer tokens, authorization codes, callback URLs, refresh tokens, or access tokens.\n\n" +
   "Do not configure CALL-E run_call for auto-run.\n\n" +
   "wait 60 seconds before the first `get_call_run`.\n\n";
-const VALID_SKILL = `---
+function validCliGuidance(version = VERSION) {
+  return (
+    "CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=" + version + "\n\n" +
+    "node packages/cli/bin/calle.js\n\n" +
+    "npx -y @call-e/cli\n\n" +
+    "auth status\n\n" +
+    "mcp tools\n\n" +
+    "call plan\n\n" +
+    "call run\n\n" +
+    "call status\n\n"
+  );
+}
+function validSkill(version = VERSION) {
+  return `---
 name: calle
 description: Use CALL-E from Cursor for setup checks, authentication recovery, phone call planning, planned call execution, and call status checks.
 ---
 
 # CALL-E For Cursor
 
-${VALID_CALL_GUIDANCE}${VALID_CLI_GUIDANCE}
+${VALID_CALL_GUIDANCE}${validCliGuidance(version)}
 `;
+}
 const VALID_RULE = `---
 description: "CALL-E real phone call safety rules."
 alwaysApply: true
@@ -68,13 +73,13 @@ function makeTempRoot(name) {
   return fs.mkdtempSync(path.join(os.tmpdir(), `${name}-`));
 }
 
-function createValidFixture(root) {
+function createValidFixture(root, { version = VERSION } = {}) {
   const packageRoot = path.join(root, "packages", "cursor-plugin");
   const repoRoot = root;
 
   writeJson(path.join(packageRoot, "package.json"), {
     name: "@call-e/cursor-plugin",
-    version: VERSION,
+    version,
     type: "module",
     license: "MIT",
     files: ["README.md", "plugin"],
@@ -91,7 +96,7 @@ function createValidFixture(root) {
   writeJson(path.join(packageRoot, "plugin", ".cursor-plugin", "plugin.json"), {
     name: "calle",
     displayName: "CALL-E",
-    version: VERSION,
+    version,
     description: "Use CALL-E from Cursor through MCP, the calle CLI, and safety-aware agent skills.",
     author: {
       name: "CALLE AI",
@@ -112,8 +117,8 @@ function createValidFixture(root) {
     },
   });
 
-  writeFile(path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"), VALID_SKILL);
-  writeFile(path.join(packageRoot, "plugin", "skills", "calle", "references", "commands.md"), VALID_SKILL);
+  writeFile(path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"), validSkill(version));
+  writeFile(path.join(packageRoot, "plugin", "skills", "calle", "references", "commands.md"), validSkill(version));
   writeFile(path.join(packageRoot, "plugin", "rules", "call-e-safety.mdc"), VALID_RULE);
 
   const doc = `${REMOTE_MCP_URL}\nplan_call\nrun_call\nget_call_run\nreal outbound\nauto-run\n`;
@@ -144,6 +149,14 @@ function createValidFixture(root) {
 
 test("current Cursor plugin metadata is valid", () => {
   assert.deepEqual(checkCursorPlugin({ packageRoot: PACKAGE_ROOT, repoRoot: REPO_ROOT }), []);
+});
+
+test("accepts release-bumped package versions", () => {
+  const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-cursor-plugin-release-version"), {
+    version: "0.1.1",
+  });
+
+  assert.deepEqual(checkCursorPlugin({ packageRoot, repoRoot }), []);
 });
 
 test("reports a missing plugin manifest", () => {
@@ -187,7 +200,7 @@ test("reports missing skill safety guidance", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-cursor-plugin-missing-skill-guidance"));
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"),
-    `---\nname: calle\ndescription: Use CALL-E from Cursor for setup checks, authentication recovery, phone call planning, planned call execution, and call status checks.\n---\n\n# Skill\n\n${VALID_CLI_GUIDANCE}`,
+    `---\nname: calle\ndescription: Use CALL-E from Cursor for setup checks, authentication recovery, phone call planning, planned call execution, and call status checks.\n---\n\n# Skill\n\n${validCliGuidance()}`,
   );
 
   const failures = checkCursorPlugin({ packageRoot, repoRoot });

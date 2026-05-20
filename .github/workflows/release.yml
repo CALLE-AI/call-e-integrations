@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
   pull-requests: write
 
 jobs:
@@ -34,6 +35,9 @@ jobs:
           node-version: 22
           cache: pnpm
           registry-url: https://registry.npmjs.org/
+
+      - name: Set up npm trusted publishing
+        run: npm install --global npm@11
 
       - name: Initialize Codex latest ref
         run: |
@@ -94,28 +98,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Verify npm auth and scope access
-        run: |
-          tmpdir=$(mktemp -d)
-          trap 'rm -rf "$tmpdir"' EXIT
-
-          cat > "$tmpdir/.npmrc" <<'EOF'
-          //registry.npmjs.org/:_authToken=${NPM_TOKEN}
-          EOF
-
-          scope="call-e"
-          npm_user=$(NPM_TOKEN="$NPM_TOKEN" npm whoami \
-            --userconfig="$tmpdir/.npmrc" \
-            --registry=https://registry.npmjs.org/)
-
-          echo "Authenticated npm user: $npm_user"
-          npm org ls "$scope" "$npm_user" \
-            --userconfig="$tmpdir/.npmrc" \
-            --registry=https://registry.npmjs.org/
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Create release PR or publish
         id: changesets
         uses: changesets/action@v1
@@ -126,8 +108,6 @@ jobs:
           title: "chore: release packages"
         env:
           GITHUB_TOKEN: ${{ env.RELEASE_GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Update Codex latest ref
         if: steps.changesets.outputs.published == 'true'

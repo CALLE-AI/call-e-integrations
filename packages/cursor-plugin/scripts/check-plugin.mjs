@@ -92,7 +92,7 @@ function checkPackage({ packageRoot, failures }) {
   }
 
   assert(packageJson.name === EXPECTED_PACKAGE_NAME, failures, "package.json name must be @call-e/cursor-plugin.");
-  assert(packageJson.version === "0.1.0", failures, "package.json version must start at 0.1.0.");
+  assert(typeof packageJson.version === "string" && packageJson.version.length > 0, failures, "package.json must include a version.");
   assert(packageJson.type === "module", failures, "package.json type must be module.");
   assert(packageJson.license === "MIT", failures, "package.json license must be MIT.");
   assert(packageJson.private !== true, failures, "package.json must keep the Cursor plugin package publishable.");
