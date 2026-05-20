@@ -72,7 +72,7 @@ function createValidFixture(root) {
       "# Commands",
       "",
       "env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill node packages/cli/bin/calle.js",
-      "env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill npx -y @call-e/cli@0.2.1",
+      "env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill npx -y @call-e/cli",
       "Run auth login --start-only --no-browser-open and ask the user to use the authorization instructions returned by the CLI.",
       "Run auth login --no-browser-open to exchange a pending authorization.",
       "Great, authorization is complete",

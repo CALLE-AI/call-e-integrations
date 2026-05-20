@@ -97,7 +97,7 @@ function assertCliGuidance({ source, filePath, failures }) {
     `${filePath} must include Claude CLI integration attribution.`,
   );
   assert(source.includes("node packages/cli/bin/calle.js"), failures, `${filePath} must document the repository-local CLI command.`);
-  assert(source.includes("npx -y @call-e/cli"), failures, `${filePath} must document the pinned npx CLI fallback.`);
+  assert(source.includes("npx -y @call-e/cli"), failures, `${filePath} must document the npx CLI fallback.`);
   assert(source.includes("auth status"), failures, `${filePath} must document auth status checks.`);
   assert(source.includes("Run blocking `auth login`"), failures, `${filePath} must document blocking authorization login.`);
   assert(

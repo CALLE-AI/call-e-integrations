@@ -99,8 +99,8 @@ function readPackageVersion(packagePath) {
 const replacements = [
   {
     label: "npx CLI fallback",
-    pattern: /npx -y @call-e\/cli@\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
-    value: `npx -y @call-e/cli@${readPackageVersion("packages/cli")}`,
+    pattern: /npx -y @call-e\/cli(?:@(?:latest|\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?))?/g,
+    value: "npx -y @call-e/cli",
   },
 ];
 

@@ -15,7 +15,7 @@ npm install -g @call-e/cli
 For one-off usage without a global install:
 
 ```bash
-npx -y @call-e/cli@0.3.3 --help
+npx -y @call-e/cli --help
 ```
 
 ## Authenticate

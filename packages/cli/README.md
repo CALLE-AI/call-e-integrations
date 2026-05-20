@@ -98,6 +98,7 @@ Common options:
 - `--goal`
 - `--language`
 - `--region`
+- `--timezone`
 - `--plan-id`
 - `--confirm-token`
 - `--run-id`

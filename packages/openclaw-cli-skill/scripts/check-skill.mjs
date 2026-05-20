@@ -187,7 +187,7 @@ function checkReference({ packageRoot, failures }) {
   const source = fs.readFileSync(referenceFile, "utf8");
   const requiredSnippets = [
     "node packages/cli/bin/calle.js",
-    "npx -y @call-e/cli@",
+    "npx -y @call-e/cli",
     "CALLE_SOURCE=openclaw",
     "CALLE_INTEGRATION=openclaw_cli_skill",
     "auth_required",

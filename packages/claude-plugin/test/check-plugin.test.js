@@ -13,7 +13,7 @@ const VERSION = "0.0.0";
 const VALID_AUTH_GUIDANCE =
   "CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.0.0\n\n" +
   "node packages/cli/bin/calle.js\n\n" +
-  "npx -y @call-e/cli@0.0.0\n\n" +
+  "npx -y @call-e/cli\n\n" +
   "auth status\n\n" +
   "mcp tools\n\n" +
   "call plan\n\n" +

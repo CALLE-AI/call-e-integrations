@@ -535,7 +535,7 @@ test("mcp call forwards plan_call arguments and request meta", async () => {
   assert.equal(payload.tool_name, "plan_call");
 });
 
-test("mcp call leaves non-plan tools without request meta", async () => {
+test("mcp call leaves non-plan tools without request meta or timestamp localization", async () => {
   const cacheRoot = makeTempRoot("calle-cli-mcp-call-non-plan");
   const serverUrl = "https://mcp.example/mcp/openagent_oauth";
   writeToken(cacheRoot, serverUrl, "call-token");
@@ -553,7 +553,12 @@ test("mcp call leaves non-plan tools without request meta", async () => {
       return jsonRpcResponse({
         jsonrpc: "2.0",
         id: payload.id,
-        result: { structuredContent: { run_id: "run-1" } },
+        result: {
+          structuredContent: {
+            run_id: "run-1",
+            activity: [{ ts: "2026-05-20T09:32:10.000Z", message: "Calling" }],
+          },
+        },
       });
     }
     throw new Error(`unexpected method: ${payload.method}`);
@@ -563,9 +568,9 @@ test("mcp call leaves non-plan tools without request meta", async () => {
     [
       "mcp",
       "call",
-      "run_call",
+      "get_call_run",
       "--args-json",
-      '{"plan_id":"plan-1","confirm_token":"confirm-1"}',
+      '{"run_id":"run-1"}',
       "--timezone",
       "Asia/Shanghai",
       "--base-url",
@@ -580,12 +585,15 @@ test("mcp call leaves non-plan tools without request meta", async () => {
   assert.equal(result.code, 0);
   assert.deepEqual(calls, [
     {
-      name: "run_call",
-      arguments: { plan_id: "plan-1", confirm_token: "confirm-1" },
+      name: "get_call_run",
+      arguments: { run_id: "run-1" },
     },
   ]);
   assert.equal(payload.ok, true);
-  assert.equal(payload.tool_name, "run_call");
+  assert.equal(payload.tool_name, "get_call_run");
+  assert.deepEqual(payload.result.structuredContent.activity, [
+    { ts: "2026-05-20T09:32:10.000Z", message: "Calling" },
+  ]);
 });
 
 test("call plan maps flags to plan_call arguments", async () => {
@@ -823,6 +831,7 @@ test("call start plans and runs without printing confirmation data", async () =>
   assert.equal(payload.run_id, "run-1");
   assert.equal(payload.status_result.structuredContent.status, "IN_PROGRESS");
   assert.equal(payload.run_result, undefined);
+  assert.match(payload.next_command, /--timezone Asia\/Shanghai/);
   assert.doesNotMatch(result.stdout, /confirm-1|plan-1|start-token/);
 });
 
@@ -852,7 +861,21 @@ test("call run invokes run_call then get_call_run once", async () => {
         return jsonRpcResponse({
           jsonrpc: "2.0",
           id: payload.id,
-          result: { structuredContent: { run_id: "run-1", status: "IN_PROGRESS" } },
+          result: {
+            structuredContent: {
+              run_id: "run-1",
+              status: "IN_PROGRESS",
+              activity: [{ ts: "2026-05-20T09:32:10.000Z", message: "Calling" }],
+              result: {
+                extracted: {
+                  calling: {
+                    started_at: "2026-05-20T09:32:10.000Z",
+                    ended_at: "2026-05-20T16:01:02.000Z",
+                  },
+                },
+              },
+            },
+          },
         });
       }
     }
@@ -867,6 +890,8 @@ test("call run invokes run_call then get_call_run once", async () => {
       "plan-1",
       "--confirm-token",
       "confirm-1",
+      "--timezone",
+      "America/New_York",
       "--base-url",
       "https://mcp.example",
       "--cache-root",
@@ -885,7 +910,13 @@ test("call run invokes run_call then get_call_run once", async () => {
   assert.equal(payload.run_id, "run-1");
   assert.equal(payload.run_result.structuredContent.status, "STARTED");
   assert.equal(payload.status_result.structuredContent.status, "IN_PROGRESS");
+  assert.deepEqual(payload.status_result.structuredContent.activity, [
+    { ts: "2026-05-20T05:32:10.000-04:00", message: "Calling" },
+  ]);
+  assert.equal(payload.status_result.structuredContent.result.extracted.calling.started_at, "2026-05-20T05:32:10.000-04:00");
+  assert.equal(payload.status_result.structuredContent.result.extracted.calling.ended_at, "2026-05-20T12:01:02.000-04:00");
   assert.match(payload.next_command, /calle call status --run-id run-1/);
+  assert.match(payload.next_command, /--timezone America\/New_York/);
   assert.doesNotMatch(result.stdout, /run-token/);
 });
 
@@ -907,7 +938,25 @@ test("call status maps flags to get_call_run arguments", async () => {
       return jsonRpcResponse({
         jsonrpc: "2.0",
         id: payload.id,
-        result: { structuredContent: { run_id: "run-1", status: "COMPLETED" } },
+        result: {
+          structuredContent: {
+            run_id: "run-1",
+            status: "COMPLETED",
+            activity: [
+              { ts: "2026-05-20T09:32:10.123Z", message: "Calling" },
+              { ts: "not-a-timestamp", message: "Still waiting" },
+              { message: "No timestamp" },
+            ],
+            result: {
+              extracted: {
+                calling: {
+                  started_at: "2026-05-20T09:32:10.123Z",
+                  ended_at: "2026-05-20T16:01:02Z",
+                },
+              },
+            },
+          },
+        },
       });
     }
     throw new Error(`unexpected method: ${payload.method}`);
@@ -923,6 +972,8 @@ test("call status maps flags to get_call_run arguments", async () => {
       "cursor-1",
       "--limit",
       "20",
+      "--timezone",
+      "Asia/Shanghai",
       "--base-url",
       "https://mcp.example",
       "--cache-root",
@@ -936,7 +987,64 @@ test("call status maps flags to get_call_run arguments", async () => {
     name: "get_call_run",
     arguments: { run_id: "run-1", cursor: "cursor-1", limit: 20 },
   });
-  assert.equal(JSON.parse(result.stdout).tool_name, "get_call_run");
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.tool_name, "get_call_run");
+  assert.deepEqual(payload.result.structuredContent.activity, [
+    { ts: "2026-05-20T17:32:10.123+08:00", message: "Calling" },
+    { ts: "not-a-timestamp", message: "Still waiting" },
+    { message: "No timestamp" },
+  ]);
+  assert.equal(payload.result.structuredContent.result.extracted.calling.started_at, "2026-05-20T17:32:10.123+08:00");
+  assert.equal(payload.result.structuredContent.result.extracted.calling.ended_at, "2026-05-21T00:01:02.000+08:00");
+});
+
+test("call status localizes timestamps from CALLE_TIMEZONE", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-call-status-env-timezone");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl);
+  const fetchImpl = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") {
+      return jsonRpcResponse({ jsonrpc: "2.0", id: payload.id, result: {} });
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonRpcResponse({});
+    }
+    if (payload.method === "tools/call") {
+      return jsonRpcResponse({
+        jsonrpc: "2.0",
+        id: payload.id,
+        result: {
+          structuredContent: {
+            run_id: "run-1",
+            status: "IN_PROGRESS",
+            activity: [{ ts: "2026-01-01T05:06:07Z", message: "Connected" }],
+          },
+        },
+      });
+    }
+    throw new Error(`unexpected method: ${payload.method}`);
+  };
+
+  const result = await run(
+    [
+      "call",
+      "status",
+      "--run-id",
+      "run-1",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    { env: { CALLE_TIMEZONE: "America/New_York" }, fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 0);
+  assert.deepEqual(payload.result.structuredContent.activity, [
+    { ts: "2026-01-01T00:06:07.000-05:00", message: "Connected" },
+  ]);
 });
 
 test("mcp commands return auth_required for missing or expired tokens", async () => {

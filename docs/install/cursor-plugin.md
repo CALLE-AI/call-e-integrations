@@ -72,11 +72,11 @@ get_call_run
 
 The plugin should prefer Cursor MCP tools. If the skill falls back to CLI
 commands, it uses the repository-local CLI when available, then a global
-`calle`, then the pinned npm fallback:
+`calle`, then the npm fallback:
 
 ```bash
-npx -y @call-e/cli@0.3.3 auth status
-npx -y @call-e/cli@0.3.3 mcp tools
+npx -y @call-e/cli auth status
+npx -y @call-e/cli mcp tools
 ```
 
 CLI commands run by the Cursor skill include this CALL-E attribution:

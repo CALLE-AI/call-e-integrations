@@ -66,10 +66,10 @@ If the repository-local CLI is unavailable, use the global command:
 env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 calle
 ```
 
-If neither command works, use the pinned npm package through `npx`:
+If neither command works, use the npm package through `npx`:
 
 ```bash
-env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli@0.3.3
+env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli
 ```
 
 Only tell the user to install the CLI globally if `npx` is unavailable,

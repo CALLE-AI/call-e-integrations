@@ -42,19 +42,19 @@ The plugin checks authentication when `/calle:calle` is invoked. To
 pre-authorize before using the skill, run:
 
 ```bash
-npx -y @call-e/cli@0.3.3 auth login
+npx -y @call-e/cli auth login
 ```
 
 The command opens the CALL-E browser authorization flow, waits for completion,
 then stores the token in the private local CLI cache. To verify setup:
 
 ```bash
-npx -y @call-e/cli@0.3.3 auth status
-npx -y @call-e/cli@0.3.3 mcp tools
+npx -y @call-e/cli auth status
+npx -y @call-e/cli mcp tools
 ```
 
 The plugin uses the repository-local CLI when available, then a global `calle`,
-then the pinned npm fallback above. CLI commands run by the skill include this
+then the npm fallback above. CLI commands run by the skill include this
 CALL-E attribution:
 
 ```text

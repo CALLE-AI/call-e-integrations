@@ -157,7 +157,7 @@ function assertCliGuidance({ source, filePath, packageJson, failures }) {
     `${filePath} must include Cursor CLI integration version ${packageJson.version}.`,
   );
   assert(source.includes("node packages/cli/bin/calle.js"), failures, `${filePath} must document the repository-local CLI command.`);
-  assert(source.includes("npx -y @call-e/cli"), failures, `${filePath} must document the pinned npx CLI fallback.`);
+  assert(source.includes("npx -y @call-e/cli"), failures, `${filePath} must document the npx CLI fallback.`);
   assert(source.includes("auth status"), failures, `${filePath} must document auth status checks.`);
   assert(source.includes("mcp tools"), failures, `${filePath} must document CLI tool discovery.`);
   assert(source.includes("call plan"), failures, `${filePath} must document call planning through the CLI.`);

@@ -80,7 +80,7 @@ MCP/call options:
   --goal <text>
   --language <language>
   --region <region>
-  --timezone <iana>            Timezone hint for relative scheduling in call plan
+  --timezone <iana>            Timezone for call planning and local call timestamp display
   --plan-id <id>
   --confirm-token <token>
   --run-id <id>
@@ -177,7 +177,7 @@ function normalizeIanaTimezone(value) {
   }
   try {
     const resolved = new Intl.DateTimeFormat("en-US", { timeZone: value.trim() }).resolvedOptions().timeZone;
-    if (typeof resolved !== "string" || !resolved.includes("/")) {
+    if (typeof resolved !== "string" || (resolved !== "UTC" && !resolved.includes("/"))) {
       return null;
     }
     return resolved;
@@ -234,6 +234,92 @@ function timezoneOffsetMinutes(timezone, instant = new Date()) {
   } catch {
     return null;
   }
+}
+
+const ISO_TIMESTAMP_WITH_TIMEZONE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})$/iu;
+
+function recordObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+}
+
+function zonedDateTimeParts(timezone, instant) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(instant);
+  return Object.fromEntries(parts.map((part) => [part.type, part.value]));
+}
+
+function formatIsoTimestampInTimezone(value, timezone) {
+  if (typeof value !== "string" || !timezone) {
+    return value;
+  }
+  const timestamp = value.trim();
+  if (!ISO_TIMESTAMP_WITH_TIMEZONE.test(timestamp)) {
+    return value;
+  }
+  const instant = new Date(timestamp);
+  if (Number.isNaN(instant.getTime())) {
+    return value;
+  }
+
+  try {
+    const parts = zonedDateTimeParts(timezone, instant);
+    const offsetMinutes = timezoneOffsetMinutes(timezone, instant);
+    if (offsetMinutes === null) {
+      return value;
+    }
+    const localOffsetMinutes = -offsetMinutes;
+    const sign = localOffsetMinutes >= 0 ? "+" : "-";
+    const absoluteOffsetMinutes = Math.abs(localOffsetMinutes);
+    const offsetHours = String(Math.floor(absoluteOffsetMinutes / 60)).padStart(2, "0");
+    const offsetRemainderMinutes = String(absoluteOffsetMinutes % 60).padStart(2, "0");
+    const milliseconds = String(instant.getUTCMilliseconds()).padStart(3, "0");
+    return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}.${milliseconds}${sign}${offsetHours}:${offsetRemainderMinutes}`;
+  } catch {
+    return value;
+  }
+}
+
+function localizeCallStatusResultTimestamps(result, options, env = process.env) {
+  const timezone = resolvePlanTimezone(options, env);
+  if (!timezone) {
+    return result;
+  }
+
+  const structured = recordObject(structuredPayload(result));
+  if (!structured) {
+    return result;
+  }
+
+  if (Array.isArray(structured.activity)) {
+    for (const item of structured.activity) {
+      const event = recordObject(item);
+      if (event && Object.hasOwn(event, "ts")) {
+        event.ts = formatIsoTimestampInTimezone(event.ts, timezone);
+      }
+    }
+  }
+
+  const resultObject = recordObject(structured.result);
+  const extracted = recordObject(resultObject?.extracted);
+  const calling = recordObject(extracted?.calling);
+  if (calling) {
+    if (Object.hasOwn(calling, "started_at")) {
+      calling.started_at = formatIsoTimestampInTimezone(calling.started_at, timezone);
+    }
+    if (Object.hasOwn(calling, "ended_at")) {
+      calling.ended_at = formatIsoTimestampInTimezone(calling.ended_at, timezone);
+    }
+  }
+
+  return result;
 }
 
 function parsePositiveInteger(value, optionName) {
@@ -378,13 +464,14 @@ function loginCommand(config) {
     .join(" ");
 }
 
-function callStatusCommand(config, runId) {
+function callStatusCommand(config, runId, timezone = null) {
   return [
     "calle",
     "call",
     "status",
     "--run-id",
     runId,
+    ...(timezone ? ["--timezone", timezone] : []),
     "--server-url",
     config.serverUrl,
     "--cache-root",
@@ -709,6 +796,7 @@ async function handleCallCommand({ command, positional, options, config, deps, s
     }
 
     if (command === "start") {
+      const statusTimezone = resolvePlanTimezone(options, deps.env || process.env);
       const planResult = await callMcpTool({
         config,
         toolName: "plan_call",
@@ -724,6 +812,7 @@ async function handleCallCommand({ command, positional, options, config, deps, s
         planId,
         confirmToken,
       });
+      localizeCallStatusResultTimestamps(statusResult, options, deps.env || process.env);
       writeJson(stdout, {
         ok: true,
         server_url: config.serverUrl,
@@ -731,12 +820,13 @@ async function handleCallCommand({ command, positional, options, config, deps, s
         result: statusResult,
         run_id: runId,
         status_result: statusResult,
-        next_command: callStatusCommand(config, runId),
+        next_command: callStatusCommand(config, runId, statusTimezone),
       });
       return 0;
     }
 
     if (command === "run") {
+      const statusTimezone = resolvePlanTimezone(options, deps.env || process.env);
       const runArguments = buildRunArguments(options);
       const { runResult, runId, statusResult } = await runPlannedCallAndFetchStatus({
         config,
@@ -744,6 +834,7 @@ async function handleCallCommand({ command, positional, options, config, deps, s
         planId: runArguments.plan_id,
         confirmToken: runArguments.confirm_token,
       });
+      localizeCallStatusResultTimestamps(statusResult, options, deps.env || process.env);
       writeJson(stdout, {
         ok: true,
         server_url: config.serverUrl,
@@ -752,7 +843,7 @@ async function handleCallCommand({ command, positional, options, config, deps, s
         run_id: runId,
         run_result: runResult,
         status_result: statusResult,
-        next_command: callStatusCommand(config, runId),
+        next_command: callStatusCommand(config, runId, statusTimezone),
       });
       return 0;
     }
@@ -765,6 +856,7 @@ async function handleCallCommand({ command, positional, options, config, deps, s
         toolArguments: buildStatusArguments(options),
         fetchImpl: deps.fetchImpl || globalThis.fetch,
       });
+      localizeCallStatusResultTimestamps(result, options, deps.env || process.env);
       writeJson(stdout, mcpSuccessPayload({ config, toolName, result }));
       return 0;
     }
