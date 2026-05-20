@@ -200,3 +200,4 @@ codes, callback URLs, refresh tokens, or access tokens.
 - [Cursor MCP](./cursor.md)
 - [Cursor plugin](./cursor-plugin.md)
 - [OpenClaw source](./openclaw-cli-skill.md)
+- [Troubleshooting](./troubleshooting.md)

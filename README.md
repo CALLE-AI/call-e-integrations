@@ -8,7 +8,7 @@ Your agent can think, plan, and write. CALL-E picks up the phone — booking app
 
 **Less thinking. More doing. CALL-E handles the calls.**
 
-[Website](https://www.heycall-e.com/) · [Try on ClawHub](https://clawhub.ai/call-e-dev/phone-call-calle) · [Quick install](#-quick-install) · [Docs](#-developer-docs) · [Discord](https://discord.gg/6AbXUzUV8w)
+[Website](https://www.heycall-e.com/) · [Try on ClawHub](https://clawhub.ai/call-e-dev/phone-call-calle) · [Quick install](#-quick-install) · [Docs](#-developer-docs) · [Troubleshooting](#-troubleshooting) · [Discord](https://discord.gg/6AbXUzUV8w)
 
 ![npm](https://img.shields.io/npm/v/@call-e/cli?label=%40call-e%2Fcli)
 ![Codex](https://img.shields.io/badge/Codex-CALL--E-black)
@@ -47,6 +47,15 @@ The native Claude Code plugin path uses
 `/plugin marketplace add https://github.com/CALLE-AI/call-e-integrations.git#@call-e/claude-plugin@latest`.
 
 Install guides: [Manual](./docs/install/install-guide.md) · [CLI](./docs/install/cli.md) · [Codex](./docs/install/codex-plugin.md) · [skills.sh](./docs/install/skills-sh-skill.md) · [Claude Code](./docs/install/claude-plugin.md) · [Cursor MCP](./docs/install/cursor.md) · [Cursor plugin](./docs/install/cursor-plugin.md) · [OpenClaw source](./docs/install/openclaw-cli-skill.md)
+
+## 🧯 Troubleshooting
+
+If installation, authentication, or MCP tool verification fails, start with the
+[CALL-E troubleshooting guide](./docs/install/troubleshooting.md).
+
+It covers local agent environment issues such as Cursor sandbox/network
+restrictions, `CONNECT tunnel failed, response 403`, `calle auth login` failures,
+and verification that `plan_call`, `run_call`, and `get_call_run` are available.
 
 ## 🧠 What CALL-E gives your agent
 
