@@ -82,7 +82,7 @@ npx -y @call-e/cli mcp tools
 CLI commands run by the Cursor skill include this CALL-E attribution:
 
 ```text
-CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0
+CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1
 ```
 
 ## Safety

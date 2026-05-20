@@ -1,6 +1,6 @@
 {
   "name": "@call-e/claude-plugin",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Claude Code plugin bundle for CALL-E CLI workflows.",
   "type": "module",
   "license": "MIT",

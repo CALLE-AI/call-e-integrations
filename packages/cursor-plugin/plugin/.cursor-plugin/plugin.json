@@ -1,7 +1,7 @@
 {
   "name": "calle",
   "displayName": "CALL-E",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Use CALL-E from Cursor through MCP, the calle CLI, and safety-aware agent skills.",
   "author": {
     "name": "CALLE AI"

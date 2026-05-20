@@ -5,42 +5,42 @@ Use the first command form that is available in the current workspace.
 Repository-local base command:
 
 ```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 node packages/cli/bin/calle.js
 ```
 
 Global base command:
 
 ```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 calle
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 calle
 ```
 
 npx fallback base command:
 
 ```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 npx -y @call-e/cli
 ```
 
 ## Setup and readiness
 
 ```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js --help
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js auth status
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js auth login
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js mcp tools
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 node packages/cli/bin/calle.js --help
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 node packages/cli/bin/calle.js auth status
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 node packages/cli/bin/calle.js auth login
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 node packages/cli/bin/calle.js mcp tools
 ```
 
 ```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 calle --help
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 calle auth status
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 calle auth login
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 calle mcp tools
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 calle --help
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 calle auth status
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 calle auth login
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 calle mcp tools
 ```
 
 ```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli --help
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli auth status
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli auth login
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli mcp tools
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 npx -y @call-e/cli --help
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 npx -y @call-e/cli auth status
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 npx -y @call-e/cli auth login
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 npx -y @call-e/cli mcp tools
 ```
 
 Rules:
@@ -68,9 +68,9 @@ Rules:
 ## Call planning
 
 ```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js call plan --to-phone +15551234567 --goal "Confirm the appointment"
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 calle call plan --to-phone +15551234567 --goal "Confirm the appointment"
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli call plan --to-phone +15551234567 --goal "Confirm the appointment"
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 node packages/cli/bin/calle.js call plan --to-phone +15551234567 --goal "Confirm the appointment"
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 calle call plan --to-phone +15551234567 --goal "Confirm the appointment"
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 npx -y @call-e/cli call plan --to-phone +15551234567 --goal "Confirm the appointment"
 ```
 
 Supported `call plan` options:
@@ -89,15 +89,15 @@ If the user asks to make a call but has not provided enough explicit fields for
 verbatim as `user_input`.
 
 ```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js mcp call plan_call --args-json '{"user_input":"<latest user message verbatim>"}'
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 node packages/cli/bin/calle.js mcp call plan_call --args-json '{"user_input":"<latest user message verbatim>"}'
 ```
 
 ## Planned call execution
 
 ```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js call run --plan-id <plan_id> --confirm-token <confirm_token>
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 calle call run --plan-id <plan_id> --confirm-token <confirm_token>
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli call run --plan-id <plan_id> --confirm-token <confirm_token>
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 node packages/cli/bin/calle.js call run --plan-id <plan_id> --confirm-token <confirm_token>
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 calle call run --plan-id <plan_id> --confirm-token <confirm_token>
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 npx -y @call-e/cli call run --plan-id <plan_id> --confirm-token <confirm_token>
 ```
 
 Supported `call run` options:
@@ -111,9 +111,9 @@ Run this command only when the user clearly intends to place the call. Preserve
 ## Call status
 
 ```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js call status --run-id <run_id>
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 calle call status --run-id <run_id>
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli call status --run-id <run_id>
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 node packages/cli/bin/calle.js call status --run-id <run_id>
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 calle call status --run-id <run_id>
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 npx -y @call-e/cli call status --run-id <run_id>
 ```
 
 Supported `call status` options:

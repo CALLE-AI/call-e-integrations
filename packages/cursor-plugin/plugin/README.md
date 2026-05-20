@@ -25,5 +25,5 @@ If Cursor MCP tools are unavailable, the skill can fall back to the shared
 `calle` CLI. CLI commands run with:
 
 ```text
-CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0
+CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1
 ```

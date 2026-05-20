@@ -1,6 +1,6 @@
 {
   "name": "@call-e/cursor-plugin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Cursor plugin bundle for CALL-E MCP workflows.",
   "type": "module",
   "license": "MIT",
