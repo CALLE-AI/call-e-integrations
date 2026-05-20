@@ -36,7 +36,7 @@ pnpm --filter @call-e/openclaw-cli-skill pack:dry-run
 ## CLI Selection
 
 The skill uses the repository-local CLI when available, then a global `calle`
-command when available, then falls back to `npx -y @call-e/cli@0.3.3`.
+command when available, then falls back to `npx -y @call-e/cli`.
 
 ## Safety
 

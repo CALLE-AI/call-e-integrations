@@ -14,7 +14,7 @@ const REMOTE_MCP_URL = "https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth"
 const VALID_CLI_GUIDANCE =
   "CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0\n\n" +
   "node packages/cli/bin/calle.js\n\n" +
-  "npx -y @call-e/cli@0.0.0\n\n" +
+  "npx -y @call-e/cli\n\n" +
   "auth status\n\n" +
   "mcp tools\n\n" +
   "call plan\n\n" +

@@ -136,7 +136,7 @@ calle mcp tools
 One-off usage without a global install:
 
 ```bash
-npx -y @call-e/cli@0.3.3 --help
+npx -y @call-e/cli --help
 ```
 
 ### MCP-Only Clients
@@ -161,18 +161,18 @@ get_call_run
 CLI-based integrations can pre-authorize with:
 
 ```bash
-npx -y @call-e/cli@0.3.3 auth login
+npx -y @call-e/cli auth login
 ```
 
 Then verify:
 
 ```bash
-npx -y @call-e/cli@0.3.3 auth status
-npx -y @call-e/cli@0.3.3 mcp tools
+npx -y @call-e/cli auth status
+npx -y @call-e/cli mcp tools
 ```
 
 The Codex, Claude Code, Cursor plugin, OpenClaw, and skills.sh skills use the
-repository-local CLI when available, then a global `calle`, then the pinned
+repository-local CLI when available, then a global `calle`, then the
 npm fallback.
 
 ## Safety

@@ -9,7 +9,7 @@ shows the browser authorization URL, and continues after authorization
 completes.
 
 The skill uses the repository-local CLI when available, then a global `calle`,
-then `npx -y @call-e/cli@0.3.3`.
+then `npx -y @call-e/cli`.
 
 CLI commands run with:
 
