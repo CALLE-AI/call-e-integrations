@@ -48,7 +48,7 @@ All CLI commands run from this Claude Code plugin must include the CALL-E
 integration attribution environment:
 
 ```bash
-env CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.1
+env CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.2
 ```
 
 Use the first command form that works.
@@ -56,19 +56,19 @@ Use the first command form that works.
 Prefer the repository-local CLI when the current workspace contains it:
 
 ```bash
-env CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.1 node packages/cli/bin/calle.js
+env CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.2 node packages/cli/bin/calle.js
 ```
 
 If the repository-local CLI is unavailable, use the global command:
 
 ```bash
-env CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.1 calle
+env CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.2 calle
 ```
 
 If neither command works, use the npm package through `npx`:
 
 ```bash
-env CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.1 npx -y @call-e/cli
+env CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.2 npx -y @call-e/cli
 ```
 
 Only tell the user to install the CLI globally if `npx` is unavailable,

@@ -131,7 +131,7 @@ All CLI commands run from this Cursor plugin must include the CALL-E integration
 attribution environment:
 
 ```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1
 ```
 
 Use the first command form that works.
@@ -139,19 +139,19 @@ Use the first command form that works.
 Prefer the repository-local CLI when the current workspace contains it:
 
 ```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 node packages/cli/bin/calle.js
 ```
 
 If the repository-local CLI is unavailable, use the global command:
 
 ```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 calle
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 calle
 ```
 
 If neither command works, use the npm package through `npx`:
 
 ```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli
+env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 npx -y @call-e/cli
 ```
 
 Only tell the user to install the CLI globally if `npx` is unavailable,
