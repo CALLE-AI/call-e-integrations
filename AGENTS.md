@@ -26,8 +26,29 @@ CALL-E Integrations is a multi-ecosystem agent integration monorepo.
   GitHub Actions CI, release, deploy, and workflow failures.
 - `.agents/skills/claude-plugin-reinstall`: project-local skill for refreshing,
   reinstalling, and locally testing the CALL-E Claude Code plugin.
+- `.agents/skills/change-review-agent`: project-local skill for starting a
+  read-only review agent after code modifications when explicitly requested.
+- `.agents/skills/release-decision`: project-local skill for deciding whether a
+  change requires a package release, changeset, or maintainer release decision.
 
 Productized OpenClaw skill source lives in `packages/openclaw-cli-skill/skills`.
+
+## Release Decision
+
+Before finishing any code, docs, package metadata, marketplace, plugin, or
+install-flow change, assess whether the change requires a package version
+release.
+
+Use `.agents/skills/release-decision` for the release decision checklist.
+Report one of:
+
+- `No release needed`
+- `Patch release recommended`
+- `Minor release recommended`
+- `Major release required`
+- `Needs maintainer decision`
+
+Include the reason, affected package(s), and whether a changeset is needed.
 
 ## Repository Conventions
 
@@ -40,6 +61,9 @@ Productized OpenClaw skill source lives in `packages/openclaw-cli-skill/skills`.
   create it through `pnpm run branch:create -- <type>/<short-kebab-summary>`.
 - Keep user-facing installation steps in `docs/install/`, with root and package
   `README.md` files linking to the relevant install guide.
+- Before changing user-facing documentation, repeated commands, install steps,
+  package usage, or visible integration metadata, read and follow
+  [docs/documentation-maintenance.md](./docs/documentation-maintenance.md).
 - Before changing marketplace entry points, plugin names, visible labels, or
   install commands, read and follow
   [docs/agent-integration-layout.md](./docs/agent-integration-layout.md).
