@@ -14,10 +14,10 @@ Before installing, make sure the environment has:
 
 ## Step 1 Install The Skill
 
-Install the portable CALL-E skill.
+Install the portable CALL-E skill at user-level/global scope.
 
 ```bash
-npx -y skills add https://github.com/CALLE-AI/call-e-integrations --skill calle
+npx -y skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g
 ```
 
 Reload or restart the agent according to its instructions so the `calle` skill

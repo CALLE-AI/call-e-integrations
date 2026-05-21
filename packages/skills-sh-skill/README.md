@@ -9,6 +9,20 @@ portable skills.sh surface.
 For setup steps, see
 [docs/install/skills-sh-skill.md](../../docs/install/skills-sh-skill.md).
 
+## Why This Package Exists
+
+This package is intentionally private. It is not the install location for the
+skills.sh skill, and it must not contain a package-local `skills/` copy.
+
+It remains in the monorepo for three reasons:
+
+- provide a `pnpm --filter @call-e/skills-sh-skill check` target for validating
+  the public `skills/calle` source;
+- own the skills.sh integration version used in
+  `CALLE_INTEGRATION_VERSION=<version>` attribution strings;
+- keep CI guardrails around skills.sh install docs, CLI safety guidance,
+  root-level skill metadata, and duplicate-source drift.
+
 ## Layout
 
 ```text

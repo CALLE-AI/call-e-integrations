@@ -26,7 +26,8 @@ Your agent can think, plan, and write. CALL-E picks up the phone — booking app
 ## 🚀 Quick install
 
 For most users, the simplest path is to ask your agent to install the portable
-CALL-E skill.
+CALL-E skill at user-level/global scope, so the same agent can use `calle`
+across projects.
 
 Copy this stable prompt into a local agent that can run shell commands or
 install skills:

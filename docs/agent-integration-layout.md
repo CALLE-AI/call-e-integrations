@@ -249,15 +249,15 @@ submission; publication is a separate operational step.
 
 skills.sh install example:
 
-Use the repository root with `--skill calle` so skills.sh installs the portable
-`calle` skill from the root skill source:
+Use the repository root with `--skill calle` and `-g` so skills.sh installs the
+portable `calle` skill from the root skill source at user-level/global scope:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -y --agent <agent>
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent <agent>
 ```
 
-Or install the root skill source directly:
+Or install the root skill source directly with the same user-level/global scope:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -y --agent <agent>
+npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -g -y --agent <agent>
 ```

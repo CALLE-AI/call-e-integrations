@@ -21,23 +21,23 @@ its own environment.
 
 ### skills.sh Compatible Agents
 
-Install the portable `calle` skill from the repository root:
+Install the portable `calle` skill globally from the repository root:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -y --agent <agent>
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent <agent>
 ```
 
 Replace `<agent>` with the target agent name, such as `codex`, `openclaw`, or
 another value supported by your local skills CLI.
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -y --agent codex
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent codex
 ```
 
-For direct source installs, use:
+For direct source installs, use the same user-level/global scope:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -y --agent <agent>
+npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -g -y --agent <agent>
 ```
 
 ### Codex

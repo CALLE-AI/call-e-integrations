@@ -10,7 +10,7 @@ fails in a local agent environment.
 In Cursor, CALL-E setup may fail even though the local machine has normal network
 access. Common symptoms include:
 
-- `npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle`
+- `npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g`
   fails because sandboxed Git cannot write hooks.
 - `calle auth login` fails with a generic `fetch failed` error.
 - A direct network check fails with:

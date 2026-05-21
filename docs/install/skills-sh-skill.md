@@ -13,24 +13,26 @@ Install CALL-E for me: https://raw.githubusercontent.com/CALLE-AI/call-e-integra
 ```
 
 The stable prompt points to the latest
-[CALL-E installation guide](./CALL-E-installation-guide.md). Or run the same
-command directly from the repository root source:
+[CALL-E installation guide](./CALL-E-installation-guide.md) and installs the
+skill at user-level/global scope. Or run the equivalent command directly from
+the repository root source:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -y --agent <agent>
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent <agent>
 ```
 
 Replace `<agent>` with the target agent name, such as `codex`, `openclaw`, or
 another value supported by your local skills CLI.
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -y --agent codex
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent codex
 ```
 
-Or install the direct root skill path with the appropriate target agent:
+Or install the direct root skill path with the same user-level/global scope and
+the appropriate target agent:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -y --agent <agent>
+npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -g -y --agent <agent>
 ```
 
 ## CLI Availability
