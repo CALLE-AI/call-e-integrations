@@ -61,6 +61,10 @@ Include the reason, affected package(s), and whether a changeset is needed.
   create it through `pnpm run branch:create -- <type>/<short-kebab-summary>`.
 - Keep user-facing installation steps in `docs/install/`, with root and package
   `README.md` files linking to the relevant install guide.
+- Treat `docs/install/CALL-E-installation-guide.md` as the stable public
+  install entry point for the root `README.md` prompt and raw GitHub URL. Do not
+  delete, rename, or move it; if install docs are reorganized, keep this file in
+  place and point it to the canonical guide.
 - Before changing user-facing documentation, repeated commands, install steps,
   package usage, or visible integration metadata, read and follow
   [docs/documentation-maintenance.md](./docs/documentation-maintenance.md).

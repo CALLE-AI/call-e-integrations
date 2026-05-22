@@ -193,6 +193,7 @@ function checkRepoDocs({ repoRoot, failures }) {
   const troubleshootingPath = path.join(repoRoot, "docs", "install", "troubleshooting.md");
   const layoutPath = path.join(repoRoot, "docs", "agent-integration-layout.md");
 
+  assert(fs.existsSync(stableInstallGuidePath), failures, `Missing stable install guide: ${stableInstallGuidePath}`);
   assert(fs.existsSync(installDocPath), failures, `Missing install guide: ${installDocPath}`);
 
   if (fs.existsSync(readmePath)) {
