@@ -50,10 +50,22 @@ export async function exchangeBrokerSession(config, pending, { fetchImpl = globa
 }
 
 export function normalizePendingSession(sessionPayload) {
+  const loginUrl = String(sessionPayload.login_url);
+  let parsedLoginUrl;
+  try {
+    parsedLoginUrl = new URL(loginUrl);
+  } catch {
+    throw new Error("Broker session returned an invalid login_url");
+  }
+  const isLoopback = parsedLoginUrl.hostname === "localhost" || parsedLoginUrl.hostname === "127.0.0.1" || parsedLoginUrl.hostname === "::1";
+  if (parsedLoginUrl.protocol !== "https:" && !isLoopback) {
+    throw new Error(`Broker session login_url must use https:, got '${parsedLoginUrl.protocol}'`);
+  }
+
   return {
     session_id: String(sessionPayload.session_id),
     session_secret: String(sessionPayload.session_secret),
-    login_url: String(sessionPayload.login_url),
+    login_url: loginUrl,
     status: String(sessionPayload.status || "PENDING").toUpperCase(),
     created_at: new Date().toISOString(),
     expires_at: sessionPayload.expires_at ? String(sessionPayload.expires_at) : null,
