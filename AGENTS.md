@@ -68,6 +68,11 @@ Include the reason, affected package(s), and whether a changeset is needed.
 - Before changing user-facing documentation, repeated commands, install steps,
   package usage, or visible integration metadata, read and follow
   [docs/documentation-maintenance.md](./docs/documentation-maintenance.md).
+- Treat [packages/cli/docs/cli-reference.md](./packages/cli/docs/cli-reference.md)
+  as the canonical source for `calle` CLI commands and parameters. When changing
+  `calle` commands, flags/options, defaults, required arguments, output shape, or
+  parameter examples, update that reference and any synchronized command
+  guidance in the same change.
 - Before changing marketplace entry points, plugin names, visible labels, or
   install commands, read and follow
   [docs/agent-integration-layout.md](./docs/agent-integration-layout.md).

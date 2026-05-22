@@ -17,6 +17,8 @@ commands.
 - Package-specific usage belongs in the owning package `README.md`, with links
   back to canonical guides when the content is also user-facing install or
   support guidance.
+- `calle` CLI commands, options, defaults, required arguments, output shape, and
+  parameter examples live in `packages/cli/docs/cli-reference.md`.
 - Productized OpenClaw skill source lives in
   `packages/openclaw-cli-skill/skills`.
 - The skills.sh public `calle` skill source lives in `skills/calle`.

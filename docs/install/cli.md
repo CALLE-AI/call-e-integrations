@@ -44,5 +44,6 @@ calle mcp tools
 
 ## More
 
-See [packages/cli/README.md](../../packages/cli/README.md) for command
-reference, options, telemetry details, and development checks.
+See [packages/cli/README.md](../../packages/cli/README.md) for package usage
+details, and [packages/cli/docs/cli-reference.md](../../packages/cli/docs/cli-reference.md)
+for the canonical command and option reference.

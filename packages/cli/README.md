@@ -12,6 +12,8 @@ For install and authentication steps, see
 
 ## Commands
 
+<!-- sync-with: docs/cli-reference.md#commands -->
+
 ```bash
 calle auth login
 calle auth login --start-only --no-browser-open
@@ -71,39 +73,15 @@ For agent-facing outbound calls, prefer `calle call start`. It performs
 planning and execution inside one CLI invocation and does not print execution
 confirmation data.
 
-All command output is JSON. Access tokens are read from the local cache and are
-never printed.
+Successful command stdout is JSON except `--help`. Some top-level or local
+failures may print plain stderr. Access tokens are read from the local cache and
+are never printed.
 
 ## Options
 
-Common options:
-
-- `--base-url`
-- `--broker-base-url`
-- `--server-url`
-- `--auth-base-url`
-- `--channel`
-- `--client-name`
-- `--scope`
-- `--cache-root`
-- `--timeout-seconds`
-- `--poll-timeout-seconds`
-- `--force-login`
-- `--start-only`
-- `--no-browser-open`
-- `--no-telemetry`
-- `--json`
-- `--args-json`
-- `--to-phone`
-- `--goal`
-- `--language`
-- `--region`
-- `--timezone`
-- `--plan-id`
-- `--confirm-token`
-- `--run-id`
-- `--cursor`
-- `--limit`
+See [docs/cli-reference.md](./docs/cli-reference.md) for the canonical command
+and option reference, including defaults, required arguments, advanced
+configuration, and per-command examples.
 
 ## Telemetry / Usage Data
 
