@@ -79,6 +79,8 @@ plan_call → run_call → get_call_run
 
 ## ⚡ CLI command map
 
+<!-- sync-with: packages/cli/docs/cli-reference.md#commands -->
+
 ```bash
 calle auth login
 calle auth login --start-only --no-browser-open
@@ -104,7 +106,11 @@ MCP URL:       https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth
 Token cache:   ~/.calle-mcp/cli
 ```
 
-All command output is JSON except `--help`. Access tokens are read from the local cache and are never printed.
+Successful command stdout is JSON except `--help`. Some top-level or local
+failures may print plain stderr. Access tokens are read from the local cache and
+are never printed.
+For complete command and option details, see
+[packages/cli/docs/cli-reference.md](./packages/cli/docs/cli-reference.md).
 
 ## 🛡️ Agent safety contract
 

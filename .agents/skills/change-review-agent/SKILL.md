@@ -13,8 +13,8 @@ pass, not the implementer, and must not edit files.
 
 Examples include:
 
-- "启动一个 agent review 这次修改"
-- "让另一个 agent 看一下 diff"
+- "start an agent review for these changes"
+- "ask another agent to review the diff"
 - "spawn a review agent"
 - "run a subagent code review"
 - "use an agent to review my changes"
