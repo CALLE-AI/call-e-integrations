@@ -1,5 +1,11 @@
 # @call-e/cli
 
+## 0.3.5
+
+### Patch Changes
+
+- [#45](https://github.com/CALLE-AI/call-e-integrations/pull/45) [`ce345c3`](https://github.com/CALLE-AI/call-e-integrations/commit/ce345c3a6d447a7a533301254b69436ae110d76c) Thanks [@Ray-56](https://github.com/Ray-56)! - Document the complete `calle` CLI command and option reference.
+
 ## 0.3.4
 
 ### Patch Changes
