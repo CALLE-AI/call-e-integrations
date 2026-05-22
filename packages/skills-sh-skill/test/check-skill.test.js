@@ -227,3 +227,11 @@ test("reports skills.sh install docs missing global scope", () => {
   const failures = checkSkillsShSkill({ packageRoot, repoRoot });
   assert.ok(failures.some((failure) => failure.includes("global with -g")));
 });
+
+test("reports a missing stable public install guide", () => {
+  const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-skills-sh-skill-missing-stable-guide"));
+  fs.rmSync(path.join(repoRoot, "docs", "install", "CALL-E-installation-guide.md"), { force: true });
+
+  const failures = checkSkillsShSkill({ packageRoot, repoRoot });
+  assert.ok(failures.some((failure) => failure.includes("Missing stable install guide")));
+});
