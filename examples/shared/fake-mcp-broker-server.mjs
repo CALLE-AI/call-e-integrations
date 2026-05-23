@@ -91,6 +91,7 @@ export async function startFakeServer(options = {}) {
     oauth_tokens: [],
     mcp_requests: [],
     tool_calls: [],
+    get_call_run_counts: {},
     resource_reads: [],
     failures: [],
   };
@@ -105,6 +106,7 @@ export async function startFakeServer(options = {}) {
     state.oauth_tokens = [];
     state.mcp_requests = [];
     state.tool_calls = [];
+    state.get_call_run_counts = {};
     state.resource_reads = [];
     state.failures = [];
   }
@@ -215,6 +217,35 @@ export async function startFakeServer(options = {}) {
               },
             },
             {
+              name: "run_call",
+              description: "Run a planned CALL-E phone call.",
+              inputSchema: {
+                type: "object",
+                properties: {
+                  plan_id: {
+                    type: "string",
+                  },
+                  confirm_token: {
+                    type: "string",
+                  },
+                },
+                required: ["plan_id", "confirm_token"],
+              },
+            },
+            {
+              name: "get_call_run",
+              description: "Get CALL-E phone call run status.",
+              inputSchema: {
+                type: "object",
+                properties: {
+                  run_id: {
+                    type: "string",
+                  },
+                },
+                required: ["run_id"],
+              },
+            },
+            {
               name: "echo",
               description: "Echo the provided arguments.",
               inputSchema: {
@@ -233,8 +264,11 @@ export async function startFakeServer(options = {}) {
       state.tool_calls.push({
         name: toolName,
         arguments: toolArgs,
+        request_meta: payload.params?._meta || null,
       });
       if (toolName === "plan_call") {
+        const readyToRun =
+          typeof toolArgs.user_input === "string" && toolArgs.user_input.includes("ready_to_run");
         jsonResponse(res, {
           jsonrpc: "2.0",
           id: payload.id,
@@ -247,8 +281,64 @@ export async function startFakeServer(options = {}) {
             ],
             structuredContent: {
               plan_id: "fake-plan-1",
-              ready_to_run: false,
+              confirm_token: readyToRun ? "fake-confirm-token" : undefined,
+              ready_to_run: readyToRun,
               arguments: toolArgs,
+            },
+          },
+        });
+        return;
+      }
+      if (toolName === "run_call") {
+        jsonResponse(res, {
+          jsonrpc: "2.0",
+          id: payload.id,
+          result: {
+            content: [
+              {
+                type: "text",
+                text: "Fake call run started.",
+              },
+            ],
+            structuredContent: {
+              run_id: "fake-run-1",
+              status: "QUEUED",
+              arguments: toolArgs,
+            },
+          },
+        });
+        return;
+      }
+      if (toolName === "get_call_run") {
+        const runId = String(toolArgs.run_id || "fake-run-1");
+        const count = (state.get_call_run_counts[runId] || 0) + 1;
+        state.get_call_run_counts[runId] = count;
+        const status = count >= 2 ? "COMPLETED" : "IN_PROGRESS";
+        const completed = count >= 2;
+        jsonResponse(res, {
+          jsonrpc: "2.0",
+          id: payload.id,
+          result: {
+            content: [
+              {
+                type: "text",
+                text: `Fake call run status: ${status}.`,
+              },
+            ],
+            structuredContent: {
+              run_id: runId,
+              status,
+              duration_seconds: completed ? 12.34 : undefined,
+              post_summary: completed ? "Fake call completed successfully." : undefined,
+              transcript: completed
+                ? "[00:00:00] BOT: Hello from CALL-E. [00:00:04] USER: Received. Goodbye."
+                : undefined,
+              activity: [
+                {
+                  message: completed ? "Fake call completed." : "Fake call is in progress.",
+                  ts: new Date().toISOString(),
+                },
+              ],
             },
           },
         });

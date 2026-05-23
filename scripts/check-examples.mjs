@@ -71,6 +71,16 @@ const steps = [
     command: "uv",
     args: ["run", "--isolated", "pytest"],
   },
+  {
+    cwd: "examples/python-batch-runner",
+    command: "uv",
+    args: ["run", "--isolated", "python", "-m", "py_compile", "client.py"],
+  },
+  {
+    cwd: "examples/python-batch-runner",
+    command: "uv",
+    args: ["run", "--isolated", "pytest"],
+  },
 ];
 
 for (const step of steps) {

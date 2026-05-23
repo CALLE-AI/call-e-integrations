@@ -177,6 +177,7 @@ Runnable MCP client demos live under [examples](./examples):
 
 - [Standard MCP OAuth clients](./examples/mcp-oauth-client): TypeScript and Python clients for standard MCP OAuth over Streamable HTTP.
 - [CALL-E broker login MCP clients](./examples/mcp-broker-client): TypeScript and Python clients for CALL-E brokered login, local token cache, and MCP HTTP calls.
+- [Python batch runner](./examples/python-batch-runner): Python JSONL batch runner using `calle` CLI auth state, FastMCP, Rich output, and MCP tool-call metadata.
 
 These examples are runnable demos, not a CALL-E SDK or supported application API.
 

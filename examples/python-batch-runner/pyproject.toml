@@ -1,0 +1,14 @@
+[project]
+name = "calle-python-batch-runner-example"
+version = "0.0.0"
+description = "Python JSONL batch runner example for CALL-E MCP calls."
+requires-python = ">=3.10"
+dependencies = [
+  "fastmcp>=3.2,<4",
+  "rich>=13",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=9.0.0",
+]
