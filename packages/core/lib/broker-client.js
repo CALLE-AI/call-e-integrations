@@ -103,8 +103,11 @@ export async function loginWithBroker(config, {
   }
 
   const deadline = Date.now() + Number(config.pollTimeoutSeconds || 300) * 1000;
+  const maxAttempts = Number(config.pollMaxAttempts || 0) || 600;
+  let attempt = 0;
   let current = pending;
-  while (Date.now() < deadline) {
+  while (Date.now() < deadline && attempt < maxAttempts) {
+    attempt += 1;
     const statusPayload = await getBrokerSessionStatus(config, current, { fetchImpl });
     const status = String(statusPayload.status || current.status || "PENDING").toUpperCase();
     current = {

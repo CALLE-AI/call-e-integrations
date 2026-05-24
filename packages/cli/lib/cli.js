@@ -913,6 +913,9 @@ export async function runCli(argv, deps = {}) {
   const { options, positional } = parseOptions(rest);
 
   const config = resolveRuntimeConfig(options, deps.env || process.env);
+  config._onProtocolVersionMismatch = (serverVersion, clientVersion) => {
+    process.stderr.write(`[calle] Warning: MCP protocol version mismatch — server reports ${serverVersion}, client expects ${clientVersion}.\n`);
+  };
   const captureTelemetry = createCommandTelemetry({ config, group, command, deps });
   if (prePlanInvokedCommand(group, command)) {
     await captureTelemetry("cli_invoked");

@@ -78,7 +78,16 @@ function resolveTelemetryEnabled(options = {}, env = {}) {
 function resolveTelemetryUrl({ telemetryUrl, baseUrl }, env = {}) {
   const configured = firstOptionValue(telemetryUrl) || env.CALLE_TELEMETRY_URL;
   if (configured) {
-    return String(configured);
+    const url = String(configured);
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "https:") {
+        throw new Error(`Telemetry URL must use HTTPS, got: ${parsed.protocol}`);
+      }
+    } catch (err) {
+      throw new Error(`Invalid CALLE_TELEMETRY_URL: ${err.message}`);
+    }
+    return url;
   }
   return `${normalizeBaseUrl(baseUrl)}/api/ui-telemetry/track`;
 }
