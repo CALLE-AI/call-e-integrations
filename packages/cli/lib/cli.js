@@ -18,13 +18,23 @@ class InvalidArgumentsError extends Error {
 }
 
 export function preAuthHelpMessage(loginUrl) {
+  let safeUrl;
+  try {
+    const parsed = new URL(loginUrl);
+    if (parsed.protocol !== "https:") {
+      throw new Error("non-https");
+    }
+    safeUrl = parsed.href;
+  } catch {
+    safeUrl = "[authorization URL unavailable]";
+  }
   return `Hi, I'm CALL-E 👋
 
 I can help you make phone calls, ask for information, and handle phone-related tasks. I'll also keep you updated on the call status, what was discussed, and the key points.
 Before we officially begin, I'll send you the call goal for confirmation.
 
 Before we start, please complete authorization here:
-${loginUrl}`;
+${safeUrl}`;
 }
 
 export const POST_AUTH_HELP_MESSAGE = `Great, authorization is complete ✨
@@ -878,6 +888,15 @@ export async function runCli(argv, deps = {}) {
   const stdout = deps.stdout || ((text) => process.stdout.write(text));
   const stderr = deps.stderr || ((text) => process.stderr.write(`${text}\n`));
   const openBrowser = deps.openBrowser || (async (url) => {
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      throw new Error(`Refusing to open browser: invalid login URL`);
+    }
+    if (parsedUrl.protocol !== "https:") {
+      throw new Error(`Refusing to open browser: login URL must use HTTPS (got '${parsedUrl.protocol}')`);
+    }
     const { spawn } = await import("node:child_process");
     const command = process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
     const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
