@@ -1,5 +1,5 @@
 import { pendingCachePath, readJson, removeFile, tokenCachePath, tokenIsUsable } from "./cache.js";
-import { DEFAULT_BASE_URL, DEFAULT_CHANNEL, DEFAULT_CLIENT_NAME, DEFAULT_SCOPE, resolveRuntimeConfig } from "./config.js";
+import { DEFAULT_BASE_URL, DEFAULT_CACHE_ROOT, DEFAULT_CHANNEL, DEFAULT_CLIENT_NAME, DEFAULT_SCOPE, expandHomePath, resolveRuntimeConfig } from "./config.js";
 import { ensurePendingLogin, loginWithBroker } from "./broker-client.js";
 import {
   AuthRequiredError,
@@ -343,18 +343,27 @@ function parsePositiveInteger(value, optionName) {
   return parsed;
 }
 
+const ARGS_JSON_MAX_BYTES = 64 * 1024; // 64 KB
+
 function parseJsonObject(value, optionName) {
   const raw = firstOptionValue(value);
   if (raw === undefined) {
     return {};
   }
+  const rawStr = String(raw);
+  if (Buffer.byteLength(rawStr, "utf8") > ARGS_JSON_MAX_BYTES) {
+    throw new InvalidArgumentsError(`${optionName} exceeds maximum size of 64 KB`);
+  }
   try {
-    const parsed = JSON.parse(String(raw));
+    const parsed = JSON.parse(rawStr);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       throw new Error("not object");
     }
     return parsed;
-  } catch {
+  } catch (err) {
+    if (err instanceof InvalidArgumentsError) {
+      throw err;
+    }
     throw new InvalidArgumentsError(`${optionName} must be a JSON object`);
   }
 }
@@ -391,8 +400,6 @@ function publicPendingLoginPayload({ config, cachePath, pendingPath, pending, cr
     status: "login_required",
     broker_base_url: config.brokerBaseUrl,
     server_url: config.serverUrl,
-    cache_path: cachePath,
-    pending_cache_path: pendingPath,
     pending_status: pending.status,
     pending_created: created,
     login_url: pending.login_url,
@@ -406,8 +413,6 @@ function publicLoginPayload({ config, cachePath, pendingPath, tokenDocument, sta
     status,
     broker_base_url: config.brokerBaseUrl,
     server_url: config.serverUrl,
-    cache_path: cachePath,
-    pending_cache_path: pendingPath,
     expires_at: tokenDocument?.expires_at ?? null,
     ...(assistantHint ? { assistant_hint: assistantHint } : {}),
   };
@@ -418,16 +423,24 @@ function statusPayload(config) {
   const pendingPath = pendingCachePath(config.cacheRoot, config.serverUrl);
   const cacheDocument = readJson(cachePath);
   const pendingDocument = readJson(pendingPath);
+  const rawPendingLoginUrl = typeof pendingDocument?.login_url === "string" ? pendingDocument.login_url : null;
+  let pendingLoginUrl = null;
+  if (rawPendingLoginUrl) {
+    try {
+      const parsed = new URL(rawPendingLoginUrl);
+      pendingLoginUrl = parsed.protocol === "https:" ? parsed.href : null;
+    } catch {
+      pendingLoginUrl = null;
+    }
+  }
   return {
     server_url: config.serverUrl,
-    cache_path: cachePath,
-    pending_cache_path: pendingPath,
     cache_exists: cacheDocument !== null,
     pending_exists: pendingDocument !== null,
     usable: tokenIsUsable(cacheDocument, config.minTtlSeconds),
     expires_at: cacheDocument?.expires_at ?? null,
     pending_status: pendingDocument?.status ?? null,
-    pending_login_url: pendingDocument?.login_url ?? null,
+    ...(pendingLoginUrl ? { pending_login_url: pendingLoginUrl } : {}),
   };
 }
 
@@ -455,7 +468,7 @@ function shellQuote(value) {
 }
 
 function loginCommand(config) {
-  return [
+  const parts = [
     "calle",
     "auth",
     "login",
@@ -467,11 +480,13 @@ function loginCommand(config) {
     config.authBaseUrl,
     "--channel",
     config.channel,
-    "--cache-root",
-    config.cacheRoot,
-  ]
-    .map(shellQuote)
-    .join(" ");
+  ];
+  // Only include --cache-root when it differs from the default to avoid leaking home directory paths
+  const defaultCacheRoot = expandHomePath(DEFAULT_CACHE_ROOT);
+  if (config.cacheRoot !== defaultCacheRoot) {
+    parts.push("--cache-root", config.cacheRoot);
+  }
+  return parts.map(shellQuote).join(" ");
 }
 
 function callStatusCommand(config, runId, timezone = null) {
@@ -633,10 +648,18 @@ function buildPlanArguments(options) {
   if (toPhones.length === 0) {
     throw new InvalidArgumentsError("Missing required --to-phone");
   }
+  if (toPhones.length > 10) {
+    throw new InvalidArgumentsError("--to-phone: maximum 10 numbers per request");
+  }
+
+  const goal = requireStringOption(options, "goal", "--goal");
+  if (goal.length > 2000) {
+    throw new InvalidArgumentsError("--goal: maximum 2000 characters");
+  }
 
   const args = {
     to_phones: toPhones,
-    goal: requireStringOption(options, "goal", "--goal"),
+    goal,
   };
   const language = optionalStringOption(options, "language");
   const region = optionalStringOption(options, "region");

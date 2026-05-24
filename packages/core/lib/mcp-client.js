@@ -104,7 +104,11 @@ async function requestJsonRpc(fetchImpl, url, { headers, payload, timeoutMs, sle
 
       if (body?.error) {
         const error = body.error;
-        throw new McpHttpError(error.message || `Remote MCP error for ${payload.method}`, {
+        const rawMessage = typeof error.message === "string" ? error.message : null;
+        const safeMessage = rawMessage
+          ? rawMessage.slice(0, 200).replace(/[\r\n]+/g, " ").trim()
+          : `Remote MCP error for ${payload.method}`;
+        throw new McpHttpError(safeMessage, {
           payload: error,
           headers: responseHeaders,
           code: "mcp_error",

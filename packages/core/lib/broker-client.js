@@ -95,10 +95,20 @@ export async function loginWithBroker(config, {
 
   const { pending, created } = await ensurePendingLogin(config, { fetchImpl, forceLogin });
   if (created) {
+    let safeLoginUrl;
+    try {
+      const parsed = new URL(pending.login_url);
+      if (parsed.protocol !== "https:") {
+        throw new Error("non-https");
+      }
+      safeLoginUrl = parsed.href;
+    } catch {
+      safeLoginUrl = null;
+    }
     stderr("Open the brokered login URL in your browser to continue:");
-    stderr(pending.login_url);
-    if (!noBrowserOpen) {
-      await openBrowser(pending.login_url);
+    stderr(safeLoginUrl ?? "[authorization URL unavailable]");
+    if (!noBrowserOpen && safeLoginUrl) {
+      await openBrowser(safeLoginUrl);
     }
   }
 
