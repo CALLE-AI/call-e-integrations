@@ -10,7 +10,7 @@ Use CALL-E directly, or integrate it into agents, platforms, and business system
 
 New users get 20 free calls to get started.
 
-[Website](https://www.heycall-e.com/) · [Try on ClawHub](https://clawhub.ai/call-e-dev/phone-call-calle) · [Get started](#-get-started) · [Docs](#-developer-docs) · [Troubleshooting](#-troubleshooting) · [Discord](https://discord.gg/6AbXUzUV8w)
+[Website](https://www.heycall-e.com/) · [Try on ClawHub](https://clawhub.ai/call-e-dev/phone-call-calle) · [Get started](#-get-started) · [Troubleshooting](#-troubleshooting) · [Discord](https://discord.gg/6AbXUzUV8w)
 
 ![npm](https://img.shields.io/npm/v/@call-e/cli?label=%40call-e%2Fcli)
 ![Codex](https://img.shields.io/badge/Codex-CALL--E-black)
@@ -22,17 +22,17 @@ New users get 20 free calls to get started.
 
 </div>
 
-## Why CALL-E is Different
+## 💡 Why CALL-E is Different
 
 Unlike traditional voice/calling platforms that rely on prebuilt bots and high-volume calls, CALL-E focuses on goal-driven tasks. You provide a goal, and CALL-E manages the call workflow, adapts dynamically, and delivers structured results, enabling automation of low-frequency, personalized phone tasks that were previously too expensive or custom to automate.
 
-## Key Features
+## ✨ Key Features
 
 - **Quick Start** - Start using CALL-E within minutes via direct use or integration through Skills, Plugins, SDKs, or APIs.
 - **Goal-Driven Long Tasks** *(in development)* - Define your goal in natural language; CALL-E executes the task from planning to follow-up.
 - **Reliable Voice Interaction** - CALL-E handles natural conversation flow, tone, interruptions, and changing call conditions in real time.
 
-## Other Features
+## 🧩 Other Features
 
 | Feature | Description |
 | --- | --- |
@@ -58,7 +58,7 @@ Choose the integration path that matches how you want to use CALL-E.
 
 ---
 
-### SDK / API *(In Development)*
+### 🛠️ SDK / API *(In Development)*
 
 SDK and API support is currently in development.
 
@@ -74,7 +74,7 @@ These docs will cover direct integration options for applications, backend servi
 
 ---
 
-### Agent Install
+### 🤖 Agent Install
 
 For agent installs, the simplest path is to ask your agent to install CALL-E at
 user-level/global scope, so the same agent can use `calle` across projects.
@@ -101,119 +101,6 @@ If installation, authentication, or MCP tool verification fails, start with the
 It covers local agent environment issues such as Cursor sandbox/network
 restrictions, `CONNECT tunnel failed, response 403`, `calle auth login` failures,
 and verification that `plan_call`, `run_call`, and `get_call_run` are available.
-
-## 🧠 What CALL-E gives your agent
-
-```text
-plan_call → run_call → get_call_run
-```
-
-| Capability | Surface |
-| --- | --- |
-| Brokered browser login | `calle auth login` |
-| Private local token cache | `~/.calle-mcp/cli` |
-| MCP client configuration | Streamable HTTP URL or `calle mcp config` |
-| Tool discovery | `calle mcp tools` |
-| Call planning | `calle call plan` or MCP `plan_call` |
-| Real outbound call execution | `calle call start`, `calle call run`, or MCP `run_call` |
-| Status, activity, summary, details, transcript | `calle call status` or MCP `get_call_run` |
-| Agent-client UX | `$calle` in Codex; `calle` through skills.sh; `/calle:calle` in Claude Code; `calle` MCP/skill in Cursor; **Phone Call - CALL-E** in OpenClaw; ClawHub Prompt flow in Hermes Agent |
-
-`plan_call` creates the call plan and returns run credentials. `run_call` starts the real outbound call. `get_call_run` returns progress and final results when available.
-
-## ⚡ CLI command map
-
-<!-- sync-with: packages/cli/docs/cli-reference.md#commands -->
-
-```bash
-calle auth login
-calle auth login --start-only --no-browser-open
-calle auth status
-calle auth logout
-
-calle mcp config
-calle mcp tools
-calle mcp call plan_call --args-json '{"to_phones":["+15551234567"],"goal":"Confirm the appointment"}'
-
-calle call plan --to-phone +15551234567 --goal "Confirm the appointment"
-calle call start --to-phone +15551234567 --goal "Confirm the appointment"
-calle call run --plan-id <plan_id> --confirm-token <confirm_token>
-calle call status --run-id <run_id>
-```
-
-Defaults used by the CLI:
-
-```text
-Base URL:      https://seleven-mcp-sg.airudder.com
-MCP channel:   openagent_oauth
-MCP URL:       https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth
-Token cache:   ~/.calle-mcp/cli
-```
-
-Successful command stdout is JSON except `--help`. Some top-level or local
-failures may print plain stderr. Access tokens are read from the local cache and
-are never printed.
-For complete command and option details, see
-[packages/cli/docs/cli-reference.md](./packages/cli/docs/cli-reference.md).
-
-## 🛡️ Agent safety contract
-
-- Real calls may contact external people or businesses.
-- Always plan first.
-- If the user asked to place a call from an agent-facing flow, prefer `calle call start` so planning and execution confirmation stay inside the CLI.
-- If the user only asked to verify setup or draft a plan, do not place the call.
-- Do not guess phone numbers, country codes, language, region, execution confirmation data, or `run_id`.
-- Do not print, request, or expose access tokens.
-
-## 📦 Developer docs
-
-| Path | Package | Role |
-| --- | --- | --- |
-| `packages/core` | `@call-e/core` | Shared runtime helpers for brokered auth, private token cache files, JSON HTTP, and MCP Streamable HTTP calls. |
-| `packages/cli` | `@call-e/cli` | Shared `calle` command for auth, MCP config, tool listing, and phone-call workflow shortcuts. |
-| `packages/codex-plugin` | `@call-e/codex-plugin` | Codex plugin bundle that exposes CALL-E as the `$calle` skill. |
-| `packages/claude-plugin` | `@call-e/claude-plugin` | Claude Code plugin bundle that exposes CALL-E through the shared CLI and `/calle:calle`. |
-| `packages/cursor-plugin` | `@call-e/cursor-plugin` | Cursor plugin bundle that exposes CALL-E through MCP, a `calle` skill, and a safety rule. |
-| `packages/openclaw-cli-skill` | `@call-e/openclaw-cli-skill` | Private validation/source package for the OpenClaw skill published through ClawHub. |
-| `packages/skills-sh-skill` | `@call-e/skills-sh-skill` | Private validation package for the portable skills.sh `calle` skill. |
-
-```text
-.agents/plugins/marketplace.json              # Codex marketplace entry
-.claude-plugin/marketplace.json               # Claude Code marketplace entry
-.cursor-plugin/marketplace.json               # Cursor marketplace entry
-packages/codex-plugin/plugin/                 # Codex plugin source
-packages/claude-plugin/plugin/                # Claude Code plugin source
-packages/cursor-plugin/plugin/                # Cursor plugin source
-packages/openclaw-cli-skill/skills/            # OpenClaw skill source
-skills/calle/                                  # skills.sh compatible skill source
-packages/cli/                                  # Shared calle CLI
-packages/core/                                 # Shared runtime helpers
-examples/                                      # Runnable MCP demos
-```
-
-### Stable identifiers
-
-| Surface | Identifier | Value |
-| --- | --- | --- |
-| Codex marketplace | `name` | `call-e-codex` |
-| Codex marketplace | display name | `CALL-E` |
-| Codex plugin entry | name | `calle` |
-| Codex plugin source | path | `./packages/codex-plugin/plugin` |
-| Claude Code marketplace | `name` | `call-e-claude` |
-| Claude Code plugin entry | name | `calle` |
-| Claude Code plugin source | path | `./packages/claude-plugin/plugin` |
-| Claude Code CLI attribution | env | `claude/claude_code_plugin/<version>` |
-| Cursor marketplace | `name` | `call-e-cursor` |
-| Cursor plugin entry | name | `calle` |
-| Cursor plugin display name | displayName | `CALL-E` |
-| Cursor plugin source | path | `./packages/cursor-plugin/plugin` |
-| Cursor MCP server | key | `calle` |
-| Cursor CLI attribution | env | `cursor/cursor_plugin/<version>` |
-| OpenClaw skill | slug | `phone-call-calle` |
-| OpenClaw skill | name | `Phone Call - CALL-E` |
-| skills.sh skill | name | `calle` |
-| skills.sh skill source | path | `skills/calle` |
-| skills.sh CLI attribution | env | `skills_sh/skills_sh_skill/<version>` |
 
 ## 🧪 Examples
 
