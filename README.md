@@ -1,14 +1,16 @@
 <div align="center">
 
-# CALL-E 📞
+# CALL-E Integrations
 
-**The voice layer for AI agents.**
+**CALL-E is your AI agent for getting phone work done.**
 
-Your agent can think, plan, and write. CALL-E picks up the phone — booking appointments, calling businesses, following up, waiting on hold, and reporting the result back to you.
+Tell CALL-E your goal, and it handles the phone task end-to-end: it plans, calls, adapts in real time, follows through, and improves along the way.
 
-**Less thinking. More doing. CALL-E handles the calls.**
+Use CALL-E directly, or integrate it into agents, platforms, and business systems through Skills, Plugins, SDKs, or APIs.
 
-[Website](https://www.heycall-e.com/) · [Try on ClawHub](https://clawhub.ai/call-e-dev/phone-call-calle) · [Quick install](#-quick-install) · [Docs](#-developer-docs) · [Troubleshooting](#-troubleshooting) · [Discord](https://discord.gg/6AbXUzUV8w)
+New users get 20 free calls to get started.
+
+[Website](https://www.heycall-e.com/) · [Try on ClawHub](https://clawhub.ai/call-e-dev/phone-call-calle) · [Get started](#-get-started) · [Docs](#-developer-docs) · [Troubleshooting](#-troubleshooting) · [Discord](https://discord.gg/6AbXUzUV8w)
 
 ![npm](https://img.shields.io/npm/v/@call-e/cli?label=%40call-e%2Fcli)
 ![Codex](https://img.shields.io/badge/Codex-CALL--E-black)
@@ -20,14 +22,62 @@ Your agent can think, plan, and write. CALL-E picks up the phone — booking app
 
 </div>
 
-> [!IMPORTANT]
-> CALL-E can place real outbound phone calls. Integrations must **plan first** and only start a real call when the user clearly intends to place that call. Agent-facing flows should prefer `calle call start` so execution confirmation data stays inside the CLI.
+## Why CALL-E is Different
 
-## 🚀 Quick install
+Unlike traditional voice/calling platforms that rely on prebuilt bots and high-volume calls, CALL-E focuses on goal-driven tasks. You provide a goal, and CALL-E manages the call workflow, adapts dynamically, and delivers structured results, enabling automation of low-frequency, personalized phone tasks that were previously too expensive or custom to automate.
 
-For most users, the simplest path is to ask your agent to install the portable
-CALL-E skill at user-level/global scope, so the same agent can use `calle`
-across projects.
+## Key Features
+
+- **Quick Start** - Start using CALL-E within minutes via direct use or integration through Skills, Plugins, SDKs, or APIs.
+- **Goal-Driven Long Tasks** *(in development)* - Define your goal in natural language; CALL-E executes the task from planning to follow-up.
+- **Reliable Voice Interaction** - CALL-E handles natural conversation flow, tone, interruptions, and changing call conditions in real time.
+
+## Other Features
+
+| Feature | Description |
+| --- | --- |
+| Live Task Progress | Track task from planning to final result with status, activity history, call outcomes, and next steps. |
+| Smart Goal Clarification | Ask missing details before execution (who, when, language, success criteria). |
+| Managed Call Execution | Handle number/line setup, outbound dialing, monitoring, and result capture. |
+| Actionable Call Results | Return summaries, transcripts, metadata, and recommended next steps. |
+| Scheduled & Batch Calling | Schedule individual or batch calls; clarify timing when needed. |
+| In-Task Optimization | Learn from prior attempts and adjust next steps. |
+| Continuous Improvement | Improve over time based on historical patterns and outcomes. |
+| Real-World Voice Runtime | Handle live pickup, voicemail, screening, hold, transfers, silence, interruptions. |
+| Use Wherever Work Happens | Integrate via Skills, Plugins, MCP, ChatGPT Apps, SDKs, APIs, or enterprise systems. |
+| Built-In Safety & Governance | Number governance, rate limits, concurrency controls, blocklists, kill switches, redacted logs, audit trails. |
+
+## 🚀 Get Started
+
+Choose the integration path that matches how you want to use CALL-E.
+
+| Goal | Use | Start here |
+| --- | --- | --- |
+| Add CALL-E to your app or backend | SDK / API *(in development)* | SDK docs (`docs/sdk.md`) and API docs (`docs/api.md`) will be added later. |
+| Install CALL-E into an AI agent | Agent Install | Copy the stable prompt below or use the [manual install guide](./docs/install/install-guide.md). |
+
+---
+
+### SDK / API *(In Development)*
+
+SDK and API support is currently in development.
+
+The documentation structure is reserved here:
+
+```text
+docs/
+├── sdk.md   # In development
+└── api.md   # In development
+```
+
+These docs will cover direct integration options for applications, backend services, and business systems once the SDK/API surface is ready.
+
+---
+
+### Agent Install
+
+For agent installs, the simplest path is to ask your agent to install CALL-E at
+user-level/global scope, so the same agent can use `calle` across projects.
 
 Copy this stable prompt into a local agent that can run shell commands or
 install skills:
@@ -36,18 +86,12 @@ install skills:
 Install CALL-E for me: https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/docs/install/CALL-E-installation-guide.md
 ```
 
-The linked guide contains the install steps, so the prompt can stay unchanged
-when those steps need to evolve.
+The linked guide contains the full install steps, so this prompt can stay
+unchanged when those steps evolve.
 
-New users get 20 free calls to get started.
+For manual setup, see the [manual install guide](./docs/install/install-guide.md).
 
-If the prompt flow is not supported in your client, use the
-[manual install guide](./docs/install/install-guide.md). It covers Codex,
-Claude Code, Cursor, OpenClaw, Hermes Agent, CLI-only, and MCP-only setup.
-The native Claude Code plugin path uses
-`/plugin marketplace add https://github.com/CALLE-AI/call-e-integrations.git#@call-e/claude-plugin@latest`.
-
-Install guides: [Manual](./docs/install/install-guide.md) · [CLI](./docs/install/cli.md) · [Codex](./docs/install/codex-plugin.md) · [skills.sh](./docs/install/skills-sh-skill.md) · [Claude Code](./docs/install/claude-plugin.md) · [Cursor MCP](./docs/install/cursor.md) · [Cursor plugin](./docs/install/cursor-plugin.md) · [OpenClaw source](./docs/install/openclaw-cli-skill.md)
+> ⚠️ **Safety notice:** CALL-E can place real outbound phone calls. Always verify the plan, recipient, and user intent before running a phone task.
 
 ## 🧯 Troubleshooting
 
@@ -144,7 +188,7 @@ packages/openclaw-cli-skill/skills/            # OpenClaw skill source
 skills/calle/                                  # skills.sh compatible skill source
 packages/cli/                                  # Shared calle CLI
 packages/core/                                 # Shared runtime helpers
-examples/                                      # Runnable MCP demos, not an SDK
+examples/                                      # Runnable MCP demos
 ```
 
 ### Stable identifiers
@@ -179,11 +223,14 @@ Runnable MCP client demos live under [examples](./examples):
 - [CALL-E broker login MCP clients](./examples/mcp-broker-client): TypeScript and Python clients for CALL-E brokered login, local token cache, and MCP HTTP calls.
 - [Python batch runner](./examples/python-batch-runner): Python JSONL batch runner using `calle` CLI auth state, FastMCP, Rich output, and MCP tool-call metadata.
 
-These examples are runnable demos, not a CALL-E SDK or supported application API.
+These examples are runnable demos. Supported SDK and API surfaces should be
+documented separately from demo clients.
 
 ## 🧭 Boundaries
 
 - The CLI is not an OAuth server and not an MCP server. It is a local wrapper over the CALL-E broker API and remote MCP HTTP endpoint.
+- CALL-E can be used directly or integrated through Skills, Plugins, MCP, ChatGPT Apps, SDKs, APIs, and enterprise systems.
+- SDKs and APIs are supported integration surfaces. Runnable examples are demos and starting points, not the canonical SDK or API contract.
 - Codex, Claude Code, OpenClaw, skills.sh, and Hermes Agent integrations intentionally reuse the shared `calle` CLI for authentication, token caching, JSON output, MCP tool discovery, and call workflow shortcuts.
 - The Cursor plugin reuses the existing remote CALL-E MCP server and does not implement a new local MCP server or backend.
 - The OpenClaw route in this repository does not register OpenClaw-native tools and does not require a gateway restart from this repository.
