@@ -53,24 +53,9 @@ Choose the integration path that matches how you want to use CALL-E.
 
 | Goal | Use | Start here |
 | --- | --- | --- |
-| Add CALL-E to your app or backend | SDK / API *(in development)* | SDK docs (`docs/sdk.md`) and API docs (`docs/api.md`) will be added later. |
 | Install CALL-E into an AI agent | Agent Install | Copy the stable prompt below or use the [manual install guide](./docs/install/install-guide.md). |
-
----
-
-### 🛠️ SDK / API *(In Development)*
-
-SDK and API support is currently in development.
-
-The documentation structure is reserved here:
-
-```text
-docs/
-├── sdk.md   # In development
-└── api.md   # In development
-```
-
-These docs will cover direct integration options for applications, backend services, and business systems once the SDK/API surface is ready.
+| Add CALL-E with a server SDK | SDK *(preview / in development)* | Review the [SDKs](https://docs.heycall-e.com/#/sdks), then use the preview SDK example below. |
+| Call CALL-E from your backend directly | API *(preview / in development)* | Review the [API Reference](https://docs.heycall-e.com/#api-reference), then use the preview API example below. |
 
 ---
 
@@ -92,6 +77,125 @@ unchanged when those steps evolve.
 For manual setup, see the [manual install guide](./docs/install/install-guide.md).
 
 > ⚠️ **Safety notice:** CALL-E can place real outbound phone calls. Always verify the plan, recipient, and user intent before running a phone task.
+
+---
+
+### SDK *(Preview / In Development)*
+
+CALL-E server SDK support is in Phase 1 beta and still under active
+development. Treat this section as a compact preview, not a complete or final
+integration contract.
+
+Current draft SDK docs:
+
+- [SDKs](https://docs.heycall-e.com/#/sdks)
+
+The SDK docs currently identify the TypeScript beta package as
+`@call-e/calle@beta`. Python SDK packaging is still rolling out, with the
+`calle-ai` distribution and `from calle import CalleClient` import path
+documented for the upcoming Python package.
+
+Set `CALLE_API_KEY` and `CALLE_BASE_URL` from your beta onboarding or the latest
+SDK docs before running the example. The sample avoids hardcoding a production
+API host because the public SDK docs are still evolving.
+
+Representative TypeScript SDK **Create and wait** sample:
+
+```ts
+import { CalleClient } from "@call-e/calle";
+
+const client = new CalleClient({
+  apiKey: process.env.CALLE_API_KEY!,
+  baseUrl: process.env.CALLE_BASE_URL!,
+});
+
+const call = await client.calls.createAndWait(
+  {
+    task: "Call the recipient and ask whether they can attend Friday lunch in San Francisco.",
+    recipient: {
+      phone: "+141xxxxxxxx",
+      region: "US",
+      locale: "en-US",
+    },
+    resultSchema: {
+      type: "object",
+      required: ["can_attend"],
+      properties: {
+        can_attend: { type: "string", enum: ["yes", "no", "unknown"] },
+      },
+      additionalProperties: false,
+    },
+    metadata: { workflow_run_id: "wf_123" },
+  },
+  { idempotencyKey: "wf_123_friday_lunch" },
+);
+
+console.log(call.status);
+console.log(call.structuredResult);
+console.log(call.resultValidation);
+```
+
+---
+
+### API *(Preview / In Development)*
+
+CALL-E Developer API support is in Phase 1 beta and still under active
+development. Treat this section as a compact preview, not a complete or final
+integration contract.
+
+Current draft API docs:
+
+- [API Reference](https://docs.heycall-e.com/#api-reference)
+
+The current API reference covers the Phase 1 server flow:
+
+- `POST /v1/calls` to create a call.
+- `GET /v1/calls/{call_id}` to read call state and results.
+- `GET /v1/calls/{call_id}/events` to list developer-facing call events.
+- `POST /calle/webhook` for terminal call result webhooks.
+
+Not all API surfaces are available in Phase 1. Batch calls, scheduled calls,
+cancel calls, and project-level webhook management are still outside the
+current beta scope.
+
+Set `CALLE_API_KEY` and `CALLE_BASE_URL` from your beta onboarding or the latest
+API docs before running the example. The sample avoids hardcoding a production
+API host because the public API docs are still evolving.
+
+Representative API **Create Call** sample:
+
+```bash
+curl "$CALLE_BASE_URL/v1/calls" \
+  --request POST \
+  --header "Authorization: Bearer $CALLE_API_KEY" \
+  --header 'Content-Type: application/json' \
+  --header 'Idempotency-Key: wf_123_friday_lunch' \
+  --data '{
+    "task": "Call the recipient and ask whether they can attend Friday lunch in San Francisco.",
+    "recipient": {
+      "phone": "+141xxxxxxxx",
+      "region": "US",
+      "locale": "en-US"
+    },
+    "result_schema": {
+      "type": "object",
+      "required": ["can_attend"],
+      "properties": {
+        "can_attend": {
+          "type": "string",
+          "enum": ["yes", "no", "unknown"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "workflow_run_id": "wf_123"
+    },
+    "webhook_url": "https://example.com/calle/webhook"
+  }'
+```
+
+---
 
 ## 🧯 Troubleshooting
 
