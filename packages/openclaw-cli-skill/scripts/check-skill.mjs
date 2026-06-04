@@ -221,13 +221,7 @@ function checkReference({ packageRoot, failures }) {
 }
 
 function checkRepoDocs({ repoRoot, failures }) {
-  const readmePath = path.join(repoRoot, "README.md");
   const layoutPath = path.join(repoRoot, "docs", "agent-integration-layout.md");
-
-  if (fs.existsSync(readmePath)) {
-    const readme = fs.readFileSync(readmePath, "utf8");
-    assert(readme.includes("packages/openclaw-cli-skill"), failures, "README.md must mention packages/openclaw-cli-skill.");
-  }
 
   if (fs.existsSync(layoutPath)) {
     const layout = fs.readFileSync(layoutPath, "utf8");

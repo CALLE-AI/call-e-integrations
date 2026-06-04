@@ -47,7 +47,6 @@ const codexLatestInstallFiles = new Set([
 const codexLatestInstallRef = "--ref '@call-e/codex-plugin@latest'";
 
 const claudeLatestInstallFiles = new Set([
-  "README.md",
   "docs/install/install-guide.md",
   "docs/install/claude-plugin.md",
   "docs/agent-integration-layout.md",
