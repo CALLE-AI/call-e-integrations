@@ -54,6 +54,7 @@ Choose the integration path that matches how you want to use CALL-E.
 | Goal | Use | Start here |
 | --- | --- | --- |
 | Install CALL-E into an AI agent | Agent Install | Copy the stable prompt below or use the [manual install guide](./docs/install/install-guide.md). |
+| Connect a Streamable HTTP MCP client | MCP | Use the [`openagent_oauth` MCP guide](./docs/mcp/openagent-oauth.md). |
 | Add CALL-E with a server SDK | SDK *(preview / in development)* | Review the [SDKs](https://docs.heycall-e.com/#/sdks), then use the preview SDK example below. |
 | Call CALL-E from your backend directly | API *(preview / in development)* | Review the [API Reference](https://docs.heycall-e.com/#api-reference), then use the preview API example below. |
 
