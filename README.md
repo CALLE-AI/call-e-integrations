@@ -29,7 +29,7 @@ Unlike traditional voice/calling platforms that rely on prebuilt bots and high-v
 ## ✨ Key Features
 
 - **Quick Start** - Start using CALL-E within minutes via direct use or integration through Skills, Plugins, SDKs, or APIs.
-- **Goal-Driven Long Tasks** *(in development)* - Define your goal in natural language; CALL-E executes the task from planning to follow-up.
+- **Goal-Driven Long Tasks** *(in development)* - Tell CALL-E the goal, and it builds the path to get there. It plans the overall task, designs the calling approach, executes the calls, learns from real outcomes, and continuously improves its strategy over time. CALL-E is not just making calls one by one — it is learning how to achieve each phone-based goal more reliably.
 - **Reliable Voice Interaction** - CALL-E handles natural conversation flow, tone, interruptions, and changing call conditions in real time.
 
 ## 🧩 Other Features
