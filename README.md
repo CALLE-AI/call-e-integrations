@@ -206,7 +206,6 @@ languages. Use these region codes with the SDK and API recipient settings.
 | Recipient region code | Language(s) |
 | --- | --- |
 | US | English |
-| CN | English |
 | SG | English |
 | MY | English |
 | IN | English, Hindi |
