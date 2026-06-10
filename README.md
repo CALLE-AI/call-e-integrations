@@ -198,6 +198,34 @@ curl "$CALLE_BASE_URL/v1/calls" \
 
 ---
 
+### Supported Regions and Languages
+
+CALL-E calling supports the following recipient region codes and spoken
+languages. Use these region codes with the SDK and API recipient settings.
+
+| Recipient region code | Language(s) |
+| --- | --- |
+| US | English |
+| CN | English |
+| SG | English |
+| MY | English |
+| IN | English, Hindi |
+| AE | English, Arabic |
+| AU | English |
+| CA | English |
+| GB | English |
+| VN | Vietnamese |
+| DE | English, German |
+| JP | Japanese |
+| FR | French |
+| MX | Spanish |
+| BR | Portuguese |
+| ID | English |
+| PH | English |
+| KE | English |
+
+---
+
 ## 🧯 Troubleshooting
 
 If installation, authentication, or MCP tool verification fails, start with the
