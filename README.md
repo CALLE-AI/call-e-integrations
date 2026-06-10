@@ -198,7 +198,7 @@ curl "$CALLE_BASE_URL/v1/calls" \
 
 ---
 
-### Supported Regions and Languages
+## 🌍 Supported Regions and Languages
 
 CALL-E calling supports the following recipient region codes and spoken
 languages. Use these region codes with the SDK and API recipient settings.
@@ -223,8 +223,6 @@ languages. Use these region codes with the SDK and API recipient settings.
 | ID | English |
 | PH | English |
 | KE | English |
-
----
 
 ## 🧯 Troubleshooting
 
