@@ -55,7 +55,7 @@ Choose the integration path that matches how you want to use CALL-E.
 | --- | --- | --- |
 | Install CALL-E into an AI agent | Agent Install | Copy the stable prompt below or use the [manual install guide](./docs/install/install-guide.md). |
 | Connect a Streamable HTTP MCP client | MCP | Use the [`openagent_oauth` MCP guide](./docs/mcp/openagent-oauth.md). |
-| Add CALL-E with a server SDK | SDK *(preview / in development)* | Review the [SDKs](https://docs.heycall-e.com/#/sdks), then use the preview SDK example below. |
+| Add CALL-E with a server SDK | SDK | Install the published TypeScript or Python SDK and follow the [SDK docs](https://docs.heycall-e.com/#/sdks). |
 | Call CALL-E from your backend directly | API *(preview / in development)* | Review the [API Reference](https://docs.heycall-e.com/#api-reference), then use the preview API example below. |
 
 ---
@@ -81,59 +81,84 @@ For manual setup, see the [manual install guide](./docs/install/install-guide.md
 
 ---
 
-### SDK *(Preview / In Development)*
+### SDK
 
-CALL-E server SDK support is in Phase 1 beta and still under active
-development. Treat this section as a compact preview, not a complete or final
-integration contract.
+CALL-E server SDKs are published for trusted backend services, workers, and
+automation systems that create and monitor call tasks.
 
-Current draft SDK docs:
+Start with the public docs:
 
+- [Quickstart](https://docs.heycall-e.com/#/quickstart)
 - [SDKs](https://docs.heycall-e.com/#/sdks)
 
-The SDK docs currently identify the TypeScript beta package as
-`@call-e/calle@beta`. Python SDK packaging is still rolling out, with the
-`calle-ai` distribution and `from calle import CalleClient` import path
-documented for the upcoming Python package.
+You can view your API keys in the
+[CALL-E dashboard](https://dashboard.heycall-e.com/account/api-keys).
 
-Set `CALLE_API_KEY` and `CALLE_BASE_URL` from your beta onboarding or the latest
-SDK docs before running the example. The sample avoids hardcoding a production
-API host because the public SDK docs are still evolving.
+Install the SDK package for your runtime:
 
-Representative TypeScript SDK **Create and wait** sample:
+```bash
+pnpm add @call-e/calle
+pip install calle-ai
+```
+
+Current server SDK packages:
+
+- TypeScript: `@call-e/calle@0.2.0`
+- Python: `calle-ai==0.2.0`, imported as `calle`
+
+Set `CALLE_API_KEY` before running the examples:
+
+```bash
+export CALLE_API_KEY="calle_live_key"
+```
+
+TypeScript **Create and wait** sample:
 
 ```ts
 import { CalleClient } from "@call-e/calle";
 
 const client = new CalleClient({
   apiKey: process.env.CALLE_API_KEY!,
-  baseUrl: process.env.CALLE_BASE_URL!,
 });
 
-const call = await client.calls.createAndWait(
-  {
-    task: "Call the recipient and ask whether they can attend Friday lunch in San Francisco.",
-    recipient: {
-      phone: "+141xxxxxxxx",
-      region: "US",
-      locale: "en-US",
+const call = await client.calls.createAndWait({
+  task: "Call <E164_PHONE> and ask whether they can hear clearly.",
+  resultSchema: {
+    type: "object",
+    required: ["can_hear_clearly"],
+    properties: {
+      can_hear_clearly: { type: "string", enum: ["yes", "no", "unknown"] },
     },
-    resultSchema: {
-      type: "object",
-      required: ["can_attend"],
-      properties: {
-        can_attend: { type: "string", enum: ["yes", "no", "unknown"] },
-      },
-      additionalProperties: false,
-    },
-    metadata: { workflow_run_id: "wf_123" },
   },
-  { idempotencyKey: "wf_123_friday_lunch" },
-);
+});
 
 console.log(call.status);
 console.log(call.structuredResult);
-console.log(call.resultValidation);
+console.log(call.taskCompleted, call.completionConfidence, call.evidence);
+```
+
+Python **Create and wait** sample:
+
+```python
+import os
+from calle import CalleClient
+
+client = CalleClient(api_key=os.environ["CALLE_API_KEY"])
+
+call = client.calls.create_and_wait(
+    task="Call <E164_PHONE> and ask whether they can hear clearly.",
+    result_schema={
+        "type": "object",
+        "required": ["can_hear_clearly"],
+        "properties": {
+            "can_hear_clearly": {"type": "string", "enum": ["yes", "no", "unknown"]},
+        },
+    },
+)
+
+print(call["status"])
+print(call["structured_result"])
+print(call["task_completed"], call["completion_confidence"], call["evidence"])
 ```
 
 ---
