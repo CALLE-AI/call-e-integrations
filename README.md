@@ -56,7 +56,7 @@ Choose the integration path that matches how you want to use CALL-E.
 | Install CALL-E into an AI agent | Agent Install | Copy the stable prompt below or use the [manual install guide](./docs/install/install-guide.md). |
 | Connect a Streamable HTTP MCP client | MCP | Use the [`openagent_oauth` MCP guide](./docs/mcp/openagent-oauth.md). |
 | Add CALL-E with a server SDK | SDK | Install the published TypeScript or Python SDK and follow the [SDK docs](https://docs.heycall-e.com/#/sdks). |
-| Call CALL-E from your backend directly | API *(preview / in development)* | Review the [API Reference](https://docs.heycall-e.com/#api-reference), then use the preview API example below. |
+| Call CALL-E from your backend directly | API | Use the [Developer API reference](https://docs.heycall-e.com/#/api-reference) and curl example below. |
 
 ---
 
@@ -163,32 +163,39 @@ print(call["task_completed"], call["completion_confidence"], call["evidence"])
 
 ---
 
-### API *(Preview / In Development)*
+### API
 
-CALL-E Developer API support is in Phase 1 beta and still under active
-development. Treat this section as a compact preview, not a complete or final
-integration contract.
+CALL-E Developer API is available for trusted backend services, workers, and
+workflow systems that need direct HTTP access.
 
-Current draft API docs:
+Start with the public docs:
 
-- [API Reference](https://docs.heycall-e.com/#api-reference)
+- [Quickstart](https://docs.heycall-e.com/#/quickstart)
+- [Authentication](https://docs.heycall-e.com/#/authentication)
+- [Calls](https://docs.heycall-e.com/#/calls)
+- [API Reference](https://docs.heycall-e.com/#/api-reference)
 
-The current API reference covers the Phase 1 server flow:
+You can view your API keys in the
+[CALL-E dashboard](https://dashboard.heycall-e.com/account/api-keys).
 
-- `POST /v1/calls` to create a call.
-- `GET /v1/calls/{call_id}` to read call state and results.
+Set your API key and base URL before running curl examples:
+
+```bash
+export CALLE_API_KEY="calle_live_key"
+export CALLE_BASE_URL="https://api.heycall-e.com"
+```
+
+The Developer API supports:
+
+- `POST /v1/calls` to create one-recipient or batch call tasks.
+- `GET /v1/calls/{call_id}` to read status, summaries, structured results, and transcripts.
 - `GET /v1/calls/{call_id}/events` to list developer-facing call events.
 - `POST /calle/webhook` for terminal call result webhooks.
 
-Not all API surfaces are available in Phase 1. Batch calls, scheduled calls,
-cancel calls, and project-level webhook management are still outside the
-current beta scope.
+Object result schemas are strict by default: fields not declared in
+`properties` are rejected before `structured_result` is returned.
 
-Set `CALLE_API_KEY` and `CALLE_BASE_URL` from your beta onboarding or the latest
-API docs before running the example. The sample avoids hardcoding a production
-API host because the public API docs are still evolving.
-
-Representative API **Create Call** sample:
+API **Create Call** sample:
 
 ```bash
 curl "$CALLE_BASE_URL/v1/calls" \
@@ -197,13 +204,24 @@ curl "$CALLE_BASE_URL/v1/calls" \
   --header 'Content-Type: application/json' \
   --header 'Idempotency-Key: wf_123_friday_lunch' \
   --data '{
-    "task": "Call the recipient and ask whether they can attend Friday lunch in San Francisco.",
-    "recipient": {
-      "phone": "+141xxxxxxxx",
-      "region": "US",
-      "locale": "en-US"
-    },
+    "task": "Call each recipient and ask whether they can attend Friday lunch in San Francisco.",
+    "recipients": [
+      {
+        "phones": ["<E164_PHONE>"],
+        "region": "US",
+        "locale": "en-US"
+      }
+    ],
     "result_schema": {
+      "type": "object",
+      "required": ["completed_count"],
+      "properties": {
+        "completed_count": {
+          "type": "integer"
+        }
+      }
+    },
+    "recipient_result_schema": {
       "type": "object",
       "required": ["can_attend"],
       "properties": {
@@ -211,14 +229,51 @@ curl "$CALLE_BASE_URL/v1/calls" \
           "type": "string",
           "enum": ["yes", "no", "unknown"]
         }
-      },
-      "additionalProperties": false
+      }
     },
     "metadata": {
       "workflow_run_id": "wf_123"
     },
     "webhook_url": "https://example.com/calle/webhook"
   }'
+```
+
+API **Read Result** sample:
+
+```bash
+curl "$CALLE_BASE_URL/v1/calls/call_123" \
+  --header "Authorization: Bearer $CALLE_API_KEY"
+```
+
+Terminal calls include schema-valid `structured_result`, task-level outcome
+fields from the post-call summary, recipient-level structured results, and
+attempt transcripts when available:
+
+```json
+{
+  "status": "completed",
+  "task_completed": true,
+  "completion_confidence": {"score": 0.92, "label": "high"},
+  "evidence": ["The recipient said they can attend Friday lunch."],
+  "structured_result": {
+    "completed_count": 1
+  },
+  "recipients": [
+    {
+      "structured_result": {
+        "can_attend": "yes"
+      },
+      "attempts": [
+        {
+          "transcript_turns": [
+            {"offset_seconds": 0, "speaker": "bot", "text": "Hi, I am calling about Friday lunch."},
+            {"offset_seconds": 4, "speaker": "user", "text": "Yes, I can attend."}
+          ]
+        }
+      ]
+    }
+  ]
+}
 ```
 
 ---
