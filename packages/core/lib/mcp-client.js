@@ -50,56 +50,90 @@ function parseResponseBody(text) {
   return JSON.parse(text);
 }
 
-async function requestJsonRpc(fetchImpl, url, { headers, payload, timeoutMs }) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  if (typeof timeout.unref === "function") {
-    timeout.unref();
-  }
+const RETRYABLE_STATUS_CODES = new Set([429, 502, 503, 504]);
+const MAX_RETRY_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 500;
 
-  try {
-    const response = await fetchImpl(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-    const text = await response.text();
-    let body = null;
+function retryDelayMs(attempt, retryAfterHeader) {
+  const retryAfter = Number(retryAfterHeader);
+  if (retryAfterHeader && !Number.isNaN(retryAfter) && retryAfter > 0) {
+    return Math.min(retryAfter * 1000, 30000);
+  }
+  return Math.min(RETRY_BASE_DELAY_MS * 2 ** (attempt - 1), 10000);
+}
+
+async function requestJsonRpc(fetchImpl, url, { headers, payload, timeoutMs, sleepImpl = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
+  let lastError;
+  for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    if (typeof timeout.unref === "function") {
+      timeout.unref();
+    }
+
     try {
-      body = parseResponseBody(text);
-    } catch {
-      body = null;
-    }
-    const responseHeaders = Object.fromEntries(response.headers.entries());
-
-    if (!response.ok) {
-      throw new McpHttpError(`MCP HTTP ${response.status} for ${payload.method}`, {
-        statusCode: response.status,
-        responseText: text,
-        payload: body,
-        headers: responseHeaders,
+      const response = await fetchImpl(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+        signal: controller.signal,
       });
-    }
+      const text = await response.text();
+      let body = null;
+      try {
+        body = parseResponseBody(text);
+      } catch {
+        body = null;
+      }
+      const responseHeaders = Object.fromEntries(response.headers.entries());
 
-    if (body?.error) {
-      const error = body.error;
-      throw new McpHttpError(error.message || `Remote MCP error for ${payload.method}`, {
-        payload: error,
-        headers: responseHeaders,
-        code: "mcp_error",
-      });
-    }
+      if (!response.ok) {
+        const err = new McpHttpError(`MCP HTTP ${response.status} for ${payload.method}`, {
+          statusCode: response.status,
+          responseText: text,
+          payload: body,
+          headers: responseHeaders,
+        });
+        if (RETRYABLE_STATUS_CODES.has(response.status) && attempt < MAX_RETRY_ATTEMPTS) {
+          lastError = err;
+          await sleepImpl(retryDelayMs(attempt, responseHeaders["retry-after"]));
+          continue;
+        }
+        throw err;
+      }
 
-    return { body, headers: responseHeaders };
-  } catch (error) {
-    if (error?.name === "AbortError") {
-      throw new McpHttpError(`MCP request timed out for ${payload.method}`, { code: "http_error" });
+      if (body?.error) {
+        const error = body.error;
+        const rawMessage = typeof error.message === "string" ? error.message : null;
+        const safeMessage = rawMessage
+          ? rawMessage.slice(0, 200).replace(/[\r\n]+/g, " ").trim()
+          : `Remote MCP error for ${payload.method}`;
+        throw new McpHttpError(safeMessage, {
+          payload: error,
+          headers: responseHeaders,
+          code: "mcp_error",
+        });
+      }
+
+      return { body, headers: responseHeaders };
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        throw new McpHttpError(`MCP request timed out for ${payload.method}`, { code: "http_error" });
+      }
+      if (error instanceof McpHttpError) {
+        throw error;
+      }
+      lastError = error;
+      if (attempt < MAX_RETRY_ATTEMPTS) {
+        await sleepImpl(retryDelayMs(attempt, null));
+        continue;
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
     }
-    throw error;
-  } finally {
-    clearTimeout(timeout);
   }
+  throw lastError;
 }
 
 function requireFetch(fetchImpl) {
@@ -167,6 +201,11 @@ async function openMcpSession({ config, fetchImpl }) {
 
   const sessionId = initialize.headers["mcp-session-id"] || initialize.headers["Mcp-Session-Id"] || "";
   const rpcHeaders = sessionId ? { ...commonHeaders, "mcp-session-id": sessionId } : commonHeaders;
+
+  const serverProtocolVersion = initialize.body?.result?.protocolVersion;
+  if (serverProtocolVersion && serverProtocolVersion !== MCP_PROTOCOL_VERSION) {
+    config._onProtocolVersionMismatch?.(serverProtocolVersion, MCP_PROTOCOL_VERSION);
+  }
 
   await requestJsonRpc(fetchImpl, config.serverUrl, {
     headers: rpcHeaders,

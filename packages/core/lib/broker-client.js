@@ -95,16 +95,29 @@ export async function loginWithBroker(config, {
 
   const { pending, created } = await ensurePendingLogin(config, { fetchImpl, forceLogin });
   if (created) {
+    let safeLoginUrl;
+    try {
+      const parsed = new URL(pending.login_url);
+      if (parsed.protocol !== "https:") {
+        throw new Error("non-https");
+      }
+      safeLoginUrl = parsed.href;
+    } catch {
+      safeLoginUrl = null;
+    }
     stderr("Open the brokered login URL in your browser to continue:");
-    stderr(pending.login_url);
-    if (!noBrowserOpen) {
-      await openBrowser(pending.login_url);
+    stderr(safeLoginUrl ?? "[authorization URL unavailable]");
+    if (!noBrowserOpen && safeLoginUrl) {
+      await openBrowser(safeLoginUrl);
     }
   }
 
   const deadline = Date.now() + Number(config.pollTimeoutSeconds || 300) * 1000;
+  const maxAttempts = Number(config.pollMaxAttempts || 0) || 600;
+  let attempt = 0;
   let current = pending;
-  while (Date.now() < deadline) {
+  while (Date.now() < deadline && attempt < maxAttempts) {
+    attempt += 1;
     const statusPayload = await getBrokerSessionStatus(config, current, { fetchImpl });
     const status = String(statusPayload.status || current.status || "PENDING").toUpperCase();
     current = {
