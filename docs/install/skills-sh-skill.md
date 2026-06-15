@@ -9,7 +9,7 @@ public skill page and search results directly from the repository root.
 For most users, the recommended path is to ask the agent to install the skill:
 
 ```text
-Install CALL-E for me: https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/docs/install/CALL-E-installation-guide.md
+Install CALL-E for me: https://open.heycall-e.com/document/mcp-archive/CALL-E-installation-guide.md
 ```
 
 The stable prompt points to the latest

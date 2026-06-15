@@ -69,7 +69,7 @@ Copy this stable prompt into a local agent that can run shell commands or
 install skills:
 
 ```text
-Install CALL-E for me: https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/docs/install/CALL-E-installation-guide.md
+Install CALL-E for me: https://open.heycall-e.com/document/mcp-archive/CALL-E-installation-guide.md
 ```
 
 The linked guide contains the full install steps, so this prompt can stay
