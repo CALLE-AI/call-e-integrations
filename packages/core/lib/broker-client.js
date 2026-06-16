@@ -1,6 +1,6 @@
 import { pendingCachePath, pendingIsExpired, readPendingLogin, removeFile, tokenCachePath, tokenIsUsable, writePrivateJson, readJson } from "./cache.js";
 import { INTEGRATION_HEADER, SESSION_SECRET_HEADER } from "./constants.js";
-import { requestJson } from "./http.js";
+import { HttpStatusError, requestJson } from "./http.js";
 
 function integrationHeaders(config) {
   return config?.integrationHeader ? { [INTEGRATION_HEADER]: config.integrationHeader } : {};
@@ -12,6 +12,54 @@ function brokerHeaders(config, sessionSecret) {
 
 function isActivePendingStatus(status) {
   return status === "PENDING" || status === "AUTHORIZED";
+}
+
+function hasActivePendingLogin(pending) {
+  return Boolean(pending && isActivePendingStatus(pending.status) && !pendingIsExpired(pending));
+}
+
+function isExpiredBrokerSessionError(error) {
+  return error instanceof HttpStatusError && error.statusCode === 410;
+}
+
+function isTerminalBrokerSessionStatus(status) {
+  return status === "EXPIRED" || status === "FAILED" || status === "EXCHANGED";
+}
+
+function pendingFromBrokerStatus(existing, status) {
+  return normalizePendingSession({
+    ...existing,
+    ...status,
+    session_id: status.session_id || existing.session_id,
+    session_secret: status.session_secret || existing.session_secret,
+    login_url: status.login_url || status.auth_url || status.verification_url || existing.login_url,
+    expires_at: status.expires_at || existing.expires_at,
+  });
+}
+
+async function reconcileExistingPending(config, existing, { fetchImpl = globalThis.fetch } = {}) {
+  if (!existing?.session_id) {
+    return null;
+  }
+  try {
+    const brokerStatus = await getBrokerSessionStatus(config, existing, { fetchImpl });
+    const reconciled = pendingFromBrokerStatus(existing, brokerStatus);
+    if (
+      reconciled &&
+      isActivePendingStatus(reconciled.status) &&
+      !pendingIsExpired(reconciled) &&
+      !isTerminalBrokerSessionStatus(reconciled.status)
+    ) {
+      writePrivateJson(pendingCachePath(config.cacheRoot, config.serverUrl), reconciled);
+      return reconciled;
+    }
+    return null;
+  } catch (error) {
+    if (isExpiredBrokerSessionError(error)) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 function sleep(ms) {
@@ -66,7 +114,10 @@ export async function ensurePendingLogin(config, { fetchImpl = globalThis.fetch,
   const pendingPath = pendingCachePath(config.cacheRoot, config.serverUrl);
   const existing = readPendingLogin(pendingPath);
   if (!forceLogin && existing && isActivePendingStatus(existing.status) && !pendingIsExpired(existing)) {
-    return { pending: existing, created: false };
+    const reconciled = await reconcileExistingPending(config, existing, { fetchImpl });
+    if (reconciled) {
+      return { pending: reconciled, created: false };
+    }
   }
   if (existing) {
     removeFile(pendingPath);
@@ -89,7 +140,8 @@ export async function loginWithBroker(config, {
   const cachePath = tokenCachePath(config.cacheRoot, config.serverUrl);
   const pendingPath = pendingCachePath(config.cacheRoot, config.serverUrl);
   const cached = readJson(cachePath);
-  if (!forceLogin && tokenIsUsable(cached, config.minTtlSeconds)) {
+  const existingPending = readPendingLogin(pendingPath);
+  if (!forceLogin && tokenIsUsable(cached, config.minTtlSeconds) && !hasActivePendingLogin(existingPending)) {
     return { status: "cached", cachePath, pendingPath, tokenDocument: cached };
   }
 

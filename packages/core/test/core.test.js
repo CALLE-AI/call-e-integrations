@@ -26,6 +26,8 @@ import {
 } from "@call-e/core/cache";
 import {
   createBrokerSession,
+  ensurePendingLogin,
+  loginWithBroker,
   normalizePendingSession,
 } from "@call-e/core/broker-client";
 import {
@@ -167,6 +169,164 @@ test("broker client sends integration headers and normalizes pending sessions", 
   assert.equal(pending.expires_at, "2026-01-01T00:00:00.000Z");
   assert.equal(pending.poll_after_ms, 1500);
   assert.ok(Date.parse(pending.created_at));
+});
+
+test("broker client refreshes active pending login against broker before reuse", async () => {
+  const cacheRoot = makeTempRoot("calle-core-pending-reuse");
+  const config = {
+    cacheRoot,
+    brokerBaseUrl: "https://broker.test",
+    serverUrl: "https://broker.test/mcp/openagent_oauth",
+    authBaseUrl: "https://broker.test",
+    channel: "openagent_oauth",
+    scope: "openid email profile",
+    clientName: "calle Login",
+    timeoutSeconds: 15,
+    integrationHeader: "cli/cli/9.9.9",
+  };
+  const pendingPath = pendingCachePath(cacheRoot, config.serverUrl);
+  writePrivateJson(pendingPath, {
+    session_id: "session-1",
+    session_secret: "secret-1",
+    login_url: "https://broker.test/local-start",
+    status: "PENDING",
+    created_at: "2026-01-01T00:00:00.000Z",
+    expires_at: "2030-01-01T00:00:00.000Z",
+  });
+  const requests = [];
+  const fetchImpl = async (url, init) => {
+    requests.push(`${init.method} ${url}`);
+    assert.equal(init.headers[SESSION_SECRET_HEADER], "secret-1");
+    return jsonResponse({
+      session_id: "session-1",
+      login_url: "https://broker.test/broker-start",
+      status: "PENDING",
+      expires_at: "2030-01-01T00:00:00.000Z",
+      poll_after_ms: 3000,
+    });
+  };
+
+  const result = await ensurePendingLogin(config, { fetchImpl });
+  const cached = readPendingLogin(pendingPath);
+
+  assert.equal(result.created, false);
+  assert.equal(result.pending.login_url, "https://broker.test/broker-start");
+  assert.equal(result.pending.poll_after_ms, 3000);
+  assert.deepEqual(requests, ["GET https://broker.test/api/v1/openagent-auth/sessions/session-1"]);
+  assert.equal(cached.login_url, "https://broker.test/broker-start");
+});
+
+test("broker client creates fresh pending login when broker rejects cached pending", async () => {
+  const cacheRoot = makeTempRoot("calle-core-pending-expired");
+  const config = {
+    cacheRoot,
+    brokerBaseUrl: "https://broker.test",
+    serverUrl: "https://broker.test/mcp/openagent_oauth",
+    authBaseUrl: "https://broker.test",
+    channel: "openagent_oauth",
+    scope: "openid email profile",
+    clientName: "calle Login",
+    timeoutSeconds: 15,
+    integrationHeader: "cli/cli/9.9.9",
+  };
+  const pendingPath = pendingCachePath(cacheRoot, config.serverUrl);
+  writePrivateJson(pendingPath, {
+    session_id: "session-old",
+    session_secret: "secret-old",
+    login_url: "https://broker.test/old-start",
+    status: "PENDING",
+    created_at: "2026-01-01T00:00:00.000Z",
+    expires_at: "2030-01-01T00:00:00.000Z",
+  });
+  const requests = [];
+  const fetchImpl = async (url, init) => {
+    requests.push(`${init.method} ${url}`);
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-old")) {
+      return jsonResponse({ status: "EXPIRED" }, { status: 410, statusText: "Gone" });
+    }
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions")) {
+      return jsonResponse({
+        session_id: "session-new",
+        session_secret: "secret-new",
+        login_url: "https://broker.test/new-start",
+        status: "PENDING",
+        expires_at: "2030-01-01T00:00:00.000Z",
+      });
+    }
+    throw new Error(`unexpected request: ${init.method} ${url}`);
+  };
+
+  const result = await ensurePendingLogin(config, { fetchImpl });
+  const cached = readPendingLogin(pendingPath);
+
+  assert.equal(result.created, true);
+  assert.equal(result.pending.session_id, "session-new");
+  assert.deepEqual(requests, [
+    "GET https://broker.test/api/v1/openagent-auth/sessions/session-old",
+    "POST https://broker.test/api/v1/openagent-auth/sessions",
+  ]);
+  assert.equal(cached.session_id, "session-new");
+  assert.equal(cached.login_url, "https://broker.test/new-start");
+});
+
+test("broker login exchanges active pending before reusing cached token", async () => {
+  const cacheRoot = makeTempRoot("calle-core-pending-before-cached-login");
+  const config = {
+    cacheRoot,
+    brokerBaseUrl: "https://broker.test",
+    serverUrl: "https://broker.test/mcp/openagent_oauth",
+    authBaseUrl: "https://broker.test",
+    channel: "openagent_oauth",
+    scope: "openid email profile",
+    clientName: "calle Login",
+    minTtlSeconds: 300,
+    timeoutSeconds: 15,
+    pollTimeoutSeconds: 1,
+    integrationHeader: "cli/cli/9.9.9",
+  };
+  const pendingPath = pendingCachePath(cacheRoot, config.serverUrl);
+  const tokenPath = tokenCachePath(cacheRoot, config.serverUrl);
+  writePrivateJson(tokenPath, {
+    token: { access_token: "cached-token" },
+    expires_at: "2030-01-01T00:00:00.000Z",
+  });
+  writePrivateJson(pendingPath, {
+    session_id: "session-1",
+    session_secret: "secret-1",
+    login_url: "https://broker.test/start",
+    status: "AUTHORIZED",
+    created_at: "2026-01-01T00:00:00.000Z",
+    expires_at: "2030-01-01T00:00:00.000Z",
+  });
+  const requests = [];
+  const fetchImpl = async (url, init) => {
+    requests.push(`${init.method} ${url}`);
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-1") && init.method === "GET") {
+      assert.equal(init.headers[SESSION_SECRET_HEADER], "secret-1");
+      return jsonResponse({ status: "AUTHORIZED", expires_at: "2030-01-01T00:00:00.000Z" });
+    }
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-1/exchange") && init.method === "POST") {
+      assert.equal(init.headers[SESSION_SECRET_HEADER], "secret-1");
+      return jsonResponse({
+        token: { access_token: "fresh-token" },
+        expires_at: "2030-01-01T00:00:00.000Z",
+      });
+    }
+    throw new Error(`unexpected request: ${init.method} ${url}`);
+  };
+
+  const result = await loginWithBroker(config, { fetchImpl, noBrowserOpen: true, sleepImpl: async () => {} });
+  const cached = readJson(tokenPath);
+
+  assert.equal(result.status, "logged_in");
+  assert.equal(result.tokenDocument.token.access_token, "fresh-token");
+  assert.equal(cached.token.access_token, "fresh-token");
+  assert.equal(fs.existsSync(pendingPath), false);
+  assert.deepEqual(requests, [
+    "GET https://broker.test/api/v1/openagent-auth/sessions/session-1",
+    "GET https://broker.test/api/v1/openagent-auth/sessions/session-1",
+    "POST https://broker.test/api/v1/openagent-auth/sessions/session-1/exchange",
+  ]);
 });
 
 test("MCP client initializes a session and lists tools", async () => {

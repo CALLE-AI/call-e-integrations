@@ -46,6 +46,31 @@ function captureTelemetry(events) {
   };
 }
 
+function maybeMcpToolsListResponse(
+  url,
+  init,
+  { serverUrl, accessToken, methods, sessionId = "sess-verify", integrationHeader = defaultIntegrationHeader }
+) {
+  if (String(url) !== serverUrl) {
+    return null;
+  }
+  assert.equal(init.headers.Authorization, `Bearer ${accessToken}`);
+  assert.equal(init.headers["X-Call-E-Integration"], integrationHeader);
+  const payload = JSON.parse(init.body);
+  methods.push(payload.method);
+  if (payload.method === "initialize") {
+    return jsonRpcResponse({ jsonrpc: "2.0", id: payload.id, result: {} }, { headers: { "mcp-session-id": sessionId } });
+  }
+  if (payload.method === "notifications/initialized") {
+    assert.equal(init.headers["mcp-session-id"], sessionId);
+    return jsonRpcResponse({});
+  }
+  if (payload.method === "tools/list") {
+    return jsonRpcResponse({ jsonrpc: "2.0", id: payload.id, result: { tools: [] } });
+  }
+  throw new Error(`unexpected MCP method: ${payload.method}`);
+}
+
 async function run(argv, deps = {}) {
   let stdout = "";
   let stderr = "";
@@ -67,14 +92,16 @@ async function run(argv, deps = {}) {
 
 test("auth login defaults broker payload to openagent_oauth and hides token from stdout", async () => {
   const cacheRoot = makeTempRoot("calle-cli-login");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
   const requests = [];
+  const mcpMethods = [];
   const fetchImpl = async (url, init) => {
     requests.push({ url: String(url), init });
     if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
       assert.equal(init.headers["X-Call-E-Integration"], defaultIntegrationHeader);
       const payload = JSON.parse(init.body);
       assert.equal(payload.channel, "openagent_oauth");
-      assert.equal(payload.server_url, "https://mcp.example/mcp/openagent_oauth");
+      assert.equal(payload.server_url, serverUrl);
       assert.equal(payload.auth_base_url, "https://mcp.example");
       return jsonResponse(
         {
@@ -100,6 +127,14 @@ test("auth login defaults broker payload to openagent_oauth and hides token from
         expires_at: "2030-01-01T00:00:00Z",
       });
     }
+    const mcpResponse = maybeMcpToolsListResponse(url, init, {
+      serverUrl,
+      accessToken: "secret-token",
+      methods: mcpMethods,
+    });
+    if (mcpResponse) {
+      return mcpResponse;
+    }
     throw new Error(`unexpected request: ${init?.method} ${url}`);
   };
 
@@ -109,11 +144,12 @@ test("auth login defaults broker payload to openagent_oauth and hides token from
   );
 
   assert.equal(result.code, 0);
-  assert.equal(requests.length, 3);
+  assert.equal(requests.length, 6);
+  assert.deepEqual(mcpMethods, ["initialize", "notifications/initialized", "tools/list"]);
   assert.doesNotMatch(result.stdout, /secret-token/);
   const payload = JSON.parse(result.stdout);
   assert.equal(payload.status, "logged_in");
-  assert.equal(payload.server_url, "https://mcp.example/mcp/openagent_oauth");
+  assert.equal(payload.server_url, serverUrl);
   assert.deepEqual(payload.assistant_hint, {
     type: "post_auth_help",
     message: POST_AUTH_HELP_MESSAGE,
@@ -122,6 +158,61 @@ test("auth login defaults broker payload to openagent_oauth and hides token from
   const tokenPayload = JSON.parse(fs.readFileSync(tokenCachePath(cacheRoot, payload.server_url), "utf8"));
   assert.equal(tokenPayload.token.access_token, "secret-token");
   assert.equal(fs.existsSync(pendingCachePath(cacheRoot, payload.server_url)), false);
+});
+
+test("auth login removes exchanged token and returns auth_required when MCP rejects verification", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-verify-401");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const tokenPath = tokenCachePath(cacheRoot, serverUrl);
+  const requests = [];
+  const fetchImpl = async (url, init) => {
+    requests.push(`${init?.method} ${url}`);
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+      return jsonResponse(
+        {
+          session_id: "session-1",
+          session_secret: "secret-1",
+          login_url: "https://mcp.example/openagent-auth/sessions/session-1/start",
+          status: "PENDING",
+          poll_after_ms: 1,
+          expires_at: "2030-01-01T00:00:00Z",
+        },
+        { status: 201 }
+      );
+    }
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-1") && init?.method === "GET") {
+      return jsonResponse({ status: "AUTHORIZED", expires_at: "2030-01-01T00:00:00Z" });
+    }
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-1/exchange") && init?.method === "POST") {
+      return jsonResponse({
+        token: { access_token: "rejected-token" },
+        expires_at: "2030-01-01T00:00:00Z",
+      });
+    }
+    if (String(url) === serverUrl && init?.method === "POST") {
+      assert.equal(init.headers.Authorization, "Bearer rejected-token");
+      return jsonRpcResponse({ error: "unauthorized" }, { status: 401 });
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+
+  const result = await run(
+    ["auth", "login", "--base-url", "https://mcp.example", "--cache-root", cacheRoot, "--no-browser-open"],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "auth_required");
+  assert.equal(fs.existsSync(tokenPath), false);
+  assert.deepEqual(requests, [
+    "POST https://mcp.example/api/v1/openagent-auth/sessions",
+    "GET https://mcp.example/api/v1/openagent-auth/sessions/session-1",
+    "POST https://mcp.example/api/v1/openagent-auth/sessions/session-1/exchange",
+    `POST ${serverUrl}`,
+  ]);
+  assert.doesNotMatch(result.stdout, /rejected-token/);
 });
 
 test("auth login start-only returns authorization hint without polling", async () => {
@@ -173,6 +264,192 @@ test("auth login start-only returns authorization hint without polling", async (
   assert.doesNotMatch(result.stdout, /secret-1/);
 });
 
+test("auth login start-only replaces locally active pending cache when broker reports it expired", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-start-only-expired-broker");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const oldLoginUrl = "https://mcp.example/openagent-auth/sessions/session-old/start";
+  const newLoginUrl = "https://mcp.example/openagent-auth/sessions/session-new/start";
+  const pendingPath = pendingCachePath(cacheRoot, serverUrl);
+  writePrivateJson(pendingPath, {
+    session_id: "session-old",
+    session_secret: "secret-old",
+    login_url: oldLoginUrl,
+    status: "PENDING",
+    created_at: "2026-04-23T00:00:00Z",
+    expires_at: "2030-01-01T00:00:00Z",
+  });
+  const requests = [];
+  const fetchImpl = async (url, init) => {
+    requests.push(`${init?.method} ${url}`);
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-old") && init?.method === "GET") {
+      return jsonResponse({ status: "EXPIRED" }, { status: 410 });
+    }
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+      return jsonResponse(
+        {
+          session_id: "session-new",
+          session_secret: "secret-new",
+          login_url: newLoginUrl,
+          status: "PENDING",
+          poll_after_ms: 1,
+          expires_at: "2030-01-01T00:00:00Z",
+        },
+        { status: 201 }
+      );
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+
+  const result = await run(
+    [
+      "auth",
+      "login",
+      "--start-only",
+      "--no-browser-open",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+  const pendingPayload = JSON.parse(fs.readFileSync(pendingPath, "utf8"));
+
+  assert.equal(result.code, 0);
+  assert.deepEqual(requests, [
+    "GET https://mcp.example/api/v1/openagent-auth/sessions/session-old",
+    "POST https://mcp.example/api/v1/openagent-auth/sessions",
+  ]);
+  assert.equal(payload.login_url, newLoginUrl);
+  assert.equal(payload.pending_created, true);
+  assert.equal(pendingPayload.session_id, "session-new");
+  assert.equal(pendingPayload.login_url, newLoginUrl);
+  assert.doesNotMatch(result.stdout, /secret-new|secret-old/);
+});
+
+test("auth login start-only reuses pending cache only after broker confirms it is active", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-start-only-reconciled");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const oldLoginUrl = "https://mcp.example/openagent-auth/sessions/session-1/local-start";
+  const brokerLoginUrl = "https://mcp.example/openagent-auth/sessions/session-1/broker-start";
+  const pendingPath = pendingCachePath(cacheRoot, serverUrl);
+  writeToken(cacheRoot, serverUrl, "cached-token");
+  writePrivateJson(pendingPath, {
+    session_id: "session-1",
+    session_secret: "secret-1",
+    login_url: oldLoginUrl,
+    status: "PENDING",
+    created_at: "2026-04-23T00:00:00Z",
+    expires_at: "2030-01-01T00:00:00Z",
+    poll_after_ms: 1,
+  });
+  const requests = [];
+  const fetchImpl = async (url, init) => {
+    requests.push(`${init?.method} ${url}`);
+    assert.notEqual(String(url), "https://mcp.example/api/v1/openagent-auth/sessions");
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-1") && init?.method === "GET") {
+      assert.equal(init.headers["X-OpenAgent-Session-Secret"], "secret-1");
+      return jsonResponse({
+        session_id: "session-1",
+        login_url: brokerLoginUrl,
+        status: "PENDING",
+        poll_after_ms: 7,
+        expires_at: "2030-01-01T00:00:00Z",
+      });
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+
+  const result = await run(
+    [
+      "auth",
+      "login",
+      "--start-only",
+      "--no-browser-open",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+  const pendingPayload = JSON.parse(fs.readFileSync(pendingPath, "utf8"));
+
+  assert.equal(result.code, 0);
+  assert.deepEqual(requests, ["GET https://mcp.example/api/v1/openagent-auth/sessions/session-1"]);
+  assert.equal(payload.login_url, brokerLoginUrl);
+  assert.equal(payload.pending_created, false);
+  assert.equal(payload.pending_status, "PENDING");
+  assert.equal(pendingPayload.login_url, brokerLoginUrl);
+  assert.equal(pendingPayload.poll_after_ms, 7);
+  assert.doesNotMatch(result.stdout, /secret-1/);
+});
+
+test("auth login start-only creates a new session when broker reports a terminal pending status", async () => {
+  for (const terminalStatus of ["EXPIRED", "FAILED", "EXCHANGED"]) {
+    const cacheRoot = makeTempRoot(`calle-cli-login-start-only-terminal-${terminalStatus.toLowerCase()}`);
+    const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+    const pendingPath = pendingCachePath(cacheRoot, serverUrl);
+    writePrivateJson(pendingPath, {
+      session_id: `session-old-${terminalStatus.toLowerCase()}`,
+      session_secret: "secret-old",
+      login_url: `https://mcp.example/openagent-auth/sessions/${terminalStatus}/start`,
+      status: "PENDING",
+      created_at: "2026-04-23T00:00:00Z",
+      expires_at: "2030-01-01T00:00:00Z",
+    });
+    const requests = [];
+    const fetchImpl = async (url, init) => {
+      requests.push(`${init?.method} ${url}`);
+      if (String(url).includes(`/sessions/session-old-${terminalStatus.toLowerCase()}`) && init?.method === "GET") {
+        return jsonResponse({
+          session_id: `session-old-${terminalStatus.toLowerCase()}`,
+          status: terminalStatus,
+          expires_at: "2030-01-01T00:00:00Z",
+        });
+      }
+      if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+        return jsonResponse(
+          {
+            session_id: `session-new-${terminalStatus.toLowerCase()}`,
+            session_secret: "secret-new",
+            login_url: `https://mcp.example/openagent-auth/sessions/new-${terminalStatus}/start`,
+            status: "PENDING",
+            poll_after_ms: 1,
+            expires_at: "2030-01-01T00:00:00Z",
+          },
+          { status: 201 }
+        );
+      }
+      throw new Error(`unexpected request: ${init?.method} ${url}`);
+    };
+
+    const result = await run(
+      [
+        "auth",
+        "login",
+        "--start-only",
+        "--no-browser-open",
+        "--base-url",
+        "https://mcp.example",
+        "--cache-root",
+        cacheRoot,
+      ],
+      { fetchImpl }
+    );
+    const payload = JSON.parse(result.stdout);
+    const pendingPayload = JSON.parse(fs.readFileSync(pendingPath, "utf8"));
+
+    assert.equal(result.code, 0);
+    assert.equal(requests.length, 2);
+    assert.equal(requests[1], "POST https://mcp.example/api/v1/openagent-auth/sessions");
+    assert.equal(payload.pending_created, true);
+    assert.equal(pendingPayload.session_id, `session-new-${terminalStatus.toLowerCase()}`);
+  }
+});
+
 test("auth login returns post-auth assistant hint for cached login", async () => {
   const cacheRoot = makeTempRoot("calle-cli-cached-login");
   const serverUrl = "https://mcp.example/mcp/openagent_oauth";
@@ -197,9 +474,67 @@ test("auth login returns post-auth assistant hint for cached login", async () =>
   });
 });
 
+test("auth login exchanges active pending login before returning cached token", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-pending-before-cached-login");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const tokenPath = tokenCachePath(cacheRoot, serverUrl);
+  const pendingPath = pendingCachePath(cacheRoot, serverUrl);
+  writeToken(cacheRoot, serverUrl, "stale-cached-token");
+  writePrivateJson(pendingPath, {
+    session_id: "session-1",
+    session_secret: "secret-1",
+    login_url: "https://mcp.example/openagent-auth/sessions/session-1/start",
+    status: "AUTHORIZED",
+    created_at: "2026-04-23T00:00:00Z",
+    expires_at: "2030-01-01T00:00:00Z",
+    poll_after_ms: 1,
+  });
+
+  const seenMethods = [];
+  const mcpMethods = [];
+  const fetchImpl = async (url, init) => {
+    seenMethods.push(`${init?.method} ${url}`);
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-1") && init?.method === "GET") {
+      return jsonResponse({ status: "AUTHORIZED", expires_at: "2030-01-01T00:00:00Z" });
+    }
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-1/exchange") && init?.method === "POST") {
+      return jsonResponse({
+        token: { access_token: "fresh-token" },
+        expires_at: "2030-01-01T00:00:00Z",
+      });
+    }
+    const mcpResponse = maybeMcpToolsListResponse(url, init, {
+      serverUrl,
+      accessToken: "fresh-token",
+      methods: mcpMethods,
+    });
+    if (mcpResponse) {
+      return mcpResponse;
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+
+  const result = await run(
+    ["auth", "login", "--base-url", "https://mcp.example", "--cache-root", cacheRoot, "--no-browser-open"],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+  const tokenPayload = JSON.parse(fs.readFileSync(tokenPath, "utf8"));
+
+  assert.equal(result.code, 0);
+  assert.equal(payload.status, "logged_in");
+  assert.deepEqual(seenMethods.map((entry) => entry.split(" ")[0]), ["GET", "GET", "POST", "POST", "POST", "POST"]);
+  assert.deepEqual(mcpMethods, ["initialize", "notifications/initialized", "tools/list"]);
+  assert.equal(tokenPayload.token.access_token, "fresh-token");
+  assert.equal(fs.existsSync(pendingPath), false);
+  assert.doesNotMatch(result.stdout, /stale-cached-token|fresh-token|secret-1/);
+});
+
 test("auth login forwards upstream integration context from environment", async () => {
   const cacheRoot = makeTempRoot("calle-cli-login-integration");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
   const seenHeaders = [];
+  const mcpMethods = [];
   const fetchImpl = async (url, init) => {
     seenHeaders.push(init.headers["X-Call-E-Integration"]);
     if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
@@ -224,6 +559,15 @@ test("auth login forwards upstream integration context from environment", async 
         expires_at: "2030-01-01T00:00:00Z",
       });
     }
+    const mcpResponse = maybeMcpToolsListResponse(url, init, {
+      serverUrl,
+      accessToken: "secret-token",
+      methods: mcpMethods,
+      integrationHeader: "codex/codex_plugin/0.1.2",
+    });
+    if (mcpResponse) {
+      return mcpResponse;
+    }
     throw new Error(`unexpected request: ${init?.method} ${url}`);
   };
 
@@ -244,7 +588,11 @@ test("auth login forwards upstream integration context from environment", async 
     "codex/codex_plugin/0.1.2",
     "codex/codex_plugin/0.1.2",
     "codex/codex_plugin/0.1.2",
+    "codex/codex_plugin/0.1.2",
+    "codex/codex_plugin/0.1.2",
+    "codex/codex_plugin/0.1.2",
   ]);
+  assert.deepEqual(mcpMethods, ["initialize", "notifications/initialized", "tools/list"]);
 });
 
 test("auth login resumes a pending login without creating a new session", async () => {
@@ -261,6 +609,7 @@ test("auth login resumes a pending login without creating a new session", async 
   });
 
   const seenMethods = [];
+  const mcpMethods = [];
   const fetchImpl = async (url, init) => {
     seenMethods.push(`${init?.method} ${url}`);
     assert.notEqual(String(url), "https://mcp.example/api/v1/openagent-auth/sessions");
@@ -273,6 +622,14 @@ test("auth login resumes a pending login without creating a new session", async 
         expires_at: "2030-01-01T00:00:00Z",
       });
     }
+    const mcpResponse = maybeMcpToolsListResponse(url, init, {
+      serverUrl,
+      accessToken: "resumed-token",
+      methods: mcpMethods,
+    });
+    if (mcpResponse) {
+      return mcpResponse;
+    }
     throw new Error(`unexpected request: ${init?.method} ${url}`);
   };
 
@@ -282,19 +639,22 @@ test("auth login resumes a pending login without creating a new session", async 
   );
 
   assert.equal(result.code, 0);
-  assert.deepEqual(seenMethods.map((entry) => entry.split(" ")[0]), ["GET", "POST"]);
+  assert.deepEqual(seenMethods.map((entry) => entry.split(" ")[0]), ["GET", "GET", "POST", "POST", "POST", "POST"]);
+  assert.deepEqual(mcpMethods, ["initialize", "notifications/initialized", "tools/list"]);
   assert.doesNotMatch(result.stdout, /resumed-token/);
 });
 
 test("auth login honors broker base url and channel overrides", async () => {
   const cacheRoot = makeTempRoot("calle-cli-overrides");
+  const serverUrl = "https://mcp.example/mcp/custom_oauth";
   const requests = [];
+  const mcpMethods = [];
   const fetchImpl = async (url, init) => {
     requests.push(String(url));
     if (String(url) === "https://broker.example/api/v1/openagent-auth/sessions" && init?.method === "POST") {
       const payload = JSON.parse(init.body);
       assert.equal(payload.channel, "custom_oauth");
-      assert.equal(payload.server_url, "https://mcp.example/mcp/custom_oauth");
+      assert.equal(payload.server_url, serverUrl);
       assert.equal(payload.auth_base_url, "https://mcp.example");
       return jsonResponse({
         session_id: "session-2",
@@ -313,6 +673,14 @@ test("auth login honors broker base url and channel overrides", async () => {
         token: { access_token: "override-token" },
         expires_at: "2030-01-01T00:00:00Z",
       });
+    }
+    const mcpResponse = maybeMcpToolsListResponse(url, init, {
+      serverUrl,
+      accessToken: "override-token",
+      methods: mcpMethods,
+    });
+    if (mcpResponse) {
+      return mcpResponse;
     }
     throw new Error(`unexpected request: ${init?.method} ${url}`);
   };
@@ -339,7 +707,11 @@ test("auth login honors broker base url and channel overrides", async () => {
     "https://broker.example/api/v1/openagent-auth/sessions",
     "https://broker.example/api/v1/openagent-auth/sessions/session-2",
     "https://broker.example/api/v1/openagent-auth/sessions/session-2/exchange",
+    serverUrl,
+    serverUrl,
+    serverUrl,
   ]);
+  assert.deepEqual(mcpMethods, ["initialize", "notifications/initialized", "tools/list"]);
   assert.doesNotMatch(result.stdout, /override-token/);
 });
 
@@ -1084,6 +1456,25 @@ test("mcp commands return auth_required for missing or expired tokens", async ()
   assert.match(pendingPayload.assistant_hint.message, /Before we start, please complete authorization here/);
   assert.doesNotMatch(pendingResult.stdout, /secret-1/);
 
+  writePrivateJson(pendingCachePath(cacheRoot, serverUrl), {
+    session_id: "session-expired",
+    session_secret: "secret-expired",
+    login_url: "https://mcp.example/openagent-auth/sessions/session-expired/start",
+    status: "PENDING",
+    created_at: "2026-04-23T00:00:00Z",
+    expires_at: "2000-01-01T00:00:00Z",
+  });
+  const expiredPendingResult = await run(["mcp", "tools", "--base-url", "https://mcp.example", "--cache-root", cacheRoot], {
+    fetchImpl: async () => {
+      throw new Error("fetch should not be called");
+    },
+  });
+  const expiredPendingPayload = JSON.parse(expiredPendingResult.stdout);
+  assert.equal(expiredPendingPayload.error.code, "auth_required");
+  assert.equal(expiredPendingPayload.login_url, undefined);
+  assert.equal(expiredPendingPayload.assistant_hint, undefined);
+  assert.doesNotMatch(expiredPendingResult.stdout, /session-expired|secret-expired/);
+
   writePrivateJson(tokenCachePath(cacheRoot, serverUrl), {
     token: { access_token: "expired-token" },
     expires_at: "2000-01-01T00:00:00Z",
@@ -1105,6 +1496,7 @@ test("mcp commands return auth_required for missing or expired tokens", async ()
 test("mcp 401 responses return auth_required without leaking cached token", async () => {
   const cacheRoot = makeTempRoot("calle-cli-auth-401");
   const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const tokenPath = tokenCachePath(cacheRoot, serverUrl);
   writeToken(cacheRoot, serverUrl, "stale-token");
   const fetchImpl = async (_url, init) => {
     assert.equal(init.headers.Authorization, "Bearer stale-token");
@@ -1117,7 +1509,42 @@ test("mcp 401 responses return auth_required without leaking cached token", asyn
   assert.equal(result.code, 1);
   assert.equal(payload.ok, false);
   assert.equal(payload.error.code, "auth_required");
+  assert.equal(fs.existsSync(tokenPath), false);
   assert.doesNotMatch(result.stdout, /stale-token/);
+});
+
+test("call plan removes cached token when MCP rejects it", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-call-plan-auth-401");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const tokenPath = tokenCachePath(cacheRoot, serverUrl);
+  writeToken(cacheRoot, serverUrl, "stale-call-token");
+  const fetchImpl = async (_url, init) => {
+    assert.equal(init.headers.Authorization, "Bearer stale-call-token");
+    return jsonRpcResponse({ error: "unauthorized" }, { status: 401 });
+  };
+
+  const result = await run(
+    [
+      "call",
+      "plan",
+      "--to-phone",
+      "+15551234567",
+      "--goal",
+      "Confirm appointment",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "auth_required");
+  assert.equal(fs.existsSync(tokenPath), false);
+  assert.doesNotMatch(result.stdout, /stale-call-token/);
 });
 
 test("auth status emits server-compatible telemetry without sensitive fields", async () => {

@@ -1,4 +1,13 @@
-import { pendingCachePath, readJson, removeFile, tokenCachePath, tokenIsUsable } from "./cache.js";
+import {
+  pendingCachePath,
+  pendingIsExpired,
+  readJson,
+  readPendingLogin,
+  removeFile,
+  removeTokenCache,
+  tokenCachePath,
+  tokenIsUsable,
+} from "./cache.js";
 import { DEFAULT_BASE_URL, DEFAULT_CHANNEL, DEFAULT_CLIENT_NAME, DEFAULT_SCOPE, resolveRuntimeConfig } from "./config.js";
 import { ensurePendingLogin, loginWithBroker } from "./broker-client.js";
 import {
@@ -481,9 +490,13 @@ function callStatusCommand(config, runId, timezone = null) {
     .join(" ");
 }
 
+function isActivePendingLogin(pending) {
+  return Boolean(pending && (pending.status === "PENDING" || pending.status === "AUTHORIZED") && !pendingIsExpired(pending));
+}
+
 function authRequiredPayload(config, message = "A usable CALL-E auth token is required.") {
-  const pendingDocument = readJson(pendingCachePath(config.cacheRoot, config.serverUrl));
-  const loginUrl = typeof pendingDocument?.login_url === "string" ? pendingDocument.login_url : null;
+  const pendingDocument = readPendingLogin(pendingCachePath(config.cacheRoot, config.serverUrl));
+  const loginUrl = isActivePendingLogin(pendingDocument) ? pendingDocument.login_url : null;
   const assistantHint = preAuthAssistantHint(loginUrl);
   return {
     ok: false,
@@ -496,6 +509,18 @@ function authRequiredPayload(config, message = "A usable CALL-E auth token is re
     ...(loginUrl ? { login_url: loginUrl } : {}),
     ...(assistantHint ? { assistant_hint: assistantHint } : {}),
   };
+}
+
+function invalidateTokenIfMcpRejected(error, config) {
+  if (isUnauthorizedMcpError(error)) {
+    removeTokenCache(config);
+    return true;
+  }
+  return false;
+}
+
+async function verifyCachedTokenWithMcp({ config, fetchImpl }) {
+  await listMcpTools({ config, fetchImpl });
 }
 
 function errorPayload(error, config) {
@@ -763,6 +788,7 @@ async function handleMcpCommand({ command, positional, options, config, deps, st
 
     throw new InvalidArgumentsError(`Unknown mcp command: ${command || ""}`.trim());
   } catch (error) {
+    invalidateTokenIfMcpRejected(error, config);
     if (command === "tools") {
       await captureTelemetry("mcp_tools_checked", {
         outcome: "failure",
@@ -863,6 +889,7 @@ async function handleCallCommand({ command, positional, options, config, deps, s
 
     throw new InvalidArgumentsError(`Unknown call command: ${command || ""}`.trim());
   } catch (error) {
+    invalidateTokenIfMcpRejected(error, config);
     if (command === "plan") {
       if (error instanceof AuthRequiredError || isUnauthorizedMcpError(error)) {
         await captureTelemetry("auth_required", errorTelemetryProperties(error));
@@ -910,7 +937,8 @@ export async function runCli(argv, deps = {}) {
     const pendingPath = pendingCachePath(config.cacheRoot, config.serverUrl);
     if (options.startOnly) {
       const cached = readJson(cachePath);
-      if (!options.forceLogin && tokenIsUsable(cached, config.minTtlSeconds)) {
+      const pending = readPendingLogin(pendingPath);
+      if (!options.forceLogin && tokenIsUsable(cached, config.minTtlSeconds) && !isActivePendingLogin(pending)) {
         writeJson(stdout, publicLoginPayload({
           config,
           cachePath,
@@ -952,6 +980,20 @@ export async function runCli(argv, deps = {}) {
     } catch (error) {
       await captureTelemetry("auth_login_local_failed", errorTelemetryProperties(error));
       throw error;
+    }
+    if (result.status === "logged_in") {
+      try {
+        await verifyCachedTokenWithMcp({
+          config,
+          fetchImpl: deps.fetchImpl || globalThis.fetch,
+        });
+      } catch (error) {
+        if (invalidateTokenIfMcpRejected(error, config)) {
+          await captureTelemetry("auth_login_local_failed", errorTelemetryProperties(error));
+          return writeCommandError(stdout, stderr, error, config);
+        }
+        throw error;
+      }
     }
     writeJson(stdout, publicLoginPayload({ config, ...result }));
     return 0;

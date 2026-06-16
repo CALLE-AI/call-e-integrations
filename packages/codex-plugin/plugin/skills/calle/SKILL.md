@@ -92,10 +92,13 @@ uncertain, when auth fails, or when the user asks to verify CALL-E setup:
 
 1. Check CLI availability with `--help`.
 2. Run `auth status`.
-3. If `auth status` reports `usable: false`, do not continue to call planning
-   or `mcp tools` yet. Run blocking `auth login` and keep that command running
-   until it exits. Do not use `auth login --start-only --no-browser-open` for
-   the default Codex plugin flow.
+3. If `auth status` reports `usable: false`, or if this flow is running after
+   any command returned `auth_required`, do not continue to call planning or
+   `mcp tools` yet. Run blocking `auth login` and keep that command running
+   until it exits. If the preceding command returned `auth_required` while
+   `auth status` still reported `usable: true`, add `--force-login` so the CLI
+   does not rely on a locally usable but server-rejected token. Do not use
+   `auth login --start-only --no-browser-open` for the default Codex plugin flow.
 4. When `auth login` prints the brokered login URL to command output or stderr,
    immediately show the first authorization help with that URL. Keep waiting
    for the same `auth login` command to complete; do not ask the user to reply
@@ -208,7 +211,7 @@ add it after `[Transcript]` under a short heading. Base all final sections only
 on the JSON returned by `call run` or `call status`; do not invent a transcript.
 
 If any command returns `auth_required`, switch to the readiness flow, complete
-login, and then retry the original operation after login completes.
+fresh login, and then retry the original operation after login completes.
 
 Use `references/commands.md` for exact command examples, supported options, and
 JSON handling rules.

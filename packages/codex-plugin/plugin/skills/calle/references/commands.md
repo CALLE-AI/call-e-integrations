@@ -53,10 +53,13 @@ Rules:
   name, tool names, or MCP service behind it.
 - Whenever this Codex plugin is actively invoked, run `auth status` before call
   planning or tool listing.
-- If `auth status` reports `usable: false`, do not call `mcp tools` or
-  `call plan` yet. Run blocking `auth login` and keep that command running
-  until it exits. Do not use `auth login --start-only --no-browser-open` for
-  the default Codex plugin flow.
+- If `auth status` reports `usable: false`, or if this auth flow is recovering
+  from an `auth_required` result, do not call `mcp tools` or `call plan` yet.
+  Run blocking `auth login` and keep that command running until it exits. If
+  the preceding command returned `auth_required` while `auth status` still
+  reported `usable: true`, add `--force-login` so the CLI does not rely on a
+  locally usable but server-rejected token. Do not use
+  `auth login --start-only --no-browser-open` for the default Codex plugin flow.
 - When `auth login` prints the brokered login URL to command output or stderr,
   show the first authorization help with that URL. Keep waiting for the same
   command to complete; do not ask the user to reply after browser
@@ -64,7 +67,8 @@ Rules:
 - If successful `auth login` output includes `assistant_hint.message`, show it
   as the post-authorization success note. Then continue the original call
   workflow if the user already gave enough details.
-- If a command returns `auth_required`, switch back to this auth flow.
+- If a command returns `auth_required`, switch back to this auth flow and
+  complete fresh login before retrying the original command.
 - If `mcp tools` succeeds, confirm that `plan_call`, `run_call`, and
   `get_call_run` are present.
 - Do not run `call run` during setup verification.
