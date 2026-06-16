@@ -1,5 +1,14 @@
 # @call-e/cli
 
+## 0.3.6
+
+### Patch Changes
+
+- [`6735d8a`](https://github.com/CALLE-AI/call-e-integrations/commit/6735d8a37ac3ca04a89d4ee2bc74afe44ed7a500) - Harden brokered auth cache reconciliation, prefer active pending logins over stale cached tokens, invalidate cached tokens rejected by MCP, and update Codex plugin auth recovery guidance.
+
+- Updated dependencies [[`6735d8a`](https://github.com/CALLE-AI/call-e-integrations/commit/6735d8a37ac3ca04a89d4ee2bc74afe44ed7a500)]:
+  - @call-e/core@0.2.2
+
 ## 0.3.5
 
 ### Patch Changes
