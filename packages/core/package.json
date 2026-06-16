@@ -1,6 +1,6 @@
 {
   "name": "@call-e/core",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Shared CALL-E runtime helpers for brokered auth, local token cache, and MCP HTTP calls.",
   "type": "module",
   "license": "MIT",
