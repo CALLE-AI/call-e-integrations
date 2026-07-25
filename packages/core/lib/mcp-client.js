@@ -53,6 +53,7 @@ function parseResponseBody(text) {
 const RETRYABLE_STATUS_CODES = new Set([429, 502, 503, 504]);
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 500;
+const RETRYABLE_JSON_RPC_METHODS = new Set(["initialize", "notifications/initialized", "tools/list"]);
 
 function retryDelayMs(attempt, retryAfterHeader) {
   const retryAfter = Number(retryAfterHeader);
@@ -64,6 +65,7 @@ function retryDelayMs(attempt, retryAfterHeader) {
 
 async function requestJsonRpc(fetchImpl, url, { headers, payload, timeoutMs, sleepImpl = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   let lastError;
+  const canRetry = RETRYABLE_JSON_RPC_METHODS.has(payload?.method);
   for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -72,20 +74,29 @@ async function requestJsonRpc(fetchImpl, url, { headers, payload, timeoutMs, sle
     }
 
     try {
-      const response = await fetchImpl(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-      const text = await response.text();
-      let body = null;
+      let response;
       try {
-        body = parseResponseBody(text);
-      } catch {
-        body = null;
+        response = await fetchImpl(url, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+      } catch (error) {
+        if (error?.name === "AbortError") {
+          throw new McpHttpError(`MCP request timed out for ${payload.method}`, { code: "http_error" });
+        }
+        lastError = error;
+        if (canRetry && attempt < MAX_RETRY_ATTEMPTS) {
+          await sleepImpl(retryDelayMs(attempt, null));
+          continue;
+        }
+        throw error;
       }
+
+      const text = await response.text();
       const responseHeaders = Object.fromEntries(response.headers.entries());
+      let body = null;
 
       if (!response.ok) {
         const err = new McpHttpError(`MCP HTTP ${response.status} for ${payload.method}`, {
@@ -94,12 +105,29 @@ async function requestJsonRpc(fetchImpl, url, { headers, payload, timeoutMs, sle
           payload: body,
           headers: responseHeaders,
         });
-        if (RETRYABLE_STATUS_CODES.has(response.status) && attempt < MAX_RETRY_ATTEMPTS) {
+        if (canRetry && RETRYABLE_STATUS_CODES.has(response.status) && attempt < MAX_RETRY_ATTEMPTS) {
           lastError = err;
           await sleepImpl(retryDelayMs(attempt, responseHeaders["retry-after"]));
           continue;
         }
         throw err;
+      }
+
+      try {
+        body = text.trim() ? parseResponseBody(text) : null;
+        if (body !== null && (typeof body !== "object" || Array.isArray(body))) {
+          throw new Error("Expected JSON object response");
+        }
+      } catch (error) {
+        if (error instanceof SyntaxError || (error instanceof Error && error.message === "Expected JSON object response")) {
+          throw new McpHttpError(`Expected JSON object response for ${payload.method}`, {
+            statusCode: response.status,
+            responseText: text,
+            headers: responseHeaders,
+            code: "mcp_error",
+          });
+        }
+        throw error;
       }
 
       if (body?.error) {
@@ -117,14 +145,11 @@ async function requestJsonRpc(fetchImpl, url, { headers, payload, timeoutMs, sle
 
       return { body, headers: responseHeaders };
     } catch (error) {
-      if (error?.name === "AbortError") {
-        throw new McpHttpError(`MCP request timed out for ${payload.method}`, { code: "http_error" });
-      }
       if (error instanceof McpHttpError) {
         throw error;
       }
       lastError = error;
-      if (attempt < MAX_RETRY_ATTEMPTS) {
+      if (canRetry && attempt < MAX_RETRY_ATTEMPTS) {
         await sleepImpl(retryDelayMs(attempt, null));
         continue;
       }

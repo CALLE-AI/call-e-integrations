@@ -126,7 +126,7 @@ test("auth login defaults broker payload to openagent_oauth and hides token from
 
 test("auth login start-only returns authorization hint without polling", async () => {
   const cacheRoot = makeTempRoot("calle-cli-login-start-only");
-  const loginUrl = "https://mcp.example/openagent-auth/sessions/session-1/start";
+  const loginUrl = "http://127.0.0.1:1234/openagent-auth/sessions/session-1/start";
   const requests = [];
   const fetchImpl = async (url, init) => {
     requests.push(`${init?.method} ${url}`);
@@ -384,6 +384,18 @@ test("auth status reports missing, usable, and expired cache states", async () =
   assert.equal(payload.pending_status, "PENDING");
   assert.equal(payload.pending_login_url, "https://mcp.example/openagent-auth/sessions/session-1/start");
   assert.doesNotMatch(result.stdout, /secret-1/);
+
+  writePrivateJson(pendingCachePath(cacheRoot, serverUrl), {
+    session_id: "session-2",
+    session_secret: "secret-2",
+    login_url: "http://127.0.0.1:1234/openagent-auth/sessions/session-2/start",
+    status: "PENDING",
+    created_at: "2026-04-23T00:00:00Z",
+  });
+  result = await run(["auth", "status", "--base-url", "https://mcp.example", "--cache-root", cacheRoot]);
+  payload = JSON.parse(result.stdout);
+  assert.equal(payload.pending_exists, true);
+  assert.equal(payload.pending_login_url, "http://127.0.0.1:1234/openagent-auth/sessions/session-2/start");
 });
 
 test("auth logout removes token and pending cache", async () => {
@@ -1083,6 +1095,24 @@ test("mcp commands return auth_required for missing or expired tokens", async ()
   assert.equal(pendingPayload.login_url, "https://mcp.example/openagent-auth/sessions/session-1/start");
   assert.match(pendingPayload.assistant_hint.message, /Before we start, please complete authorization here/);
   assert.doesNotMatch(pendingResult.stdout, /secret-1/);
+
+  writePrivateJson(pendingCachePath(cacheRoot, serverUrl), {
+    session_id: "session-2",
+    session_secret: "secret-2",
+    login_url: "file:///tmp/injected",
+    status: "PENDING",
+    created_at: "2026-04-23T00:00:00Z",
+  });
+  const unsafePendingResult = await run(["mcp", "tools", "--base-url", "https://mcp.example", "--cache-root", cacheRoot], {
+    fetchImpl: async () => {
+      throw new Error("fetch should not be called");
+    },
+  });
+  const unsafePendingPayload = JSON.parse(unsafePendingResult.stdout);
+  assert.equal(unsafePendingPayload.error.code, "auth_required");
+  assert.equal(unsafePendingPayload.login_url, undefined);
+  assert.equal(unsafePendingPayload.assistant_hint, undefined);
+  assert.doesNotMatch(unsafePendingResult.stdout, /file:\/\/\/tmp\/injected/);
 
   writePrivateJson(tokenCachePath(cacheRoot, serverUrl), {
     token: { access_token: "expired-token" },

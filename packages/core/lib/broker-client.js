@@ -2,6 +2,29 @@ import { pendingCachePath, pendingIsExpired, readPendingLogin, removeFile, token
 import { INTEGRATION_HEADER, SESSION_SECRET_HEADER } from "./constants.js";
 import { requestJson } from "./http.js";
 
+const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+
+function normalizeHostname(hostname) {
+  return hostname.replace(/^\[/u, "").replace(/\]$/u, "").toLowerCase();
+}
+
+export function isSafeBrokerLoginUrl(rawUrl) {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol === "https:") {
+      return true;
+    }
+
+    return parsed.protocol === "http:" && LOOPBACK_HOSTNAMES.has(normalizeHostname(parsed.hostname));
+  } catch {
+    return false;
+  }
+}
+
+export function sanitizeBrokerLoginUrl(rawUrl) {
+  return isSafeBrokerLoginUrl(rawUrl) ? new URL(rawUrl).href : null;
+}
+
 function integrationHeaders(config) {
   return config?.integrationHeader ? { [INTEGRATION_HEADER]: config.integrationHeader } : {};
 }
@@ -95,16 +118,7 @@ export async function loginWithBroker(config, {
 
   const { pending, created } = await ensurePendingLogin(config, { fetchImpl, forceLogin });
   if (created) {
-    let safeLoginUrl;
-    try {
-      const parsed = new URL(pending.login_url);
-      if (parsed.protocol !== "https:") {
-        throw new Error("non-https");
-      }
-      safeLoginUrl = parsed.href;
-    } catch {
-      safeLoginUrl = null;
-    }
+    const safeLoginUrl = sanitizeBrokerLoginUrl(pending.login_url);
     stderr("Open the brokered login URL in your browser to continue:");
     stderr(safeLoginUrl ?? "[authorization URL unavailable]");
     if (!noBrowserOpen && safeLoginUrl) {

@@ -1,6 +1,6 @@
 import { pendingCachePath, readJson, removeFile, tokenCachePath, tokenIsUsable } from "./cache.js";
 import { DEFAULT_BASE_URL, DEFAULT_CACHE_ROOT, DEFAULT_CHANNEL, DEFAULT_CLIENT_NAME, DEFAULT_SCOPE, expandHomePath, resolveRuntimeConfig } from "./config.js";
-import { ensurePendingLogin, loginWithBroker } from "./broker-client.js";
+import { ensurePendingLogin, loginWithBroker, sanitizeBrokerLoginUrl } from "./broker-client.js";
 import {
   AuthRequiredError,
   McpHttpError,
@@ -18,16 +18,7 @@ class InvalidArgumentsError extends Error {
 }
 
 export function preAuthHelpMessage(loginUrl) {
-  let safeUrl;
-  try {
-    const parsed = new URL(loginUrl);
-    if (parsed.protocol !== "https:") {
-      throw new Error("non-https");
-    }
-    safeUrl = parsed.href;
-  } catch {
-    safeUrl = "[authorization URL unavailable]";
-  }
+  const safeUrl = sanitizeBrokerLoginUrl(loginUrl) ?? "[authorization URL unavailable]";
   return `Hi, I'm CALL-E 👋
 
 I can help you make phone calls, ask for information, and handle phone-related tasks. I'll also keep you updated on the call status, what was discussed, and the key points.
@@ -385,24 +376,26 @@ function postAuthAssistantHint(status) {
 }
 
 function preAuthAssistantHint(loginUrl) {
-  if (typeof loginUrl !== "string" || !loginUrl.trim()) {
+  const safeLoginUrl = sanitizeBrokerLoginUrl(loginUrl);
+  if (!safeLoginUrl) {
     return null;
   }
   return {
     type: PRE_AUTH_HELP_HINT_TYPE,
-    message: preAuthHelpMessage(loginUrl.trim()),
+    message: preAuthHelpMessage(safeLoginUrl),
   };
 }
 
 function publicPendingLoginPayload({ config, cachePath, pendingPath, pending, created }) {
-  const assistantHint = preAuthAssistantHint(pending.login_url);
+  const loginUrl = sanitizeBrokerLoginUrl(pending.login_url);
+  const assistantHint = preAuthAssistantHint(loginUrl);
   return {
     status: "login_required",
     broker_base_url: config.brokerBaseUrl,
     server_url: config.serverUrl,
     pending_status: pending.status,
     pending_created: created,
-    login_url: pending.login_url,
+    ...(loginUrl ? { login_url: loginUrl } : {}),
     ...(assistantHint ? { assistant_hint: assistantHint } : {}),
   };
 }
@@ -423,16 +416,7 @@ function statusPayload(config) {
   const pendingPath = pendingCachePath(config.cacheRoot, config.serverUrl);
   const cacheDocument = readJson(cachePath);
   const pendingDocument = readJson(pendingPath);
-  const rawPendingLoginUrl = typeof pendingDocument?.login_url === "string" ? pendingDocument.login_url : null;
-  let pendingLoginUrl = null;
-  if (rawPendingLoginUrl) {
-    try {
-      const parsed = new URL(rawPendingLoginUrl);
-      pendingLoginUrl = parsed.protocol === "https:" ? parsed.href : null;
-    } catch {
-      pendingLoginUrl = null;
-    }
-  }
+  const pendingLoginUrl = sanitizeBrokerLoginUrl(typeof pendingDocument?.login_url === "string" ? pendingDocument.login_url : null);
   return {
     server_url: config.serverUrl,
     cache_exists: cacheDocument !== null,
@@ -508,7 +492,7 @@ function callStatusCommand(config, runId, timezone = null) {
 
 function authRequiredPayload(config, message = "A usable CALL-E auth token is required.") {
   const pendingDocument = readJson(pendingCachePath(config.cacheRoot, config.serverUrl));
-  const loginUrl = typeof pendingDocument?.login_url === "string" ? pendingDocument.login_url : null;
+  const loginUrl = sanitizeBrokerLoginUrl(typeof pendingDocument?.login_url === "string" ? pendingDocument.login_url : null);
   const assistantHint = preAuthAssistantHint(loginUrl);
   return {
     ok: false,

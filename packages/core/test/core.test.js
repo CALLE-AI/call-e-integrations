@@ -27,6 +27,7 @@ import {
 import {
   createBrokerSession,
   normalizePendingSession,
+  isSafeBrokerLoginUrl,
 } from "@call-e/core/broker-client";
 import {
   McpHttpError,
@@ -169,6 +170,14 @@ test("broker client sends integration headers and normalizes pending sessions", 
   assert.ok(Date.parse(pending.created_at));
 });
 
+test("broker client accepts https and loopback login URLs only", () => {
+  assert.equal(isSafeBrokerLoginUrl("https://broker.test/openagent-auth/sessions/session-1/start"), true);
+  assert.equal(isSafeBrokerLoginUrl("http://127.0.0.1:1234/openagent-auth/sessions/session-1/start"), true);
+  assert.equal(isSafeBrokerLoginUrl("http://[::1]:1234/openagent-auth/sessions/session-1/start"), true);
+  assert.equal(isSafeBrokerLoginUrl("http://example.test/openagent-auth/sessions/session-1/start"), false);
+  assert.equal(isSafeBrokerLoginUrl("file:///tmp/injected"), false);
+});
+
 test("MCP client initializes a session and lists tools", async () => {
   const config = mcpConfig(makeTempRoot("calle-core-mcp-tools"));
   const calls = [];
@@ -232,6 +241,92 @@ test("MCP client calls tools through an initialized session", async () => {
     fetchImpl,
   });
   assert.deepEqual(result, { content: [{ type: "text", text: "ok" }] });
+});
+
+test("MCP client retries safe session setup requests but not tool calls", async () => {
+  const config = mcpConfig(makeTempRoot("calle-core-mcp-retry"));
+  const methods = [];
+  let initializeAttempts = 0;
+  let toolsListAttempts = 0;
+  let toolsCallAttempts = 0;
+  const fetchImpl = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    methods.push(payload.method);
+    if (payload.method === "initialize") {
+      initializeAttempts += 1;
+      if (initializeAttempts === 1) {
+        return jsonResponse({}, { status: 503, statusText: "Service Unavailable" });
+      }
+      return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "mcp-session-retry" } });
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonResponse({});
+    }
+    if (payload.method === "tools/list") {
+      toolsListAttempts += 1;
+      if (toolsListAttempts === 1) {
+        return jsonResponse({}, { status: 503, statusText: "Service Unavailable" });
+      }
+      return jsonResponse({ result: { tools: [{ name: "plan_call" }] } });
+    }
+    if (payload.method === "tools/call") {
+      toolsCallAttempts += 1;
+      return jsonResponse({}, { status: 503, statusText: "Service Unavailable" });
+    }
+    throw new Error(`Unexpected MCP method ${payload.method}`);
+  };
+
+  const listResult = await listMcpTools({ config, fetchImpl });
+  assert.deepEqual(listResult, { tools: [{ name: "plan_call" }] });
+  assert.equal(initializeAttempts, 2);
+  assert.equal(toolsListAttempts, 2);
+
+  await assert.rejects(
+    () => callMcpTool({ config, toolName: "plan_call", fetchImpl }),
+    (error) => {
+      assert.ok(error instanceof McpHttpError);
+      assert.equal(error.statusCode, 503);
+      return true;
+    },
+  );
+  assert.equal(toolsCallAttempts, 1);
+  assert.equal(methods.filter((method) => method === "tools/call").length, 1);
+});
+
+test("MCP client fails fast on malformed JSON without retrying", async () => {
+  const config = mcpConfig(makeTempRoot("calle-core-mcp-malformed-json"));
+  const methods = [];
+  const fetchImpl = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    methods.push(payload.method);
+    if (payload.method === "initialize") {
+      return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "mcp-session-json" } });
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonResponse({});
+    }
+    if (payload.method === "tools/list") {
+      return {
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        headers: new Headers({ "content-type": "application/json" }),
+        async text() {
+          return "{not-json";
+        },
+      };
+    }
+    throw new Error(`Unexpected MCP method ${payload.method}`);
+  };
+
+  await assert.rejects(
+    () => listMcpTools({ config, fetchImpl }),
+    (error) => {
+      assert.ok(error instanceof McpHttpError);
+      return true;
+    },
+  );
+  assert.deepEqual(methods.filter((method) => method === "tools/list"), ["tools/list"]);
 });
 
 test("MCP client forwards request meta on tool calls", async () => {
