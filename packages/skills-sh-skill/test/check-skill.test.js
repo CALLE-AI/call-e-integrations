@@ -103,10 +103,8 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
   writeFile(
     path.join(repoRoot, "README.md"),
     [
-      "packages/skills-sh-skill",
-      "skills/calle",
-      "docs/install/skills-sh-skill.md",
-      "user-level/global scope",
+      "CALL-E Integrations",
+      "docs/install/CALL-E-installation-guide.md",
       "",
     ].join("\n"),
   );
@@ -166,6 +164,12 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
 
 test("current skills.sh skill metadata is valid", () => {
   assert.deepEqual(checkSkillsShSkill({ packageRoot: PACKAGE_ROOT, repoRoot: REPO_ROOT }), []);
+});
+
+test("allows root README without skills.sh integration entry points", () => {
+  const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-skills-sh-skill-concise-readme"));
+
+  assert.deepEqual(checkSkillsShSkill({ packageRoot, repoRoot }), []);
 });
 
 test("reports a missing calle skill", () => {

@@ -1,14 +1,16 @@
 <div align="center">
 
-# CALL-E 📞
+# CALL-E Integrations
 
-**The voice layer for AI agents.**
+**CALL-E is your AI agent for getting phone work done.**
 
-Your agent can think, plan, and write. CALL-E picks up the phone — booking appointments, calling businesses, following up, waiting on hold, and reporting the result back to you.
+Tell CALL-E your goal, and it handles the phone task end-to-end: it plans, calls, adapts in real time, follows through, and improves along the way.
 
-**Less thinking. More doing. CALL-E handles the calls.**
+Use CALL-E directly, or integrate it into agents, platforms, and business systems through Skills, Plugins, SDKs, or APIs.
 
-[Website](https://www.heycall-e.com/) · [Try on ClawHub](https://clawhub.ai/call-e-dev/phone-call-calle) · [Quick install](#-quick-install) · [Docs](#-developer-docs) · [Troubleshooting](#-troubleshooting) · [Discord](https://discord.gg/6AbXUzUV8w)
+New users get 20 free calls to get started.
+
+[Website](https://www.heycall-e.com/) · [Try on ClawHub](https://clawhub.ai/call-e-dev/phone-call-calle) · [Get started](#-get-started) · [Troubleshooting](#-troubleshooting) · [Discord](https://discord.gg/6AbXUzUV8w)
 
 ![npm](https://img.shields.io/npm/v/@call-e/cli?label=%40call-e%2Fcli)
 ![Codex](https://img.shields.io/badge/Codex-CALL--E-black)
@@ -20,34 +22,286 @@ Your agent can think, plan, and write. CALL-E picks up the phone — booking app
 
 </div>
 
-> [!IMPORTANT]
-> CALL-E can place real outbound phone calls. Integrations must **plan first** and only start a real call when the user clearly intends to place that call. Agent-facing flows should prefer `calle call start` so execution confirmation data stays inside the CLI.
+## 💡 Why CALL-E is Different
 
-## 🚀 Quick install
+Unlike traditional voice/calling platforms that rely on prebuilt bots and high-volume calls, CALL-E focuses on goal-driven tasks. You provide a goal, and CALL-E manages the call workflow, adapts dynamically, and delivers structured results, enabling automation of low-frequency, personalized phone tasks that were previously too expensive or custom to automate.
 
-For most users, the simplest path is to ask your agent to install the portable
-CALL-E skill at user-level/global scope, so the same agent can use `calle`
-across projects.
+## ✨ Key Features
+
+- **Quick Start** - Start using CALL-E within minutes via direct use or integration through Skills, Plugins, SDKs, or APIs.
+- **Goal-Driven Long Tasks** *(in development)* - Tell CALL-E the goal, and it builds the path to get there. It plans the overall task, designs the calling approach, executes the calls, learns from real outcomes, and continuously improves its strategy over time. CALL-E is not just making calls one by one — it is learning how to achieve each phone-based goal more reliably.
+- **Reliable Voice Interaction** - CALL-E handles natural conversation flow, tone, interruptions, and changing call conditions in real time.
+
+## 🧩 Other Features
+
+| Feature | Description |
+| --- | --- |
+| Live Task Progress | Track task from planning to final result with status, activity history, call outcomes, and next steps. |
+| Smart Goal Clarification | Ask missing details before execution (who, when, language, success criteria). |
+| Managed Call Execution | Handle number/line setup, outbound dialing, monitoring, and result capture. |
+| Actionable Call Results | Return summaries, transcripts, metadata, and recommended next steps. |
+| Scheduled & Batch Calling | Schedule individual or batch calls; clarify timing when needed. |
+| In-Task Optimization | Learn from prior attempts and adjust next steps. |
+| Continuous Improvement | Improve over time based on historical patterns and outcomes. |
+| Real-World Voice Runtime | Handle live pickup, voicemail, screening, hold, transfers, silence, interruptions. |
+| Use Wherever Work Happens | Integrate via Skills, Plugins, MCP, ChatGPT Apps, SDKs, APIs, or enterprise systems. |
+| Built-In Safety & Governance | Number governance, rate limits, concurrency controls, blocklists, kill switches, redacted logs, audit trails. |
+
+## 🚀 Get Started
+
+Choose the integration path that matches how you want to use CALL-E.
+
+| Goal | Use | Start here |
+| --- | --- | --- |
+| Install CALL-E into an AI agent | Agent Install | Copy the stable prompt below or use the [manual install guide](./docs/install/install-guide.md). |
+| Connect a Streamable HTTP MCP client | MCP | Use the [`openagent_oauth` MCP guide](./docs/mcp/openagent-oauth.md). |
+| Add CALL-E with a server SDK | SDK | Install the published TypeScript or Python SDK and follow the [SDK docs](https://docs.heycall-e.com/#/sdks). |
+| Call CALL-E from your backend directly | API | Use the [Developer API reference](https://docs.heycall-e.com/#/api-reference) and curl example below. |
+
+---
+
+### 🤖 Agent Install
+
+For agent installs, the simplest path is to ask your agent to install CALL-E at
+user-level/global scope, so the same agent can use `calle` across projects.
 
 Copy this stable prompt into a local agent that can run shell commands or
 install skills:
 
 ```text
-Install CALL-E for me: https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/docs/install/CALL-E-installation-guide.md
+Install CALL-E for me: https://open.heycall-e.com/document/mcp-archive/CALL-E-installation-guide.md
 ```
 
-The linked guide contains the install steps, so the prompt can stay unchanged
-when those steps need to evolve.
+The linked guide contains the full install steps, so this prompt can stay
+unchanged when those steps evolve.
 
-New users get 20 free calls to get started.
+For manual setup, see the [manual install guide](./docs/install/install-guide.md).
 
-If the prompt flow is not supported in your client, use the
-[manual install guide](./docs/install/install-guide.md). It covers Codex,
-Claude Code, Cursor, OpenClaw, Hermes Agent, CLI-only, and MCP-only setup.
-The native Claude Code plugin path uses
-`/plugin marketplace add https://github.com/CALLE-AI/call-e-integrations.git#@call-e/claude-plugin@latest`.
+> ⚠️ **Safety notice:** CALL-E can place real outbound phone calls. Always verify the plan, recipient, and user intent before running a phone task.
 
-Install guides: [Manual](./docs/install/install-guide.md) · [CLI](./docs/install/cli.md) · [Codex](./docs/install/codex-plugin.md) · [skills.sh](./docs/install/skills-sh-skill.md) · [Claude Code](./docs/install/claude-plugin.md) · [Cursor MCP](./docs/install/cursor.md) · [Cursor plugin](./docs/install/cursor-plugin.md) · [OpenClaw source](./docs/install/openclaw-cli-skill.md)
+---
+
+### SDK
+
+CALL-E server SDKs are published for trusted backend services, workers, and
+automation systems that create and monitor call tasks.
+
+Start with the public docs:
+
+- [Quickstart](https://docs.heycall-e.com/#/quickstart)
+- [SDKs](https://docs.heycall-e.com/#/sdks)
+
+You can view your API keys in the
+[CALL-E dashboard](https://dashboard.heycall-e.com/account/api-keys).
+
+Install the SDK package for your runtime:
+
+```bash
+pnpm add @call-e/calle
+pip install calle-ai
+```
+
+Current server SDK packages:
+
+- TypeScript: `@call-e/calle@0.2.0`
+- Python: `calle-ai==0.2.0`, imported as `calle`
+
+Set `CALLE_API_KEY` before running the examples:
+
+```bash
+export CALLE_API_KEY="calle_live_key"
+```
+
+TypeScript **Create and wait** sample:
+
+```ts
+import { CalleClient } from "@call-e/calle";
+
+const client = new CalleClient({
+  apiKey: process.env.CALLE_API_KEY!,
+});
+
+const call = await client.calls.createAndWait({
+  task: "Call <E164_PHONE> and ask whether they can hear clearly.",
+  resultSchema: {
+    type: "object",
+    required: ["can_hear_clearly"],
+    properties: {
+      can_hear_clearly: { type: "string", enum: ["yes", "no", "unknown"] },
+    },
+  },
+});
+
+console.log(call.status);
+console.log(call.structuredResult);
+console.log(call.taskCompleted, call.completionConfidence, call.evidence);
+```
+
+Python **Create and wait** sample:
+
+```python
+import os
+from calle import CalleClient
+
+client = CalleClient(api_key=os.environ["CALLE_API_KEY"])
+
+call = client.calls.create_and_wait(
+    task="Call <E164_PHONE> and ask whether they can hear clearly.",
+    result_schema={
+        "type": "object",
+        "required": ["can_hear_clearly"],
+        "properties": {
+            "can_hear_clearly": {"type": "string", "enum": ["yes", "no", "unknown"]},
+        },
+    },
+)
+
+print(call["status"])
+print(call["structured_result"])
+print(call["task_completed"], call["completion_confidence"], call["evidence"])
+```
+
+---
+
+### API
+
+CALL-E Developer API is available for trusted backend services, workers, and
+workflow systems that need direct HTTP access.
+
+Start with the public docs:
+
+- [Quickstart](https://docs.heycall-e.com/#/quickstart)
+- [Authentication](https://docs.heycall-e.com/#/authentication)
+- [Calls](https://docs.heycall-e.com/#/calls)
+- [API Reference](https://docs.heycall-e.com/#/api-reference)
+
+You can view your API keys in the
+[CALL-E dashboard](https://dashboard.heycall-e.com/account/api-keys).
+
+Set your API key and base URL before running curl examples:
+
+```bash
+export CALLE_API_KEY="calle_live_key"
+export CALLE_BASE_URL="https://api.heycall-e.com"
+```
+
+The Developer API supports:
+
+- `POST /v1/calls` to create one-recipient or batch call tasks.
+- `GET /v1/calls/{call_id}` to read status, summaries, structured results, and transcripts.
+- `GET /v1/calls/{call_id}/events` to list developer-facing call events.
+- `POST /calle/webhook` for terminal call result webhooks.
+
+Object result schemas are strict by default: fields not declared in
+`properties` are rejected before `structured_result` is returned.
+
+API **Create Call** sample:
+
+```bash
+curl "$CALLE_BASE_URL/v1/calls" \
+  --request POST \
+  --header "Authorization: Bearer $CALLE_API_KEY" \
+  --header 'Content-Type: application/json' \
+  --header 'Idempotency-Key: wf_123_friday_lunch' \
+  --data '{
+    "task": "Call each recipient and ask whether they can attend Friday lunch in San Francisco.",
+    "recipients": [
+      {
+        "phones": ["<E164_PHONE>"],
+        "region": "US",
+        "locale": "en-US"
+      }
+    ],
+    "result_schema": {
+      "type": "object",
+      "required": ["completed_count"],
+      "properties": {
+        "completed_count": {
+          "type": "integer"
+        }
+      }
+    },
+    "recipient_result_schema": {
+      "type": "object",
+      "required": ["can_attend"],
+      "properties": {
+        "can_attend": {
+          "type": "string",
+          "enum": ["yes", "no", "unknown"]
+        }
+      }
+    },
+    "metadata": {
+      "workflow_run_id": "wf_123"
+    },
+    "webhook_url": "https://example.com/calle/webhook"
+  }'
+```
+
+API **Read Result** sample:
+
+```bash
+curl "$CALLE_BASE_URL/v1/calls/call_123" \
+  --header "Authorization: Bearer $CALLE_API_KEY"
+```
+
+Terminal calls include schema-valid `structured_result`, task-level outcome
+fields from the post-call summary, recipient-level structured results, and
+attempt transcripts when available:
+
+```json
+{
+  "status": "completed",
+  "task_completed": true,
+  "completion_confidence": {"score": 0.92, "label": "high"},
+  "evidence": ["The recipient said they can attend Friday lunch."],
+  "structured_result": {
+    "completed_count": 1
+  },
+  "recipients": [
+    {
+      "structured_result": {
+        "can_attend": "yes"
+      },
+      "attempts": [
+        {
+          "transcript_turns": [
+            {"offset_seconds": 0, "speaker": "bot", "text": "Hi, I am calling about Friday lunch."},
+            {"offset_seconds": 4, "speaker": "user", "text": "Yes, I can attend."}
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## 🌍 Supported Regions and Languages
+
+CALL-E calling supports the following recipient region codes and spoken
+languages. Use these region codes with the SDK and API recipient settings.
+
+| Recipient region code | Language(s) |
+| --- | --- |
+| US | English |
+| SG | English |
+| MY | English |
+| IN | English, Hindi |
+| AE | English, Arabic |
+| AU | English |
+| CA | English |
+| GB | English |
+| VN | Vietnamese |
+| DE | English, German |
+| JP | Japanese |
+| FR | French |
+| MX | Spanish |
+| BR | Portuguese |
+| ID | English |
+| PH | English |
+| KE | English |
 
 ## 🧯 Troubleshooting
 
@@ -58,119 +312,6 @@ It covers local agent environment issues such as Cursor sandbox/network
 restrictions, `CONNECT tunnel failed, response 403`, `calle auth login` failures,
 and verification that `plan_call`, `run_call`, and `get_call_run` are available.
 
-## 🧠 What CALL-E gives your agent
-
-```text
-plan_call → run_call → get_call_run
-```
-
-| Capability | Surface |
-| --- | --- |
-| Brokered browser login | `calle auth login` |
-| Private local token cache | `~/.calle-mcp/cli` |
-| MCP client configuration | Streamable HTTP URL or `calle mcp config` |
-| Tool discovery | `calle mcp tools` |
-| Call planning | `calle call plan` or MCP `plan_call` |
-| Real outbound call execution | `calle call start`, `calle call run`, or MCP `run_call` |
-| Status, activity, summary, details, transcript | `calle call status` or MCP `get_call_run` |
-| Agent-client UX | `$calle` in Codex; `calle` through skills.sh; `/calle:calle` in Claude Code; `calle` MCP/skill in Cursor; **Phone Call - CALL-E** in OpenClaw; ClawHub Prompt flow in Hermes Agent |
-
-`plan_call` creates the call plan and returns run credentials. `run_call` starts the real outbound call. `get_call_run` returns progress and final results when available.
-
-## ⚡ CLI command map
-
-<!-- sync-with: packages/cli/docs/cli-reference.md#commands -->
-
-```bash
-calle auth login
-calle auth login --start-only --no-browser-open
-calle auth status
-calle auth logout
-
-calle mcp config
-calle mcp tools
-calle mcp call plan_call --args-json '{"to_phones":["+15551234567"],"goal":"Confirm the appointment"}'
-
-calle call plan --to-phone +15551234567 --goal "Confirm the appointment"
-calle call start --to-phone +15551234567 --goal "Confirm the appointment"
-calle call run --plan-id <plan_id> --confirm-token <confirm_token>
-calle call status --run-id <run_id>
-```
-
-Defaults used by the CLI:
-
-```text
-Base URL:      https://seleven-mcp-sg.airudder.com
-MCP channel:   openagent_oauth
-MCP URL:       https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth
-Token cache:   ~/.calle-mcp/cli
-```
-
-Successful command stdout is JSON except `--help`. Some top-level or local
-failures may print plain stderr. Access tokens are read from the local cache and
-are never printed.
-For complete command and option details, see
-[packages/cli/docs/cli-reference.md](./packages/cli/docs/cli-reference.md).
-
-## 🛡️ Agent safety contract
-
-- Real calls may contact external people or businesses.
-- Always plan first.
-- If the user asked to place a call from an agent-facing flow, prefer `calle call start` so planning and execution confirmation stay inside the CLI.
-- If the user only asked to verify setup or draft a plan, do not place the call.
-- Do not guess phone numbers, country codes, language, region, execution confirmation data, or `run_id`.
-- Do not print, request, or expose access tokens.
-
-## 📦 Developer docs
-
-| Path | Package | Role |
-| --- | --- | --- |
-| `packages/core` | `@call-e/core` | Shared runtime helpers for brokered auth, private token cache files, JSON HTTP, and MCP Streamable HTTP calls. |
-| `packages/cli` | `@call-e/cli` | Shared `calle` command for auth, MCP config, tool listing, and phone-call workflow shortcuts. |
-| `packages/codex-plugin` | `@call-e/codex-plugin` | Codex plugin bundle that exposes CALL-E as the `$calle` skill. |
-| `packages/claude-plugin` | `@call-e/claude-plugin` | Claude Code plugin bundle that exposes CALL-E through the shared CLI and `/calle:calle`. |
-| `packages/cursor-plugin` | `@call-e/cursor-plugin` | Cursor plugin bundle that exposes CALL-E through MCP, a `calle` skill, and a safety rule. |
-| `packages/openclaw-cli-skill` | `@call-e/openclaw-cli-skill` | Private validation/source package for the OpenClaw skill published through ClawHub. |
-| `packages/skills-sh-skill` | `@call-e/skills-sh-skill` | Private validation package for the portable skills.sh `calle` skill. |
-
-```text
-.agents/plugins/marketplace.json              # Codex marketplace entry
-.claude-plugin/marketplace.json               # Claude Code marketplace entry
-.cursor-plugin/marketplace.json               # Cursor marketplace entry
-packages/codex-plugin/plugin/                 # Codex plugin source
-packages/claude-plugin/plugin/                # Claude Code plugin source
-packages/cursor-plugin/plugin/                # Cursor plugin source
-packages/openclaw-cli-skill/skills/            # OpenClaw skill source
-skills/calle/                                  # skills.sh compatible skill source
-packages/cli/                                  # Shared calle CLI
-packages/core/                                 # Shared runtime helpers
-examples/                                      # Runnable MCP demos, not an SDK
-```
-
-### Stable identifiers
-
-| Surface | Identifier | Value |
-| --- | --- | --- |
-| Codex marketplace | `name` | `call-e-codex` |
-| Codex marketplace | display name | `CALL-E` |
-| Codex plugin entry | name | `calle` |
-| Codex plugin source | path | `./packages/codex-plugin/plugin` |
-| Claude Code marketplace | `name` | `call-e-claude` |
-| Claude Code plugin entry | name | `calle` |
-| Claude Code plugin source | path | `./packages/claude-plugin/plugin` |
-| Claude Code CLI attribution | env | `claude/claude_code_plugin/<version>` |
-| Cursor marketplace | `name` | `call-e-cursor` |
-| Cursor plugin entry | name | `calle` |
-| Cursor plugin display name | displayName | `CALL-E` |
-| Cursor plugin source | path | `./packages/cursor-plugin/plugin` |
-| Cursor MCP server | key | `calle` |
-| Cursor CLI attribution | env | `cursor/cursor_plugin/<version>` |
-| OpenClaw skill | slug | `phone-call-calle` |
-| OpenClaw skill | name | `Phone Call - CALL-E` |
-| skills.sh skill | name | `calle` |
-| skills.sh skill source | path | `skills/calle` |
-| skills.sh CLI attribution | env | `skills_sh/skills_sh_skill/<version>` |
-
 ## 🧪 Examples
 
 Runnable MCP client demos live under [examples](./examples):
@@ -179,11 +320,14 @@ Runnable MCP client demos live under [examples](./examples):
 - [CALL-E broker login MCP clients](./examples/mcp-broker-client): TypeScript and Python clients for CALL-E brokered login, local token cache, and MCP HTTP calls.
 - [Python batch runner](./examples/python-batch-runner): Python JSONL batch runner using `calle` CLI auth state, FastMCP, Rich output, and MCP tool-call metadata.
 
-These examples are runnable demos, not a CALL-E SDK or supported application API.
+These examples are runnable demos. Supported SDK and API surfaces should be
+documented separately from demo clients.
 
 ## 🧭 Boundaries
 
 - The CLI is not an OAuth server and not an MCP server. It is a local wrapper over the CALL-E broker API and remote MCP HTTP endpoint.
+- CALL-E can be used directly or integrated through Skills, Plugins, MCP, ChatGPT Apps, SDKs, APIs, and enterprise systems.
+- SDKs and APIs are supported integration surfaces. Runnable examples are demos and starting points, not the canonical SDK or API contract.
 - Codex, Claude Code, OpenClaw, skills.sh, and Hermes Agent integrations intentionally reuse the shared `calle` CLI for authentication, token caching, JSON output, MCP tool discovery, and call workflow shortcuts.
 - The Cursor plugin reuses the existing remote CALL-E MCP server and does not implement a new local MCP server or backend.
 - The OpenClaw route in this repository does not register OpenClaw-native tools and does not require a gateway restart from this repository.

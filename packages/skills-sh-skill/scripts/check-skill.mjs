@@ -186,7 +186,6 @@ function checkNoPackageSkillCopy({ packageRoot, failures }) {
 }
 
 function checkRepoDocs({ repoRoot, failures }) {
-  const readmePath = path.join(repoRoot, "README.md");
   const stableInstallGuidePath = path.join(repoRoot, "docs", "install", "CALL-E-installation-guide.md");
   const manualInstallGuidePath = path.join(repoRoot, "docs", "install", "install-guide.md");
   const installDocPath = path.join(repoRoot, "docs", "install", "skills-sh-skill.md");
@@ -195,15 +194,6 @@ function checkRepoDocs({ repoRoot, failures }) {
 
   assert(fs.existsSync(stableInstallGuidePath), failures, `Missing stable install guide: ${stableInstallGuidePath}`);
   assert(fs.existsSync(installDocPath), failures, `Missing install guide: ${installDocPath}`);
-
-  if (fs.existsSync(readmePath)) {
-    const readme = fs.readFileSync(readmePath, "utf8");
-    assert(readme.includes("packages/skills-sh-skill"), failures, "README.md must mention packages/skills-sh-skill.");
-    assert(readme.includes("skills/calle"), failures, "README.md must mention the skills.sh source at skills/calle.");
-    assert(readme.includes("docs/install/skills-sh-skill.md"), failures, "README.md must link to the skills.sh install guide.");
-    assert(readme.includes("user-level/global scope"), failures, "README.md must describe skills.sh installs as user-level/global scope.");
-    assert(!readme.includes("packages/skills-sh-skill/skills"), failures, "README.md must not reference the removed package-local skills directory.");
-  }
 
   if (fs.existsSync(layoutPath)) {
     const layout = fs.readFileSync(layoutPath, "utf8");

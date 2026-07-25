@@ -88,7 +88,7 @@ function createValidFixture(root) {
     ].join("\n"),
   );
 
-  writeFile(path.join(repoRoot, "README.md"), "packages/openclaw-cli-skill\n");
+  writeFile(path.join(repoRoot, "README.md"), "CALL-E Integrations\n");
   writeFile(
     path.join(repoRoot, "docs", "agent-integration-layout.md"),
     "packages/openclaw-cli-skill\n\nUse `.agents/skills/` for repository-local Codex helper skills.\n",
@@ -99,6 +99,12 @@ function createValidFixture(root) {
 
 test("current OpenClaw CLI skill metadata is valid", () => {
   assert.deepEqual(checkOpenClawCliSkill({ packageRoot: PACKAGE_ROOT, repoRoot: REPO_ROOT }), []);
+});
+
+test("allows root README without OpenClaw package entry", () => {
+  const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-openclaw-cli-skill-concise-readme"));
+
+  assert.deepEqual(checkOpenClawCliSkill({ packageRoot, repoRoot }), []);
 });
 
 test("reports a missing skill", () => {

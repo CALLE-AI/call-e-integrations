@@ -8,7 +8,7 @@ when you need a client-specific setup path.
 For most users, copy this into your agent:
 
 ```text
-Install CALL-E for me: https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/docs/install/CALL-E-installation-guide.md
+Install CALL-E for me: https://open.heycall-e.com/document/mcp-archive/CALL-E-installation-guide.md
 ```
 
 This is the preferred path for local agents that can run shell commands. The

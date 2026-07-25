@@ -53,6 +53,10 @@ export function removeFile(filePath) {
   }
 }
 
+export function removeTokenCache(config) {
+  removeFile(tokenCachePath(config.cacheRoot, config.serverUrl));
+}
+
 export function parseIsoDate(value) {
   if (!value) {
     return null;
