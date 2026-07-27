@@ -22,6 +22,10 @@ top-level or local failures may print plain stderr.
 | `calle call run` | Run a planned phone call, then fetch status once. | `--plan-id`, `--confirm-token` |
 | `calle call status` | Query a call run through `get_call_run`. | `--run-id` |
 
+If `plan_call` returns `ready_to_run: false`, `calle call start` exits without
+calling `run_call`. The JSON error uses code `plan_not_ready` and includes the
+first clarification question when available.
+
 ## Common Options
 
 These options are accepted by all commands because runtime configuration is

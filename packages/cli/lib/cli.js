@@ -699,6 +699,9 @@ function extractRequiredStructuredString(result, fieldName, context) {
   if (typeof value === "string" && value.trim()) {
     return value.trim();
   }
+  if (Object.hasOwn(structured, fieldName)) {
+    throw new McpHttpError(`${context} did not return ${fieldName}`, { code: "mcp_error", payload: result });
+  }
   const text = Array.isArray(result?.content)
     ? result.content.map((item) => (typeof item?.text === "string" ? item.text : "")).join("\n")
     : "";
@@ -830,6 +833,16 @@ async function handleCallCommand({ command, positional, options, config, deps, s
         requestMeta: buildPlanRequestMeta(options, deps.env || process.env),
         fetchImpl: deps.fetchImpl || globalThis.fetch,
       });
+      const structuredPlan = structuredPayload(planResult);
+      if (structuredPlan.ready_to_run === false) {
+        const question = Array.isArray(structuredPlan.clarifying_questions)
+          ? structuredPlan.clarifying_questions.find((item) => typeof item === "string" && item.trim())?.trim()
+          : null;
+        throw new McpHttpError(
+          `Call plan needs more information before it can run${question ? `: ${question}` : "."}`,
+          { code: "plan_not_ready", payload: planResult }
+        );
+      }
       const planId = extractRequiredStructuredString(planResult, "plan_id", "plan_call");
       const confirmToken = extractRequiredStructuredString(planResult, "confirm_token", "plan_call");
       const { runId, statusResult } = await runPlannedCallAndFetchStatus({

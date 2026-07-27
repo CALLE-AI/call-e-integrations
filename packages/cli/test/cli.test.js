@@ -1207,6 +1207,132 @@ test("call start plans and runs without printing confirmation data", async () =>
   assert.doesNotMatch(result.stdout, /confirm-1|plan-1|start-token/);
 });
 
+test("call start reports plan clarification and skips run_call when planning is not ready", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-call-start-plan-not-ready");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl);
+  const toolCalls = [];
+  const fetchImpl = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") {
+      return jsonRpcResponse({ jsonrpc: "2.0", id: payload.id, result: {} });
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonRpcResponse({});
+    }
+    if (payload.method === "tools/call") {
+      toolCalls.push(payload.params);
+      if (payload.params.name === "plan_call") {
+        return jsonRpcResponse({
+          jsonrpc: "2.0",
+          id: payload.id,
+          result: {
+            content: [
+              {
+                type: "text",
+                text: '{"plan_id":"plan-1","ready_to_run":false,"confirm_token":null}',
+              },
+            ],
+            structuredContent: {
+              plan_id: "plan-1",
+              ready_to_run: false,
+              clarifying_questions: ["What should the agent ask or say on the call?"],
+              confirm_summary: "A call purpose is required.",
+              confirm_token: null,
+            },
+          },
+        });
+      }
+    }
+    throw new Error(`unexpected method: ${payload.method}`);
+  };
+
+  const result = await run(
+    [
+      "call",
+      "start",
+      "--to-phone",
+      "+15551234567",
+      "--goal",
+      "See what they say",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.deepEqual(toolCalls.map((call) => call.name), ["plan_call"]);
+  assert.equal(payload.error.code, "plan_not_ready");
+  assert.equal(
+    payload.error.message,
+    "Call plan needs more information before it can run: What should the agent ask or say on the call?"
+  );
+});
+
+test("call start rejects a null structured confirm token without calling run_call", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-call-start-null-confirm-token");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl);
+  const toolCalls = [];
+  const fetchImpl = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") {
+      return jsonRpcResponse({ jsonrpc: "2.0", id: payload.id, result: {} });
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonRpcResponse({});
+    }
+    if (payload.method === "tools/call") {
+      toolCalls.push(payload.params);
+      if (payload.params.name === "plan_call") {
+        return jsonRpcResponse({
+          jsonrpc: "2.0",
+          id: payload.id,
+          result: {
+            content: [
+              {
+                type: "text",
+                text: '{"plan_id":"plan-1","confirm_token":null}',
+              },
+            ],
+            structuredContent: {
+              plan_id: "plan-1",
+              confirm_token: null,
+            },
+          },
+        });
+      }
+    }
+    throw new Error(`unexpected method: ${payload.method}`);
+  };
+
+  const result = await run(
+    [
+      "call",
+      "start",
+      "--to-phone",
+      "+15551234567",
+      "--goal",
+      "Confirm appointment",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.deepEqual(toolCalls.map((call) => call.name), ["plan_call"]);
+  assert.equal(payload.error.code, "mcp_error");
+  assert.equal(payload.error.message, "plan_call did not return confirm_token");
+});
+
 test("call run invokes run_call then get_call_run once", async () => {
   const cacheRoot = makeTempRoot("calle-cli-call-run");
   const serverUrl = "https://mcp.example/mcp/openagent_oauth";
