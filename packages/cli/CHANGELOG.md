@@ -1,5 +1,11 @@
 # @call-e/cli
 
+## 0.3.7
+
+### Patch Changes
+
+- [#58](https://github.com/CALLE-AI/call-e-integrations/pull/58) [`14ba3d3`](https://github.com/CALLE-AI/call-e-integrations/commit/14ba3d3ffa7e33f3064e00fbe3376a1d5429dbba) Thanks [@Ray-56](https://github.com/Ray-56)! - Stop `calle call start` before execution when call planning requires clarification.
+
 ## 0.3.6
 
 ### Patch Changes
