@@ -30,6 +30,7 @@ import {
   loginWithBroker,
   normalizePendingSession,
 } from "@call-e/core/broker-client";
+import { requestJson } from "@call-e/core/http";
 import {
   McpHttpError,
   callMcpTool,
@@ -327,6 +328,66 @@ test("broker login exchanges active pending before reusing cached token", async 
     "GET https://broker.test/api/v1/openagent-auth/sessions/session-1",
     "POST https://broker.test/api/v1/openagent-auth/sessions/session-1/exchange",
   ]);
+
+test("broker client accepts bracketed IPv6 loopback login urls", () => {
+  const pending = normalizePendingSession({
+    session_id: "session-1",
+    session_secret: "secret-1",
+    login_url: "http://[::1]:1234/openagent-auth/sessions/session-1/start",
+    status: "pending",
+  });
+
+  assert.equal(pending.login_url, "http://[::1]:1234/openagent-auth/sessions/session-1/start");
+});
+
+test("requestJson retries idempotent transient failures but fails fast for post and malformed json", async () => {
+  let retryableCalls = 0;
+  const retryableFetch = async () => {
+    retryableCalls += 1;
+    if (retryableCalls < 3) {
+      return jsonResponse({ error: "temporarily unavailable" }, { status: 503, statusText: "Service Unavailable" });
+    }
+    return jsonResponse({ ok: true });
+  };
+
+  await assert.deepEqual(await requestJson("GET", "https://example.test/retry", { fetchImpl: retryableFetch }), { ok: true });
+  assert.equal(retryableCalls, 3);
+
+  let postCalls = 0;
+  const networkError = new Error("fetch failed");
+  const postFetch = async () => {
+    postCalls += 1;
+    throw networkError;
+  };
+
+  await assert.rejects(
+    () => requestJson("POST", "https://example.test/create", { fetchImpl: postFetch }),
+    (error) => {
+      assert.equal(error, networkError);
+      return true;
+    },
+  );
+  assert.equal(postCalls, 1);
+
+  let malformedCalls = 0;
+  const malformedFetch = async () => {
+    malformedCalls += 1;
+    return {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      headers: new Headers(),
+      async text() {
+        return "{not valid json";
+      },
+    };
+  };
+
+  await assert.rejects(
+    () => requestJson("GET", "https://example.test/malformed", { fetchImpl: malformedFetch }),
+    SyntaxError,
+  );
+  assert.equal(malformedCalls, 1);
 });
 
 test("MCP client initializes a session and lists tools", async () => {

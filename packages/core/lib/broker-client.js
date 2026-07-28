@@ -105,7 +105,8 @@ export function normalizePendingSession(sessionPayload) {
   } catch {
     throw new Error("Broker session returned an invalid login_url");
   }
-  const isLoopback = parsedLoginUrl.hostname === "localhost" || parsedLoginUrl.hostname === "127.0.0.1" || parsedLoginUrl.hostname === "::1";
+  const hostname = parsedLoginUrl.hostname.replace(/^\[/u, "").replace(/\]$/u, "").toLowerCase();
+  const isLoopback = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
   if (parsedLoginUrl.protocol !== "https:" && !isLoopback) {
     throw new Error(`Broker session login_url must use https:, got '${parsedLoginUrl.protocol}'`);
   }
