@@ -3,6 +3,7 @@
   "version": "0.2.2",
   "description": "Shared CALL-E runtime helpers for brokered auth, local token cache, and MCP HTTP calls.",
   "type": "module",
+  "types": "./lib/index.d.ts",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -41,7 +42,8 @@
   },
   "scripts": {
     "test": "node --test ./test/*.test.js",
-    "check": "node ../../scripts/check-runtime-syntax.mjs lib/broker-client.js lib/cache.js lib/config.js lib/constants.js lib/http.js lib/index.js lib/mcp-client.js",
+    "check": "node ../../scripts/check-runtime-syntax.mjs lib/broker-client.js lib/cache.js lib/config.js lib/constants.js lib/http.js lib/index.js lib/mcp-client.js && pnpm run check:types",
+    "check:types": "tsc --noEmit --strict --module NodeNext --moduleResolution NodeNext --target ES2022 --skipLibCheck test/types.ts",
     "pack:dry-run": "npm pack --dry-run"
   }
 }
