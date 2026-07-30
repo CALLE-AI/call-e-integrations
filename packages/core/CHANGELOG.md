@@ -1,5 +1,12 @@
 # @call-e/core
 
+## 0.2.3
+
+### Patch Changes
+
+- [#66](https://github.com/CALLE-AI/call-e-integrations/pull/66) [`5ffada9`](https://github.com/CALLE-AI/call-e-integrations/commit/5ffada9e6cea6c8d7315fc7c6caa476075e62377) Thanks [@Ray-56](https://github.com/Ray-56)! - Add TypeScript declarations and document the outbound tool, authentication
+  preflight, and broker polling contracts.
+
 ## 0.2.2
 
 ### Patch Changes
