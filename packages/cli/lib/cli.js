@@ -919,9 +919,22 @@ export async function runCli(argv, deps = {}) {
   const stderr = deps.stderr || ((text) => process.stderr.write(`${text}\n`));
   const openBrowser = deps.openBrowser || (async (url) => {
     const { spawn } = await import("node:child_process");
-    const command = process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
-    const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
+    // Windows is handled without cmd.exe on purpose. `cmd /c start "" <url>`
+    // lets cmd parse the URL, and `&` is a command separator there -- an OAuth
+    // URL is truncated at the first `&` (losing redirect_uri, state and scope)
+    // and the remaining query fragments are run as shell commands. rundll32
+    // takes the URL as a single argument and never parses it.
+    const [command, args] =
+      process.platform === "darwin"
+        ? ["open", [url]]
+        : process.platform === "win32"
+          ? ["rundll32", ["url.dll,FileProtocolHandler", url]]
+          : ["xdg-open", [url]];
     const child = spawn(command, args, { detached: true, stdio: "ignore" });
+    // Without a listener an 'error' event (a missing opener, say) becomes an
+    // uncaught exception. Failing to open a browser should not take the CLI
+    // down -- the URL is printed for the user either way.
+    child.on("error", () => {});
     child.unref();
   });
 
