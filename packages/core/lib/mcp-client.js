@@ -142,7 +142,7 @@ function accessTokenFromCache(config) {
 async function openMcpSession({ config, fetchImpl }) {
   requireFetch(fetchImpl);
   const accessToken = accessTokenFromCache(config);
-  const timeoutMs = Math.max(Math.ceil(config.timeoutSeconds * 1000), 1000);
+  const timeoutMs = Math.max(Math.ceil(Number(config.timeoutSeconds || 15) * 1000), 1000);
   const commonHeaders = {
     Accept: "application/json, text/event-stream",
     "Content-Type": "application/json",

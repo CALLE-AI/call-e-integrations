@@ -45,6 +45,19 @@ function firstOptionValue(value) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function secondsOption(value, fallback, flag) {
+  const raw = value || fallback;
+  const parsed = Number(raw);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(
+      `${flag} expects a positive number of seconds, got "${raw}". Use "30", not "30s".`,
+    );
+  }
+
+  return parsed;
+}
+
 function isDisabledFlag(value) {
   return ["0", "false", "no", "off", "disabled"].includes(String(value || "").trim().toLowerCase());
 }
@@ -139,16 +152,24 @@ export function resolveRuntimeConfig(options = {}, env = process.env) {
     scope: options.scope || DEFAULT_SCOPE,
     clientName: options.clientName || DEFAULT_CLIENT_NAME,
     cacheRoot: expandHomePath(options.cacheRoot || DEFAULT_CACHE_ROOT),
-    timeoutSeconds: Number(options.timeoutSeconds || DEFAULT_TIMEOUT_SECONDS),
-    pollTimeoutSeconds: Number(options.pollTimeoutSeconds || DEFAULT_POLL_TIMEOUT_SECONDS),
-    minTtlSeconds: Number(options.minTtlSeconds || DEFAULT_MIN_TTL_SECONDS),
+    timeoutSeconds: secondsOption(
+      options.timeoutSeconds,
+      DEFAULT_TIMEOUT_SECONDS,
+      "--timeout-seconds",
+    ),
+    pollTimeoutSeconds: secondsOption(
+      options.pollTimeoutSeconds,
+      DEFAULT_POLL_TIMEOUT_SECONDS,
+      "--poll-timeout-seconds",
+    ),
+    minTtlSeconds: secondsOption(options.minTtlSeconds, DEFAULT_MIN_TTL_SECONDS, "--min-ttl-seconds"),
     serverName: options.serverName || DEFAULT_SERVER_NAME,
     telemetryEnabled: resolveTelemetryEnabled(options, env),
     telemetryUrl: resolveTelemetryUrl({ telemetryUrl: options.telemetryUrl, baseUrl }, env),
-    telemetryTimeoutSeconds: Number(
-      firstOptionValue(options.telemetryTimeoutSeconds) ||
-        env.CALLE_TELEMETRY_TIMEOUT_SECONDS ||
-        DEFAULT_TELEMETRY_TIMEOUT_SECONDS,
+    telemetryTimeoutSeconds: secondsOption(
+      firstOptionValue(options.telemetryTimeoutSeconds) || env.CALLE_TELEMETRY_TIMEOUT_SECONDS,
+      DEFAULT_TELEMETRY_TIMEOUT_SECONDS,
+      "--telemetry-timeout-seconds",
     ),
   };
 }
