@@ -57,11 +57,35 @@ export function removeTokenCache(config) {
   removeFile(tokenCachePath(config.cacheRoot, config.serverUrl));
 }
 
+// Epoch seconds and milliseconds below this are indistinguishable from each
+// other only for dates before 1973; anything a token expiry could plausibly
+// carry is far above it in ms and far below it in seconds.
+const EPOCH_MILLISECONDS_THRESHOLD = 1e11;
+
 export function parseIsoDate(value) {
-  if (!value) {
+  if (value === null || value === undefined || value === "") {
     return null;
   }
-  const parsed = new Date(String(value));
+
+  // A numeric expiry is a standard representation, and broker-client stringifies
+  // whatever the broker sends — so an epoch arrives here as "1700000000000",
+  // which `new Date()` reads as Invalid Date. Without this branch a perfectly
+  // valid expiry is indistinguishable from no expiry at all.
+  // The sign is matched so a negative value lands in the numeric branch and is
+  // rejected below. Left to `new Date()` it does not fail — V8 reads "-1" as a
+  // date and yields 2001-01-01, which is a nonsense expiry rather than an error.
+  const raw = typeof value === "number" ? String(value) : String(value).trim();
+  if (/^-?\d+$/.test(raw)) {
+    const numeric = Number(raw);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return null;
+    }
+    const milliseconds = numeric < EPOCH_MILLISECONDS_THRESHOLD ? numeric * 1000 : numeric;
+    const parsedEpoch = new Date(milliseconds);
+    return Number.isNaN(parsedEpoch.getTime()) ? null : parsedEpoch;
+  }
+
+  const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) {
     return null;
   }
@@ -76,9 +100,20 @@ export function tokenIsUsable(cacheDocument, minTtlSeconds) {
   if (!token || typeof token !== "object" || typeof token.access_token !== "string" || !token.access_token) {
     return false;
   }
-  const expiresAt = parseIsoDate(cacheDocument.expires_at);
+  const rawExpiry = cacheDocument.expires_at;
+  const expiryWasProvided = rawExpiry !== null && rawExpiry !== undefined && rawExpiry !== "";
+  const expiresAt = parseIsoDate(rawExpiry);
   if (!expiresAt) {
-    return true;
+    // No expiry at all: the broker never committed to one, so keep using the
+    // token — that is the existing behaviour and it is reasonable.
+    //
+    // An expiry that is present but unreadable is a different situation, and
+    // reading it as "never expires" is the worst of the available choices: the
+    // token is then cached forever and never refreshed, and the failure only
+    // surfaces much later as auth errors with no re-login. Force a refresh
+    // instead; the cost of one extra login is far below the cost of a client
+    // that is certain about a token it cannot actually reason about.
+    return !expiryWasProvided;
   }
   return expiresAt.getTime() - Date.now() > Number(minTtlSeconds || 0) * 1000;
 }
