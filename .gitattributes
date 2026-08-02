@@ -1,0 +1,10 @@
+# Keep every checked-out text file LF, on every platform.
+#
+# Without this, Git on Windows (core.autocrlf=true by default) rewrites files to
+# CRLF on checkout, and the plugin/skill validators -- which parse YAML
+# frontmatter with `\n`-anchored patterns -- report valid files as invalid.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.svg text eol=lf

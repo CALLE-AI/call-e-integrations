@@ -2,6 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+// Paths go into failure messages with forward slashes on every platform, so
+// the output is stable for tests, CI log greps and docs comparisons. Filesystem
+// access still uses the native separator.
+function displayPath(value) {
+  return String(value).split(path.sep).join("/");
+}
+
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PACKAGE_ROOT = path.resolve(SCRIPT_DIR, "..");
 const DEFAULT_REPO_ROOT = path.resolve(DEFAULT_PACKAGE_ROOT, "../..");
@@ -19,14 +26,14 @@ const EXPECTED_REFERENCE_FILE = "references/commands.md";
 
 function readJson(filePath, failures) {
   if (!fs.existsSync(filePath)) {
-    failures.push(`Missing ${filePath}`);
+    failures.push(`Missing ${displayPath(filePath)}`);
     return null;
   }
 
   try {
     return JSON.parse(fs.readFileSync(filePath, "utf8"));
   } catch (error) {
-    failures.push(`Invalid JSON at ${filePath}: ${error.message}`);
+    failures.push(`Invalid JSON at ${displayPath(filePath)}: ${error.message}`);
     return null;
   }
 }
@@ -38,12 +45,12 @@ function assert(condition, failures, message) {
 }
 
 function extractFrontmatter(markdown) {
-  const match = /^---\n([\s\S]*?)\n---\n?/u.exec(markdown);
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/u.exec(markdown);
   return match ? match[1] : null;
 }
 
 function frontmatterValue(frontmatter, key) {
-  const match = new RegExp(`^${key}:\\s*([^\\n]+)\\s*$`, "mu").exec(frontmatter);
+  const match = new RegExp(`^${key}:\\s*([^\\r\\n]+)\\s*$`, "mu").exec(frontmatter);
   return match?.[1]?.trim().replace(/^['"]|['"]$/g, "") ?? null;
 }
 
@@ -90,38 +97,38 @@ function checkNoMcp({ packageRoot, failures }) {
 }
 
 function assertCliGuidance({ source, filePath, failures }) {
-  assert(source.includes(`CALLE_SOURCE=${EXPECTED_CLI_SOURCE}`), failures, `${filePath} must include Claude CLI source attribution.`);
+  assert(source.includes(`CALLE_SOURCE=${EXPECTED_CLI_SOURCE}`), failures, `${displayPath(filePath)} must include Claude CLI source attribution.`);
   assert(
     source.includes(`CALLE_INTEGRATION=${EXPECTED_CLI_INTEGRATION}`),
     failures,
-    `${filePath} must include Claude CLI integration attribution.`,
+    `${displayPath(filePath)} must include Claude CLI integration attribution.`,
   );
-  assert(source.includes("node packages/cli/bin/calle.js"), failures, `${filePath} must document the repository-local CLI command.`);
-  assert(source.includes("npx -y @call-e/cli"), failures, `${filePath} must document the npx CLI fallback.`);
-  assert(source.includes("auth status"), failures, `${filePath} must document auth status checks.`);
-  assert(source.includes("Run blocking `auth login`"), failures, `${filePath} must document blocking authorization login.`);
+  assert(source.includes("node packages/cli/bin/calle.js"), failures, `${displayPath(filePath)} must document the repository-local CLI command.`);
+  assert(source.includes("npx -y @call-e/cli"), failures, `${displayPath(filePath)} must document the npx CLI fallback.`);
+  assert(source.includes("auth status"), failures, `${displayPath(filePath)} must document auth status checks.`);
+  assert(source.includes("Run blocking `auth login`"), failures, `${displayPath(filePath)} must document blocking authorization login.`);
   assert(
     source.includes("do not ask the user to reply"),
     failures,
-    `${filePath} must document that browser authorization should continue without a manual chat reply.`,
+    `${displayPath(filePath)} must document that browser authorization should continue without a manual chat reply.`,
   );
   assert(
     source.includes("assistant_hint.message"),
     failures,
-    `${filePath} must document how to display assistant_hint.message after auth login.`,
+    `${displayPath(filePath)} must document how to display assistant_hint.message after auth login.`,
   );
   assert(
     source.includes("Before we start, please complete authorization here"),
     failures,
-    `${filePath} must include the first authorization help message.`,
+    `${displayPath(filePath)} must include the first authorization help message.`,
   );
-  assert(source.includes("Great, authorization is complete"), failures, `${filePath} must include the post-authorization success message.`);
-  assert(source.includes("mcp tools"), failures, `${filePath} must document CLI tool discovery.`);
-  assert(source.includes("call plan"), failures, `${filePath} must document call planning through the CLI.`);
-  assert(source.includes("call run"), failures, `${filePath} must document planned call execution through the CLI.`);
-  assert(source.includes("call status"), failures, `${filePath} must document call status polling through the CLI.`);
-  assert(!source.includes("/mcp"), failures, `${filePath} must not direct users to /mcp for CALL-E authorization.`);
-  assert(!source.includes("authorize the `calle` server"), failures, `${filePath} must not document native Claude MCP OAuth authorization.`);
+  assert(source.includes("Great, authorization is complete"), failures, `${displayPath(filePath)} must include the post-authorization success message.`);
+  assert(source.includes("mcp tools"), failures, `${displayPath(filePath)} must document CLI tool discovery.`);
+  assert(source.includes("call plan"), failures, `${displayPath(filePath)} must document call planning through the CLI.`);
+  assert(source.includes("call run"), failures, `${displayPath(filePath)} must document planned call execution through the CLI.`);
+  assert(source.includes("call status"), failures, `${displayPath(filePath)} must document call status polling through the CLI.`);
+  assert(!source.includes("/mcp"), failures, `${displayPath(filePath)} must not direct users to /mcp for CALL-E authorization.`);
+  assert(!source.includes("authorize the `calle` server"), failures, `${displayPath(filePath)} must not document native Claude MCP OAuth authorization.`);
 }
 
 function checkSkill({ packageRoot, failures }) {
@@ -129,9 +136,9 @@ function checkSkill({ packageRoot, failures }) {
   const skillFile = path.join(skillDir, "SKILL.md");
   const referenceFile = path.join(skillDir, EXPECTED_REFERENCE_FILE);
 
-  assert(fs.existsSync(skillDir), failures, `Missing skill directory: ${skillDir}`);
-  assert(fs.existsSync(skillFile), failures, `Missing skill file: ${skillFile}`);
-  assert(fs.existsSync(referenceFile), failures, `Missing command reference: ${referenceFile}`);
+  assert(fs.existsSync(skillDir), failures, `Missing skill directory: ${displayPath(skillDir)}`);
+  assert(fs.existsSync(skillFile), failures, `Missing skill file: ${displayPath(skillFile)}`);
+  assert(fs.existsSync(referenceFile), failures, `Missing command reference: ${displayPath(referenceFile)}`);
 
   if (!fs.existsSync(skillFile)) {
     return;
@@ -139,23 +146,23 @@ function checkSkill({ packageRoot, failures }) {
 
   const source = fs.readFileSync(skillFile, "utf8");
   const frontmatter = extractFrontmatter(source);
-  assert(frontmatter, failures, `${skillFile} must start with YAML frontmatter.`);
+  assert(frontmatter, failures, `${displayPath(skillFile)} must start with YAML frontmatter.`);
   assertCliGuidance({ source, filePath: skillFile, failures });
 
-  assert(source.includes("plan_call"), failures, `${skillFile} must document plan_call usage.`);
-  assert(source.includes("run_call"), failures, `${skillFile} must document run_call usage.`);
-  assert(source.includes("get_call_run"), failures, `${skillFile} must document get_call_run polling.`);
-  assert(source.includes("Always plan first"), failures, `${skillFile} must require plan-first behavior.`);
-  assert(source.includes("Do not guess phone numbers"), failures, `${skillFile} must forbid guessing call inputs.`);
+  assert(source.includes("plan_call"), failures, `${displayPath(skillFile)} must document plan_call usage.`);
+  assert(source.includes("run_call"), failures, `${displayPath(skillFile)} must document run_call usage.`);
+  assert(source.includes("get_call_run"), failures, `${displayPath(skillFile)} must document get_call_run polling.`);
+  assert(source.includes("Always plan first"), failures, `${displayPath(skillFile)} must require plan-first behavior.`);
+  assert(source.includes("Do not guess phone numbers"), failures, `${displayPath(skillFile)} must forbid guessing call inputs.`);
   assert(
     source.includes("Phone call is in progress! Progress:"),
     failures,
-    `${skillFile} must document the non-terminal call activity progress template.`,
+    `${displayPath(skillFile)} must document the non-terminal call activity progress template.`,
   );
-  assert(source.includes("Poll every 10 seconds"), failures, `${skillFile} must document periodic polling.`);
-  assert(source.includes("Do not stay silent until a"), failures, `${skillFile} must require user-visible progress updates before terminal status.`);
-  assert(source.includes("[Status]"), failures, `${skillFile} must document the final status section.`);
-  assert(source.includes("[Transcript]"), failures, `${skillFile} must document the final transcript section.`);
+  assert(source.includes("Poll every 10 seconds"), failures, `${displayPath(skillFile)} must document periodic polling.`);
+  assert(source.includes("Do not stay silent until a"), failures, `${displayPath(skillFile)} must require user-visible progress updates before terminal status.`);
+  assert(source.includes("[Status]"), failures, `${displayPath(skillFile)} must document the final status section.`);
+  assert(source.includes("[Transcript]"), failures, `${displayPath(skillFile)} must document the final transcript section.`);
 
   if (fs.existsSync(referenceFile)) {
     const referenceSource = fs.readFileSync(referenceFile, "utf8");
@@ -163,17 +170,17 @@ function checkSkill({ packageRoot, failures }) {
     assert(
       referenceSource.includes("Phone call is in progress! Progress:"),
       failures,
-      `${referenceFile} must document the non-terminal call activity progress template.`,
+      `${displayPath(referenceFile)} must document the non-terminal call activity progress template.`,
     );
-    assert(referenceSource.includes("Wait 10 seconds"), failures, `${referenceFile} must document the non-terminal call polling interval.`);
+    assert(referenceSource.includes("Wait 10 seconds"), failures, `${displayPath(referenceFile)} must document the non-terminal call polling interval.`);
   }
 
   if (!frontmatter) {
     return;
   }
 
-  assert(frontmatterValue(frontmatter, "name") === EXPECTED_SKILL_NAME, failures, `${skillFile} frontmatter name must be ${EXPECTED_SKILL_NAME}.`);
-  assert(Boolean(frontmatterValue(frontmatter, "description")), failures, `${skillFile} frontmatter must include description.`);
+  assert(frontmatterValue(frontmatter, "name") === EXPECTED_SKILL_NAME, failures, `${displayPath(skillFile)} frontmatter name must be ${EXPECTED_SKILL_NAME}.`);
+  assert(Boolean(frontmatterValue(frontmatter, "description")), failures, `${displayPath(skillFile)} frontmatter must include description.`);
 }
 
 function checkMarketplace({ repoRoot, packageJson, failures }) {
@@ -216,15 +223,15 @@ function checkDocs({ packageRoot, repoRoot, failures }) {
   ];
 
   for (const docFile of docFiles) {
-    assert(fs.existsSync(docFile), failures, `Missing documentation file: ${docFile}`);
+    assert(fs.existsSync(docFile), failures, `Missing documentation file: ${displayPath(docFile)}`);
     if (!fs.existsSync(docFile)) {
       continue;
     }
 
     const source = fs.readFileSync(docFile, "utf8");
-    assert(source.includes(EXPECTED_SKILL_INVOCATION), failures, `${docFile} must document ${EXPECTED_SKILL_INVOCATION}.`);
-    assert(!source.includes(LEGACY_SKILL_INVOCATION), failures, `${docFile} must not document legacy ${LEGACY_SKILL_INVOCATION}.`);
-    assert(!source.includes("authorize the `calle` server"), failures, `${docFile} must not document native Claude MCP OAuth authorization.`);
+    assert(source.includes(EXPECTED_SKILL_INVOCATION), failures, `${displayPath(docFile)} must document ${EXPECTED_SKILL_INVOCATION}.`);
+    assert(!source.includes(LEGACY_SKILL_INVOCATION), failures, `${displayPath(docFile)} must not document legacy ${LEGACY_SKILL_INVOCATION}.`);
+    assert(!source.includes("authorize the `calle` server"), failures, `${displayPath(docFile)} must not document native Claude MCP OAuth authorization.`);
   }
 
   const installDoc = path.join(repoRoot, "docs", "install", "claude-plugin.md");

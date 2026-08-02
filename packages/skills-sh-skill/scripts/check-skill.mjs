@@ -2,6 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+// Paths go into failure messages with forward slashes on every platform, so
+// the output is stable for tests, CI log greps and docs comparisons. Filesystem
+// access still uses the native separator.
+function displayPath(value) {
+  return String(value).split(path.sep).join("/");
+}
+
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PACKAGE_ROOT = path.resolve(SCRIPT_DIR, "..");
 const DEFAULT_REPO_ROOT = path.resolve(DEFAULT_PACKAGE_ROOT, "../..");
@@ -14,14 +21,14 @@ const EXPECTED_INTEGRATION = "CALLE_INTEGRATION=skills_sh_skill";
 
 function readJson(filePath, failures) {
   if (!fs.existsSync(filePath)) {
-    failures.push(`Missing ${filePath}`);
+    failures.push(`Missing ${displayPath(filePath)}`);
     return null;
   }
 
   try {
     return JSON.parse(fs.readFileSync(filePath, "utf8"));
   } catch (error) {
-    failures.push(`Invalid JSON at ${filePath}: ${error.message}`);
+    failures.push(`Invalid JSON at ${displayPath(filePath)}: ${error.message}`);
     return null;
   }
 }
@@ -33,12 +40,12 @@ function assert(condition, failures, message) {
 }
 
 function extractFrontmatter(markdown) {
-  const match = /^---\n([\s\S]*?)\n---\n?/u.exec(markdown);
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/u.exec(markdown);
   return match ? match[1] : null;
 }
 
 function frontmatterValue(frontmatter, key) {
-  const match = new RegExp(`^${key}:\\s*([^\\n]+)\\s*$`, "mu").exec(frontmatter);
+  const match = new RegExp(`^${key}:\\s*([^\\r\\n]+)\\s*$`, "mu").exec(frontmatter);
   return match?.[1]?.trim().replace(/^['"]|['"]$/g, "") ?? null;
 }
 
@@ -52,7 +59,7 @@ function assertRequiredSnippets({ source, filePath, snippets, failures }) {
       continue;
     }
 
-    assert(source.includes(snippet), failures, `${filePath} must include ${snippet}.`);
+    assert(source.includes(snippet), failures, `${displayPath(filePath)} must include ${snippet}.`);
   }
 }
 
@@ -88,10 +95,10 @@ function checkSkill({ repoRoot, packageJson, failures }) {
   const referenceFile = path.join(skillDir, "references", "commands.md");
   const expectedVersion = integrationVersionSnippet(packageJson);
 
-  assert(fs.existsSync(skillDir), failures, `Missing skill directory: ${skillDir}`);
-  assert(fs.existsSync(skillFile), failures, `Missing skill file: ${skillFile}`);
-  assert(fs.existsSync(skillInterfaceFile), failures, `Missing skill UI metadata: ${skillInterfaceFile}`);
-  assert(fs.existsSync(referenceFile), failures, `Missing command reference: ${referenceFile}`);
+  assert(fs.existsSync(skillDir), failures, `Missing skill directory: ${displayPath(skillDir)}`);
+  assert(fs.existsSync(skillFile), failures, `Missing skill file: ${displayPath(skillFile)}`);
+  assert(fs.existsSync(skillInterfaceFile), failures, `Missing skill UI metadata: ${displayPath(skillInterfaceFile)}`);
+  assert(fs.existsSync(referenceFile), failures, `Missing command reference: ${displayPath(referenceFile)}`);
 
   if (!fs.existsSync(skillFile)) {
     return;
@@ -99,10 +106,10 @@ function checkSkill({ repoRoot, packageJson, failures }) {
 
   const source = fs.readFileSync(skillFile, "utf8");
   const frontmatter = extractFrontmatter(source);
-  assert(frontmatter, failures, `${skillFile} must start with YAML frontmatter.`);
-  assert(!source.includes("[TODO:"), failures, `${skillFile} must not contain template TODO markers.`);
-  assert(!source.includes("npx -y @call-e/cli@"), failures, `${skillFile} must not run remote npm packages from the skill.`);
-  assert(!source.includes("confirm_token"), failures, `${skillFile} must not expose or instruct handling of execution confirmation tokens.`);
+  assert(frontmatter, failures, `${displayPath(skillFile)} must start with YAML frontmatter.`);
+  assert(!source.includes("[TODO:"), failures, `${displayPath(skillFile)} must not contain template TODO markers.`);
+  assert(!source.includes("npx -y @call-e/cli@"), failures, `${displayPath(skillFile)} must not run remote npm packages from the skill.`);
+  assert(!source.includes("confirm_token"), failures, `${displayPath(skillFile)} must not expose or instruct handling of execution confirmation tokens.`);
 
   assertRequiredSnippets({
     source,
@@ -134,15 +141,15 @@ function checkSkill({ repoRoot, packageJson, failures }) {
   if (frontmatter) {
     const keys = frontmatterKeys(frontmatter);
     const unexpectedKeys = keys.filter((key) => !["name", "description"].includes(key));
-    assert(unexpectedKeys.length === 0, failures, `${skillFile} frontmatter must only include name and description.`);
-    assert(frontmatterValue(frontmatter, "name") === EXPECTED_SKILL_NAME, failures, `${skillFile} frontmatter name must be "${EXPECTED_SKILL_NAME}".`);
-    assert(Boolean(frontmatterValue(frontmatter, "description")), failures, `${skillFile} frontmatter must include description.`);
+    assert(unexpectedKeys.length === 0, failures, `${displayPath(skillFile)} frontmatter must only include name and description.`);
+    assert(frontmatterValue(frontmatter, "name") === EXPECTED_SKILL_NAME, failures, `${displayPath(skillFile)} frontmatter name must be "${EXPECTED_SKILL_NAME}".`);
+    assert(Boolean(frontmatterValue(frontmatter, "description")), failures, `${displayPath(skillFile)} frontmatter must include description.`);
   }
 
   if (fs.existsSync(skillInterfaceFile)) {
     const skillInterfaceSource = fs.readFileSync(skillInterfaceFile, "utf8");
-    assert(/display_name:\s*"calle"/u.test(skillInterfaceSource), failures, `${skillInterfaceFile} must set interface.display_name to "calle".`);
-    assert(skillInterfaceSource.includes("Use $calle"), failures, `${skillInterfaceFile} default_prompt must mention $calle.`);
+    assert(/display_name:\s*"calle"/u.test(skillInterfaceSource), failures, `${displayPath(skillInterfaceFile)} must set interface.display_name to "calle".`);
+    assert(skillInterfaceSource.includes("Use $calle"), failures, `${displayPath(skillInterfaceFile)} default_prompt must mention $calle.`);
   }
 
   if (!fs.existsSync(referenceFile)) {
@@ -150,8 +157,8 @@ function checkSkill({ repoRoot, packageJson, failures }) {
   }
 
   const referenceSource = fs.readFileSync(referenceFile, "utf8");
-  assert(!referenceSource.includes("npx -y @call-e/cli@"), failures, `${referenceFile} must not run remote npm packages from the skill.`);
-  assert(!referenceSource.includes("confirm_token"), failures, `${referenceFile} must not expose or instruct handling of execution confirmation tokens.`);
+  assert(!referenceSource.includes("npx -y @call-e/cli@"), failures, `${displayPath(referenceFile)} must not run remote npm packages from the skill.`);
+  assert(!referenceSource.includes("confirm_token"), failures, `${displayPath(referenceFile)} must not expose or instruct handling of execution confirmation tokens.`);
   assertRequiredSnippets({
     source: referenceSource,
     filePath: referenceFile,

@@ -2,6 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+// Paths go into failure messages with forward slashes on every platform, so
+// the output is stable for tests, CI log greps and docs comparisons. Filesystem
+// access still uses the native separator.
+function displayPath(value) {
+  return String(value).split(path.sep).join("/");
+}
+
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PACKAGE_ROOT = path.resolve(SCRIPT_DIR, "..");
 const DEFAULT_REPO_ROOT = path.resolve(DEFAULT_PACKAGE_ROOT, "../..");
@@ -21,14 +28,14 @@ const BANNED_AUTH_LINK_STRINGS = [
 
 function readJson(filePath, failures) {
   if (!fs.existsSync(filePath)) {
-    failures.push(`Missing ${filePath}`);
+    failures.push(`Missing ${displayPath(filePath)}`);
     return null;
   }
 
   try {
     return JSON.parse(fs.readFileSync(filePath, "utf8"));
   } catch (error) {
-    failures.push(`Invalid JSON at ${filePath}: ${error.message}`);
+    failures.push(`Invalid JSON at ${displayPath(filePath)}: ${error.message}`);
     return null;
   }
 }
@@ -40,12 +47,12 @@ function assert(condition, failures, message) {
 }
 
 function extractFrontmatter(markdown) {
-  const match = /^---\n([\s\S]*?)\n---\n?/u.exec(markdown);
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/u.exec(markdown);
   return match ? match[1] : null;
 }
 
 function frontmatterValue(frontmatter, key) {
-  const match = new RegExp(`^${key}:\\s*([^\\n]+)\\s*$`, "mu").exec(frontmatter);
+  const match = new RegExp(`^${key}:\\s*([^\\r\\n]+)\\s*$`, "mu").exec(frontmatter);
   return match?.[1]?.trim().replace(/^['"]|['"]$/g, "") ?? null;
 }
 
@@ -70,9 +77,9 @@ function checkSkill({ packageRoot, failures }) {
   const skillFile = path.join(skillDir, "SKILL.md");
   const referenceFile = path.join(skillDir, "references", "commands.md");
 
-  assert(fs.existsSync(skillDir), failures, `Missing skill directory: ${skillDir}`);
-  assert(fs.existsSync(skillFile), failures, `Missing skill file: ${skillFile}`);
-  assert(fs.existsSync(referenceFile), failures, `Missing command reference: ${referenceFile}`);
+  assert(fs.existsSync(skillDir), failures, `Missing skill directory: ${displayPath(skillDir)}`);
+  assert(fs.existsSync(skillFile), failures, `Missing skill file: ${displayPath(skillFile)}`);
+  assert(fs.existsSync(referenceFile), failures, `Missing command reference: ${displayPath(referenceFile)}`);
 
   if (!fs.existsSync(skillFile)) {
     return;
@@ -80,100 +87,100 @@ function checkSkill({ packageRoot, failures }) {
 
   const source = fs.readFileSync(skillFile, "utf8");
   const frontmatter = extractFrontmatter(source);
-  assert(frontmatter, failures, `${skillFile} must start with YAML frontmatter.`);
-  assert(source.includes("assistant_hint.message"), failures, `${skillFile} must document assistant_hint.message handling.`);
-  assert(source.includes("auth_required"), failures, `${skillFile} must document auth_required handling.`);
-  assert(source.includes("CALLE_INTEGRATION=openclaw_cli_skill"), failures, `${skillFile} must include OpenClaw CLI skill integration attribution.`);
+  assert(frontmatter, failures, `${displayPath(skillFile)} must start with YAML frontmatter.`);
+  assert(source.includes("assistant_hint.message"), failures, `${displayPath(skillFile)} must document assistant_hint.message handling.`);
+  assert(source.includes("auth_required"), failures, `${displayPath(skillFile)} must document auth_required handling.`);
+  assert(source.includes("CALLE_INTEGRATION=openclaw_cli_skill"), failures, `${displayPath(skillFile)} must include OpenClaw CLI skill integration attribution.`);
   assert(
     source.includes("auth login --start-only --no-browser-open"),
     failures,
-    `${skillFile} must document start-only authorization login for the default OpenClaw CLI skill flow.`,
+    `${displayPath(skillFile)} must document start-only authorization login for the default OpenClaw CLI skill flow.`,
   );
   assert(
     source.includes("authorization instructions returned by the CLI"),
     failures,
-    `${skillFile} must use neutral CLI-provided authorization instructions.`,
+    `${displayPath(skillFile)} must use neutral CLI-provided authorization instructions.`,
   );
   assert(
     source.includes("auth login --no-browser-open"),
     failures,
-    `${skillFile} must document how to continue and exchange a pending authorization.`,
+    `${displayPath(skillFile)} must document how to continue and exchange a pending authorization.`,
   );
   assert(
     source.includes("Great, authorization is complete"),
     failures,
-    `${skillFile} must include the post-authorization success message.`,
+    `${displayPath(skillFile)} must include the post-authorization success message.`,
   );
   assert(
     source.includes("Phone call is in progress! Progress:"),
     failures,
-    `${skillFile} must document the non-terminal call activity progress template.`,
+    `${displayPath(skillFile)} must document the non-terminal call activity progress template.`,
   );
   assert(
     source.includes("do not use `run_result`"),
     failures,
-    `${skillFile} must require call run replies to ignore run_result for user-visible output.`,
+    `${displayPath(skillFile)} must require call run replies to ignore run_result for user-visible output.`,
   );
   assert(
     source.includes("Treat `status_result.structuredContent`"),
     failures,
-    `${skillFile} must require call run replies to use status_result.structuredContent.`,
+    `${displayPath(skillFile)} must require call run replies to use status_result.structuredContent.`,
   );
   assert(
     source.includes("Never paraphrase call results"),
     failures,
-    `${skillFile} must forbid free-form call result paraphrases.`,
+    `${displayPath(skillFile)} must forbid free-form call result paraphrases.`,
   );
   assert(
     source.includes("the entire reply must be exactly this shape"),
     failures,
-    `${skillFile} must require the exact non-terminal progress reply shape.`,
+    `${displayPath(skillFile)} must require the exact non-terminal progress reply shape.`,
   );
   assert(
     source.includes("Do not stay silent until a"),
     failures,
-    `${skillFile} must require user-visible progress updates before terminal status.`,
+    `${displayPath(skillFile)} must require user-visible progress updates before terminal status.`,
   );
   assert(
     source.includes("Poll every 10 seconds"),
     failures,
-    `${skillFile} must document periodic polling while a call is non-terminal.`,
+    `${displayPath(skillFile)} must document periodic polling while a call is non-terminal.`,
   );
 
   for (const banned of BANNED_PLUGIN_STRINGS) {
-    assert(!source.includes(banned), failures, `${skillFile} must not reference plugin install path: ${banned}`);
+    assert(!source.includes(banned), failures, `${displayPath(skillFile)} must not reference plugin install path: ${banned}`);
   }
   for (const banned of BANNED_AUTH_LINK_STRINGS) {
-    assert(!source.includes(banned), failures, `${skillFile} must not include handwritten authorization link template text: ${banned}`);
+    assert(!source.includes(banned), failures, `${displayPath(skillFile)} must not include handwritten authorization link template text: ${banned}`);
   }
 
   if (!frontmatter) {
     return;
   }
 
-  assert(frontmatterValue(frontmatter, "name") === EXPECTED_SKILL_NAME, failures, `${skillFile} frontmatter name must be "${EXPECTED_SKILL_NAME}".`);
-  assert(Boolean(frontmatterValue(frontmatter, "description")), failures, `${skillFile} frontmatter must include description.`);
+  assert(frontmatterValue(frontmatter, "name") === EXPECTED_SKILL_NAME, failures, `${displayPath(skillFile)} frontmatter name must be "${EXPECTED_SKILL_NAME}".`);
+  assert(Boolean(frontmatterValue(frontmatter, "description")), failures, `${displayPath(skillFile)} frontmatter must include description.`);
 
   const metadataMatches = [...frontmatter.matchAll(/^metadata:\s*(.*)$/gmu)];
-  assert(metadataMatches.length === 1, failures, `${skillFile} frontmatter must include exactly one metadata line.`);
+  assert(metadataMatches.length === 1, failures, `${displayPath(skillFile)} frontmatter must include exactly one metadata line.`);
   const metadataSource = metadataMatches[0]?.[1]?.trim();
-  assert(Boolean(metadataSource), failures, `${skillFile} metadata must be declared on one line.`);
+  assert(Boolean(metadataSource), failures, `${displayPath(skillFile)} metadata must be declared on one line.`);
 
   if (metadataSource) {
     try {
       const metadata = JSON.parse(metadataSource);
       const openclaw = metadata.openclaw;
-      assert(openclaw && typeof openclaw === "object", failures, `${skillFile} metadata.openclaw must be an object.`);
-      assert(openclaw.requires?.bins?.includes("node"), failures, `${skillFile} metadata.openclaw.requires.bins must include node.`);
-      assert(openclaw.requires?.anyBins?.includes("calle"), failures, `${skillFile} metadata.openclaw.requires.anyBins must include calle.`);
-      assert(openclaw.requires?.anyBins?.includes("npx"), failures, `${skillFile} metadata.openclaw.requires.anyBins must include npx.`);
+      assert(openclaw && typeof openclaw === "object", failures, `${displayPath(skillFile)} metadata.openclaw must be an object.`);
+      assert(openclaw.requires?.bins?.includes("node"), failures, `${displayPath(skillFile)} metadata.openclaw.requires.bins must include node.`);
+      assert(openclaw.requires?.anyBins?.includes("calle"), failures, `${displayPath(skillFile)} metadata.openclaw.requires.anyBins must include calle.`);
+      assert(openclaw.requires?.anyBins?.includes("npx"), failures, `${displayPath(skillFile)} metadata.openclaw.requires.anyBins must include npx.`);
       assert(
         Array.isArray(openclaw.install) && openclaw.install.some((entry) => entry?.kind === "node" && entry?.package === "@call-e/cli"),
         failures,
-        `${skillFile} metadata.openclaw.install must include a node installer for @call-e/cli.`,
+        `${displayPath(skillFile)} metadata.openclaw.install must include a node installer for @call-e/cli.`,
       );
     } catch (error) {
-      failures.push(`${skillFile} metadata must be single-line JSON: ${error.message}`);
+      failures.push(`${displayPath(skillFile)} metadata must be single-line JSON: ${error.message}`);
     }
   }
 }
@@ -209,14 +216,14 @@ function checkReference({ packageRoot, failures }) {
   ];
 
   for (const snippet of requiredSnippets) {
-    assert(source.includes(snippet), failures, `${referenceFile} must include ${snippet}.`);
+    assert(source.includes(snippet), failures, `${displayPath(referenceFile)} must include ${snippet}.`);
   }
 
   for (const banned of BANNED_PLUGIN_STRINGS) {
-    assert(!source.includes(banned), failures, `${referenceFile} must not reference plugin install path: ${banned}`);
+    assert(!source.includes(banned), failures, `${displayPath(referenceFile)} must not reference plugin install path: ${banned}`);
   }
   for (const banned of BANNED_AUTH_LINK_STRINGS) {
-    assert(!source.includes(banned), failures, `${referenceFile} must not include handwritten authorization link template text: ${banned}`);
+    assert(!source.includes(banned), failures, `${displayPath(referenceFile)} must not include handwritten authorization link template text: ${banned}`);
   }
 }
 

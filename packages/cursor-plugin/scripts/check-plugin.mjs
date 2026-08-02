@@ -2,6 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+// Paths go into failure messages with forward slashes on every platform, so
+// the output is stable for tests, CI log greps and docs comparisons. Filesystem
+// access still uses the native separator.
+function displayPath(value) {
+  return String(value).split(path.sep).join("/");
+}
+
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PACKAGE_ROOT = path.resolve(SCRIPT_DIR, "..");
 const DEFAULT_REPO_ROOT = path.resolve(DEFAULT_PACKAGE_ROOT, "../..");
@@ -46,14 +53,14 @@ const CURSOR_MARKETPLACE_ENTRY_KEYS = new Set(["name", "source", "description"])
 
 function readJson(filePath, failures) {
   if (!fs.existsSync(filePath)) {
-    failures.push(`Missing ${filePath}`);
+    failures.push(`Missing ${displayPath(filePath)}`);
     return null;
   }
 
   try {
     return JSON.parse(fs.readFileSync(filePath, "utf8"));
   } catch (error) {
-    failures.push(`Invalid JSON at ${filePath}: ${error.message}`);
+    failures.push(`Invalid JSON at ${displayPath(filePath)}: ${error.message}`);
     return null;
   }
 }
@@ -75,12 +82,12 @@ function assertAllowedKeys(value, allowedKeys, failures, label) {
 }
 
 function extractFrontmatter(markdown) {
-  const match = /^---\n([\s\S]*?)\n---\n?/u.exec(markdown);
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/u.exec(markdown);
   return match ? match[1] : null;
 }
 
 function frontmatterValue(frontmatter, key) {
-  const match = new RegExp(`^${key}:\\s*([^\\n]+)\\s*$`, "mu").exec(frontmatter);
+  const match = new RegExp(`^${key}:\\s*([^\\r\\n]+)\\s*$`, "mu").exec(frontmatter);
   return match?.[1]?.trim().replace(/^['"]|['"]$/g, "") ?? null;
 }
 
@@ -145,40 +152,40 @@ function checkMcpConfig({ packageRoot, failures }) {
 }
 
 function assertCliGuidance({ source, filePath, packageJson, failures }) {
-  assert(source.includes(`CALLE_SOURCE=${EXPECTED_CLI_SOURCE}`), failures, `${filePath} must include Cursor CLI source attribution.`);
+  assert(source.includes(`CALLE_SOURCE=${EXPECTED_CLI_SOURCE}`), failures, `${displayPath(filePath)} must include Cursor CLI source attribution.`);
   assert(
     source.includes(`CALLE_INTEGRATION=${EXPECTED_CLI_INTEGRATION}`),
     failures,
-    `${filePath} must include Cursor CLI integration attribution.`,
+    `${displayPath(filePath)} must include Cursor CLI integration attribution.`,
   );
   assert(
     source.includes(`CALLE_INTEGRATION_VERSION=${packageJson.version}`),
     failures,
-    `${filePath} must include Cursor CLI integration version ${packageJson.version}.`,
+    `${displayPath(filePath)} must include Cursor CLI integration version ${packageJson.version}.`,
   );
-  assert(source.includes("node packages/cli/bin/calle.js"), failures, `${filePath} must document the repository-local CLI command.`);
-  assert(source.includes("npx -y @call-e/cli"), failures, `${filePath} must document the npx CLI fallback.`);
-  assert(source.includes("auth status"), failures, `${filePath} must document auth status checks.`);
-  assert(source.includes("mcp tools"), failures, `${filePath} must document CLI tool discovery.`);
-  assert(source.includes("call plan"), failures, `${filePath} must document call planning through the CLI.`);
-  assert(source.includes("call run"), failures, `${filePath} must document planned call execution through the CLI.`);
-  assert(source.includes("call status"), failures, `${filePath} must document call status polling through the CLI.`);
+  assert(source.includes("node packages/cli/bin/calle.js"), failures, `${displayPath(filePath)} must document the repository-local CLI command.`);
+  assert(source.includes("npx -y @call-e/cli"), failures, `${displayPath(filePath)} must document the npx CLI fallback.`);
+  assert(source.includes("auth status"), failures, `${displayPath(filePath)} must document auth status checks.`);
+  assert(source.includes("mcp tools"), failures, `${displayPath(filePath)} must document CLI tool discovery.`);
+  assert(source.includes("call plan"), failures, `${displayPath(filePath)} must document call planning through the CLI.`);
+  assert(source.includes("call run"), failures, `${displayPath(filePath)} must document planned call execution through the CLI.`);
+  assert(source.includes("call status"), failures, `${displayPath(filePath)} must document call status polling through the CLI.`);
 }
 
 function assertCallGuidance({ source, filePath, failures }) {
-  assert(source.includes("plan_call"), failures, `${filePath} must document plan_call usage.`);
-  assert(source.includes("run_call"), failures, `${filePath} must document run_call usage.`);
-  assert(source.includes("get_call_run"), failures, `${filePath} must document get_call_run polling.`);
-  assert(source.includes("Always use plan_call before run_call."), failures, `${filePath} must require plan_call before run_call.`);
+  assert(source.includes("plan_call"), failures, `${displayPath(filePath)} must document plan_call usage.`);
+  assert(source.includes("run_call"), failures, `${displayPath(filePath)} must document run_call usage.`);
+  assert(source.includes("get_call_run"), failures, `${displayPath(filePath)} must document get_call_run polling.`);
+  assert(source.includes("Always use plan_call before run_call."), failures, `${displayPath(filePath)} must require plan_call before run_call.`);
   assert(
     source.includes("Only call run_call when the user clearly intends to place the call."),
     failures,
-    `${filePath} must require explicit user intent before run_call.`,
+    `${displayPath(filePath)} must require explicit user intent before run_call.`,
   );
-  assert(source.includes("Preserve plan_id and confirm_token exactly."), failures, `${filePath} must require exact plan credential preservation.`);
-  assert(source.includes("Do not guess phone numbers"), failures, `${filePath} must forbid guessing call inputs.`);
-  assert(source.includes("Do not expose OAuth tokens"), failures, `${filePath} must forbid exposing auth secrets.`);
-  assert(source.includes("Do not configure CALL-E run_call for auto-run."), failures, `${filePath} must forbid run_call auto-run configuration.`);
+  assert(source.includes("Preserve plan_id and confirm_token exactly."), failures, `${displayPath(filePath)} must require exact plan credential preservation.`);
+  assert(source.includes("Do not guess phone numbers"), failures, `${displayPath(filePath)} must forbid guessing call inputs.`);
+  assert(source.includes("Do not expose OAuth tokens"), failures, `${displayPath(filePath)} must forbid exposing auth secrets.`);
+  assert(source.includes("Do not configure CALL-E run_call for auto-run."), failures, `${displayPath(filePath)} must forbid run_call auto-run configuration.`);
 }
 
 function checkSkill({ packageRoot, packageJson, failures }) {
@@ -186,9 +193,9 @@ function checkSkill({ packageRoot, packageJson, failures }) {
   const skillFile = path.join(skillDir, "SKILL.md");
   const referenceFile = path.join(skillDir, EXPECTED_REFERENCE_FILE);
 
-  assert(fs.existsSync(skillDir), failures, `Missing skill directory: ${skillDir}`);
-  assert(fs.existsSync(skillFile), failures, `Missing skill file: ${skillFile}`);
-  assert(fs.existsSync(referenceFile), failures, `Missing command reference: ${referenceFile}`);
+  assert(fs.existsSync(skillDir), failures, `Missing skill directory: ${displayPath(skillDir)}`);
+  assert(fs.existsSync(skillFile), failures, `Missing skill file: ${displayPath(skillFile)}`);
+  assert(fs.existsSync(referenceFile), failures, `Missing command reference: ${displayPath(referenceFile)}`);
 
   if (!fs.existsSync(skillFile) || !packageJson) {
     return;
@@ -196,14 +203,14 @@ function checkSkill({ packageRoot, packageJson, failures }) {
 
   const source = fs.readFileSync(skillFile, "utf8");
   const frontmatter = extractFrontmatter(source);
-  assert(frontmatter, failures, `${skillFile} must start with YAML frontmatter.`);
+  assert(frontmatter, failures, `${displayPath(skillFile)} must start with YAML frontmatter.`);
   assertCallGuidance({ source, filePath: skillFile, failures });
   assertCliGuidance({ source, filePath: skillFile, packageJson, failures });
-  assert(source.includes("Prefer the Cursor MCP tools"), failures, `${skillFile} must prefer Cursor MCP tools when available.`);
+  assert(source.includes("Prefer the Cursor MCP tools"), failures, `${displayPath(skillFile)} must prefer Cursor MCP tools when available.`);
   assert(
     source.includes("wait 60 seconds before the first `get_call_run`"),
     failures,
-    `${skillFile} must document the first direct MCP status wait.`,
+    `${displayPath(skillFile)} must document the first direct MCP status wait.`,
   );
 
   if (fs.existsSync(referenceFile)) {
@@ -216,34 +223,34 @@ function checkSkill({ packageRoot, packageJson, failures }) {
     return;
   }
 
-  assert(frontmatterValue(frontmatter, "name") === EXPECTED_SKILL_NAME, failures, `${skillFile} frontmatter name must be ${EXPECTED_SKILL_NAME}.`);
+  assert(frontmatterValue(frontmatter, "name") === EXPECTED_SKILL_NAME, failures, `${displayPath(skillFile)} frontmatter name must be ${EXPECTED_SKILL_NAME}.`);
   assert(
     frontmatterValue(frontmatter, "description") ===
       "Use CALL-E from Cursor for setup checks, authentication recovery, phone call planning, planned call execution, and call status checks.",
     failures,
-    `${skillFile} frontmatter description must match the Cursor skill description.`,
+    `${displayPath(skillFile)} frontmatter description must match the Cursor skill description.`,
   );
 }
 
 function checkRule({ packageRoot, failures }) {
   const rulePath = path.join(packageRoot, "plugin", "rules", "call-e-safety.mdc");
-  assert(fs.existsSync(rulePath), failures, `Missing safety rule: ${rulePath}`);
+  assert(fs.existsSync(rulePath), failures, `Missing safety rule: ${displayPath(rulePath)}`);
   if (!fs.existsSync(rulePath)) {
     return;
   }
 
   const source = fs.readFileSync(rulePath, "utf8");
   const frontmatter = extractFrontmatter(source);
-  assert(frontmatter, failures, `${rulePath} must start with YAML frontmatter.`);
-  assert(frontmatter?.includes('description: "CALL-E real phone call safety rules."'), failures, `${rulePath} must include the safety rule description.`);
-  assert(frontmatter?.includes("alwaysApply: true"), failures, `${rulePath} must contain alwaysApply: true.`);
-  assert(source.includes("CALL-E can place real outbound phone calls."), failures, `${rulePath} must warn that CALL-E can place real outbound calls.`);
-  assert(source.includes("Always use plan_call before run_call."), failures, `${rulePath} must require plan_call before run_call.`);
-  assert(source.includes("Only use run_call when the user clearly intends to place the call."), failures, `${rulePath} must require explicit user intent before run_call.`);
-  assert(source.includes("Preserve returned plan_id and confirm_token exactly."), failures, `${rulePath} must require exact returned credential preservation.`);
-  assert(source.includes("Never guess phone numbers"), failures, `${rulePath} must forbid guessing call inputs.`);
-  assert(source.includes("Never print, request, or expose OAuth tokens"), failures, `${rulePath} must forbid exposing auth secrets.`);
-  assert(source.includes("Do not configure CALL-E run_call for auto-run."), failures, `${rulePath} must forbid run_call auto-run configuration.`);
+  assert(frontmatter, failures, `${displayPath(rulePath)} must start with YAML frontmatter.`);
+  assert(frontmatter?.includes('description: "CALL-E real phone call safety rules."'), failures, `${displayPath(rulePath)} must include the safety rule description.`);
+  assert(frontmatter?.includes("alwaysApply: true"), failures, `${displayPath(rulePath)} must contain alwaysApply: true.`);
+  assert(source.includes("CALL-E can place real outbound phone calls."), failures, `${displayPath(rulePath)} must warn that CALL-E can place real outbound calls.`);
+  assert(source.includes("Always use plan_call before run_call."), failures, `${displayPath(rulePath)} must require plan_call before run_call.`);
+  assert(source.includes("Only use run_call when the user clearly intends to place the call."), failures, `${displayPath(rulePath)} must require explicit user intent before run_call.`);
+  assert(source.includes("Preserve returned plan_id and confirm_token exactly."), failures, `${displayPath(rulePath)} must require exact returned credential preservation.`);
+  assert(source.includes("Never guess phone numbers"), failures, `${displayPath(rulePath)} must forbid guessing call inputs.`);
+  assert(source.includes("Never print, request, or expose OAuth tokens"), failures, `${displayPath(rulePath)} must forbid exposing auth secrets.`);
+  assert(source.includes("Do not configure CALL-E run_call for auto-run."), failures, `${displayPath(rulePath)} must forbid run_call auto-run configuration.`);
 }
 
 function checkMarketplace({ repoRoot, packageJson, failures }) {
@@ -288,18 +295,18 @@ function checkDocs({ packageRoot, repoRoot, failures }) {
   ];
 
   for (const docFile of docFiles) {
-    assert(fs.existsSync(docFile), failures, `Missing documentation file: ${docFile}`);
+    assert(fs.existsSync(docFile), failures, `Missing documentation file: ${displayPath(docFile)}`);
     if (!fs.existsSync(docFile)) {
       continue;
     }
 
     const source = fs.readFileSync(docFile, "utf8");
-    assert(source.includes(EXPECTED_REMOTE_MCP_URL), failures, `${docFile} must document the CALL-E remote MCP URL.`);
-    assert(source.includes("plan_call"), failures, `${docFile} must mention plan_call.`);
-    assert(source.includes("run_call"), failures, `${docFile} must mention run_call.`);
-    assert(source.includes("get_call_run"), failures, `${docFile} must mention get_call_run.`);
-    assert(source.includes("real outbound"), failures, `${docFile} must warn that run_call places real outbound calls.`);
-    assert(source.includes("auto-run"), failures, `${docFile} must warn against configuring run_call for auto-run.`);
+    assert(source.includes(EXPECTED_REMOTE_MCP_URL), failures, `${displayPath(docFile)} must document the CALL-E remote MCP URL.`);
+    assert(source.includes("plan_call"), failures, `${displayPath(docFile)} must mention plan_call.`);
+    assert(source.includes("run_call"), failures, `${displayPath(docFile)} must mention run_call.`);
+    assert(source.includes("get_call_run"), failures, `${displayPath(docFile)} must mention get_call_run.`);
+    assert(source.includes("real outbound"), failures, `${displayPath(docFile)} must warn that run_call places real outbound calls.`);
+    assert(source.includes("auto-run"), failures, `${displayPath(docFile)} must warn against configuring run_call for auto-run.`);
   }
 }
 

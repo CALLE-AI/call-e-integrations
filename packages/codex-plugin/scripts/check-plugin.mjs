@@ -2,6 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+// Paths go into failure messages with forward slashes on every platform, so
+// the output is stable for tests, CI log greps and docs comparisons. Filesystem
+// access still uses the native separator.
+function displayPath(value) {
+  return String(value).split(path.sep).join("/");
+}
+
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PACKAGE_ROOT = path.resolve(SCRIPT_DIR, "..");
 const DEFAULT_REPO_ROOT = path.resolve(DEFAULT_PACKAGE_ROOT, "../..");
@@ -11,14 +18,14 @@ const EXPECTED_SKILLS = ["calle"];
 
 function readJson(filePath, failures) {
   if (!fs.existsSync(filePath)) {
-    failures.push(`Missing ${filePath}`);
+    failures.push(`Missing ${displayPath(filePath)}`);
     return null;
   }
 
   try {
     return JSON.parse(fs.readFileSync(filePath, "utf8"));
   } catch (error) {
-    failures.push(`Invalid JSON at ${filePath}: ${error.message}`);
+    failures.push(`Invalid JSON at ${displayPath(filePath)}: ${error.message}`);
     return null;
   }
 }
@@ -29,8 +36,8 @@ function assert(condition, failures, message) {
   }
 }
 
-function extractFrontmatter(markdown) {
-  const match = /^---\n([\s\S]*?)\n---\n?/u.exec(markdown);
+export function extractFrontmatter(markdown) {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/u.exec(markdown);
   return match ? match[1] : null;
 }
 
@@ -39,10 +46,10 @@ function checkSkill({ skillName, skillDir, failures }) {
   const skillInterfaceFile = path.join(skillDir, "agents", "openai.yaml");
   const referenceFile = path.join(skillDir, "references", "commands.md");
 
-  assert(fs.existsSync(skillDir), failures, `Missing skill directory: ${skillDir}`);
-  assert(fs.existsSync(skillFile), failures, `Missing skill file: ${skillFile}`);
-  assert(fs.existsSync(skillInterfaceFile), failures, `Missing skill UI metadata: ${skillInterfaceFile}`);
-  assert(fs.existsSync(referenceFile), failures, `Missing command reference: ${referenceFile}`);
+  assert(fs.existsSync(skillDir), failures, `Missing skill directory: ${displayPath(skillDir)}`);
+  assert(fs.existsSync(skillFile), failures, `Missing skill file: ${displayPath(skillFile)}`);
+  assert(fs.existsSync(skillInterfaceFile), failures, `Missing skill UI metadata: ${displayPath(skillInterfaceFile)}`);
+  assert(fs.existsSync(referenceFile), failures, `Missing command reference: ${displayPath(referenceFile)}`);
 
   if (!fs.existsSync(skillFile)) {
     return;
@@ -50,53 +57,53 @@ function checkSkill({ skillName, skillDir, failures }) {
 
   const source = fs.readFileSync(skillFile, "utf8");
   const frontmatter = extractFrontmatter(source);
-  assert(frontmatter, failures, `${skillFile} must start with YAML frontmatter.`);
+  assert(frontmatter, failures, `${displayPath(skillFile)} must start with YAML frontmatter.`);
   assert(
     source.includes("assistant_hint.message"),
     failures,
-    `${skillFile} must document how to display assistant_hint.message after auth login.`,
+    `${displayPath(skillFile)} must document how to display assistant_hint.message after auth login.`,
   );
   assert(
     source.includes("Run blocking `auth login`"),
     failures,
-    `${skillFile} must document blocking authorization login for the default Codex plugin flow.`,
+    `${displayPath(skillFile)} must document blocking authorization login for the default Codex plugin flow.`,
   );
   assert(
     source.includes("Do not call ChatGPT App or connector tools") &&
       source.includes("mcp__codex_apps__") &&
       source.toLowerCase().includes("use only the `calle` cli flow"),
     failures,
-    `${skillFile} must document that the Codex plugin does not route through ChatGPT App tools.`,
+    `${displayPath(skillFile)} must document that the Codex plugin does not route through ChatGPT App tools.`,
   );
   assert(
     source.includes("do not ask the user to reply"),
     failures,
-    `${skillFile} must document that browser authorization should continue without a manual chat reply.`,
+    `${displayPath(skillFile)} must document that browser authorization should continue without a manual chat reply.`,
   );
   assert(
     source.includes("Before we start, please complete authorization here"),
     failures,
-    `${skillFile} must include the first authorization help message.`,
+    `${displayPath(skillFile)} must include the first authorization help message.`,
   );
   assert(
     source.includes("Great, authorization is complete"),
     failures,
-    `${skillFile} must include the post-authorization success message.`,
+    `${displayPath(skillFile)} must include the post-authorization success message.`,
   );
   assert(
     source.includes("Phone call is in progress! Progress:"),
     failures,
-    `${skillFile} must document the non-terminal call activity progress template.`,
+    `${displayPath(skillFile)} must document the non-terminal call activity progress template.`,
   );
   assert(
     source.includes("Do not stay silent until a"),
     failures,
-    `${skillFile} must require user-visible progress updates before terminal status.`,
+    `${displayPath(skillFile)} must require user-visible progress updates before terminal status.`,
   );
   assert(
     source.includes("Poll every 10 seconds"),
     failures,
-    `${skillFile} must document periodic polling while a call is non-terminal.`,
+    `${displayPath(skillFile)} must document periodic polling while a call is non-terminal.`,
   );
 
   if (fs.existsSync(referenceFile)) {
@@ -104,39 +111,39 @@ function checkSkill({ skillName, skillDir, failures }) {
     assert(
       referenceSource.includes("Phone call is in progress! Progress:"),
       failures,
-      `${referenceFile} must document the non-terminal call activity progress template.`,
+      `${displayPath(referenceFile)} must document the non-terminal call activity progress template.`,
     );
     assert(
       referenceSource.includes("Run blocking `auth login`"),
       failures,
-      `${referenceFile} must document blocking authorization login for the default Codex plugin flow.`,
+      `${displayPath(referenceFile)} must document blocking authorization login for the default Codex plugin flow.`,
     );
     assert(
       referenceSource.includes("Do not call ChatGPT App or connector tools") &&
         referenceSource.includes("mcp__codex_apps__") &&
         referenceSource.includes("Use the `calle` CLI flow"),
       failures,
-      `${referenceFile} must document that the Codex plugin does not route through ChatGPT App tools.`,
+      `${displayPath(referenceFile)} must document that the Codex plugin does not route through ChatGPT App tools.`,
     );
     assert(
       referenceSource.includes("do not ask the user to reply"),
       failures,
-      `${referenceFile} must document that browser authorization should continue without a manual chat reply.`,
+      `${displayPath(referenceFile)} must document that browser authorization should continue without a manual chat reply.`,
     );
     assert(
       referenceSource.includes("Before we start, please complete authorization here"),
       failures,
-      `${referenceFile} must include the first authorization help message.`,
+      `${displayPath(referenceFile)} must include the first authorization help message.`,
     );
     assert(
       referenceSource.includes("Great, authorization is complete"),
       failures,
-      `${referenceFile} must include the post-authorization success message.`,
+      `${displayPath(referenceFile)} must include the post-authorization success message.`,
     );
     assert(
       referenceSource.includes("Wait 10 seconds"),
       failures,
-      `${referenceFile} must document the non-terminal call polling interval.`,
+      `${displayPath(referenceFile)} must document the non-terminal call polling interval.`,
     );
   }
 
@@ -144,19 +151,19 @@ function checkSkill({ skillName, skillDir, failures }) {
     return;
   }
 
-  const nameMatch = /^name:\s*([^\n]+)\s*$/mu.exec(frontmatter);
+  const nameMatch = /^name:\s*([^\r\n]+)\s*$/mu.exec(frontmatter);
   const descriptionMatch = /^description:\s*/mu.exec(frontmatter);
   const declaredName = nameMatch?.[1]?.trim().replace(/^['"]|['"]$/g, "");
 
-  assert(declaredName === skillName, failures, `${skillFile} frontmatter name must be "${skillName}".`);
-  assert(descriptionMatch, failures, `${skillFile} frontmatter must include description.`);
+  assert(declaredName === skillName, failures, `${displayPath(skillFile)} frontmatter name must be "${skillName}".`);
+  assert(descriptionMatch, failures, `${displayPath(skillFile)} frontmatter must include description.`);
 
   if (fs.existsSync(skillInterfaceFile)) {
     const skillInterfaceSource = fs.readFileSync(skillInterfaceFile, "utf8");
     assert(
       /display_name:\s*"CALL-E"/u.test(skillInterfaceSource),
       failures,
-      `${skillInterfaceFile} must set interface.display_name to "CALL-E".`,
+      `${displayPath(skillInterfaceFile)} must set interface.display_name to "CALL-E".`,
     );
   }
 }
