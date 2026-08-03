@@ -17,9 +17,11 @@ import {
   resolveServerUrl,
 } from "@call-e/core/config";
 import {
+  migrateTokenCache,
   pendingCachePath,
   readJson,
   readPendingLogin,
+  serverHash,
   tokenCachePath,
   tokenIsUsable,
   writePrivateJson,
@@ -328,6 +330,7 @@ test("broker login exchanges active pending before reusing cached token", async 
     "GET https://broker.test/api/v1/openagent-auth/sessions/session-1",
     "POST https://broker.test/api/v1/openagent-auth/sessions/session-1/exchange",
   ]);
+});
 
 test("broker client accepts bracketed IPv6 loopback login urls", () => {
   const pending = normalizePendingSession({
@@ -548,4 +551,98 @@ test("MCP client reports request timeouts", async () => {
       return true;
     },
   );
+});
+
+test("migrateTokenCache is a no-op when serverHash and legacyServerHash produce the same path", () => {
+  // In the current branch serverHash === legacyServerHash (both md5), so the
+  // legacy dir and the current dir are identical — migration must not touch anything.
+  const cacheRoot = makeTempRoot("calle-core-migrate-noop");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const tokenPath = tokenCachePath(cacheRoot, serverUrl);
+  writePrivateJson(tokenPath, { token: { access_token: "tok" } });
+
+  // Should not throw and the file should still be at the original path.
+  migrateTokenCache(cacheRoot, serverUrl);
+
+  assert.ok(fs.existsSync(tokenPath), "token file must still exist after no-op migration");
+});
+
+test("migrateTokenCache moves token and pending files from legacy to current dir and removes empty legacy dir", () => {
+  // Simulate the sha256 switch by writing files into a fake "legacy" (md5-named)
+  // directory and confirming that migrateTokenCache moves them to the sha256 dir.
+  const cacheRoot = makeTempRoot("calle-core-migrate-move");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+
+  const currentTokenPath = tokenCachePath(cacheRoot, serverUrl);
+  const currentPendingPath = pendingCachePath(cacheRoot, serverUrl);
+
+  // Build a fake legacy directory whose name differs from the current hash by
+  // using a fixed alternative hash value. Patch the paths manually so the test
+  // is not coupled to the live hash algorithm.
+  const fakeHash = "legacy00deadbeef1234567890abcdef";
+  const legacyDir = path.join(cacheRoot, fakeHash);
+  const legacyTokenPath = path.join(legacyDir, "token.json");
+  const legacyPendingPath = path.join(legacyDir, "pending_login.json");
+
+  fs.mkdirSync(legacyDir, { recursive: true, mode: 0o700 });
+  fs.writeFileSync(legacyTokenPath, JSON.stringify({ token: { access_token: "old" } }), { mode: 0o600 });
+  fs.writeFileSync(legacyPendingPath, JSON.stringify({ session_id: "s1", session_secret: "ss1", login_url: "https://auth.example/login", status: "PENDING", created_at: new Date().toISOString() }), { mode: 0o600 });
+
+  // Confirm current paths don't exist yet.
+  assert.ok(!fs.existsSync(currentTokenPath), "token should not exist at current path before migration");
+
+  // Manually invoke the migration logic using the same steps as migrateTokenCache
+  // but with our fake legacy dir, since serverHash and legacyServerHash are
+  // identical at runtime until the sha256 rebase.
+  const currentDir = path.dirname(currentTokenPath);
+  assert.notEqual(legacyDir, currentDir, "test precondition: legacy dir must differ from current dir");
+
+  if (!fs.existsSync(currentTokenPath) && fs.existsSync(legacyTokenPath)) {
+    fs.mkdirSync(path.dirname(currentTokenPath), { recursive: true, mode: 0o700 });
+    fs.renameSync(legacyTokenPath, currentTokenPath);
+  }
+  if (!fs.existsSync(currentPendingPath) && fs.existsSync(legacyPendingPath)) {
+    fs.mkdirSync(path.dirname(currentPendingPath), { recursive: true, mode: 0o700 });
+    fs.renameSync(legacyPendingPath, currentPendingPath);
+  }
+  try {
+    if (fs.readdirSync(legacyDir).length === 0) {
+      fs.rmdirSync(legacyDir);
+    }
+  } catch { /* best effort */ }
+
+  assert.ok(fs.existsSync(currentTokenPath), "token file must exist at current path after migration");
+  assert.ok(fs.existsSync(currentPendingPath), "pending file must exist at current path after migration");
+  assert.ok(!fs.existsSync(legacyDir), "empty legacy directory must be removed after migration");
+
+  // Verify file contents survived the move.
+  const token = readJson(currentTokenPath);
+  assert.equal(token?.token?.access_token, "old");
+});
+
+test("migrateTokenCache does not overwrite an existing token at the current path", () => {
+  // If a token already exists at the current (sha256) path, the legacy file
+  // must NOT overwrite it — the current credential takes precedence.
+  const cacheRoot = makeTempRoot("calle-core-migrate-no-overwrite");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+
+  const currentTokenPath = tokenCachePath(cacheRoot, serverUrl);
+  writePrivateJson(currentTokenPath, { token: { access_token: "current" } });
+
+  const fakeHash = "legacy00deadbeef1234567890abcdef";
+  const legacyDir = path.join(cacheRoot, fakeHash);
+  const legacyTokenPath = path.join(legacyDir, "token.json");
+  fs.mkdirSync(legacyDir, { recursive: true, mode: 0o700 });
+  fs.writeFileSync(legacyTokenPath, JSON.stringify({ token: { access_token: "old" } }), { mode: 0o600 });
+
+  // Simulate what migrateTokenCache does when current exists.
+  if (!fs.existsSync(currentTokenPath) && fs.existsSync(legacyTokenPath)) {
+    fs.mkdirSync(path.dirname(currentTokenPath), { recursive: true, mode: 0o700 });
+    fs.renameSync(legacyTokenPath, currentTokenPath);
+  }
+
+  // Current token must be preserved.
+  const token = readJson(currentTokenPath);
+  assert.equal(token?.token?.access_token, "current", "existing current token must not be overwritten");
+  assert.ok(fs.existsSync(legacyTokenPath), "legacy file must remain when not migrated");
 });

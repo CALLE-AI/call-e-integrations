@@ -1,3 +1,16 @@
+/**
+ * Returns true if rawUrl is a safe URL that can be opened in a browser:
+ * - any https: URL, or
+ * - an http: URL whose hostname is a loopback address (localhost, 127.0.0.1, ::1).
+ */
+export function isSafeBrokerLoginUrl(rawUrl: unknown): boolean;
+
+/**
+ * Returns the canonicalised href of rawUrl when isSafeBrokerLoginUrl returns
+ * true, or null otherwise.
+ */
+export function sanitizeBrokerLoginUrl(rawUrl: unknown): string | null;
+
 import type { JsonObject, PendingLoginDocument, TokenDocument } from "./cache.js";
 
 export interface BrokerRequestConfig {

@@ -19,7 +19,10 @@
   },
   "exports": {
     ".": "./lib/index.js",
-    "./broker-client": "./lib/broker-client.js",
+    "./broker-client": {
+      "types": "./lib/broker-client.d.ts",
+      "default": "./lib/broker-client.js"
+    },
     "./cache": "./lib/cache.js",
     "./config": "./lib/config.js",
     "./constants": "./lib/constants.js",
