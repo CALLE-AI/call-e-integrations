@@ -1896,11 +1896,59 @@ test("resolveRuntimeConfig rejects durations that are not plain numbers", () => 
   );
   assert.throws(
     () => resolveRuntimeConfig({ minTtlSeconds: "60s" }),
-    /--min-ttl-seconds expects a positive number of seconds/,
+    /--min-ttl-seconds expects a non-negative number of seconds/,
   );
   assert.throws(
     () => resolveRuntimeConfig({ telemetryTimeoutSeconds: "1.5s" }, {}),
     /--telemetry-timeout-seconds expects a positive number of seconds/,
+  );
+});
+
+test("resolveRuntimeConfig keeps --min-ttl-seconds 0 working", () => {
+  // Zero disables the minimum remaining-lifetime window, which is a documented
+  // way to use the flag. The duration validator is strictly positive, so sharing
+  // it across every setting would have taken that away.
+  assert.equal(resolveRuntimeConfig({ minTtlSeconds: "0" }).minTtlSeconds, 0);
+  assert.equal(resolveRuntimeConfig({ minTtlSeconds: 0 }).minTtlSeconds, 0);
+
+  // Still not a free pass: a negative minimum is meaningless.
+  assert.throws(
+    () => resolveRuntimeConfig({ minTtlSeconds: "-1" }),
+    /--min-ttl-seconds expects a non-negative number of seconds/,
+  );
+
+  // And zero stays rejected where it would mean "abort immediately".
+  assert.throws(
+    () => resolveRuntimeConfig({ timeoutSeconds: "0" }),
+    /--timeout-seconds expects a positive number of seconds/,
+  );
+});
+
+test("resolveRuntimeConfig rejects timer values Node would collapse to 1ms", () => {
+  // setTimeout stores its delay in a signed 32-bit int. Anything over
+  // 2,147,483,647ms is silently replaced by 1ms, so a very large --timeout-seconds
+  // recreated the same immediate-abort bug the validator was added to stop.
+  const maxSeconds = Math.floor(2_147_483_647 / 1000); // 2147483
+
+  assert.equal(resolveRuntimeConfig({ timeoutSeconds: String(maxSeconds) }).timeoutSeconds, maxSeconds);
+
+  for (const flag of ["timeoutSeconds", "pollTimeoutSeconds"]) {
+    assert.throws(
+      () => resolveRuntimeConfig({ [flag]: String(maxSeconds + 1) }),
+      /expects at most 2147483 seconds/,
+      `expected ${flag} to reject ${maxSeconds + 1}`,
+    );
+  }
+
+  assert.throws(
+    () => resolveRuntimeConfig({ telemetryTimeoutSeconds: String(maxSeconds + 1) }, {}),
+    /expects at most 2147483 seconds/,
+  );
+
+  // --min-ttl-seconds never reaches setTimeout, so it is not bounded by it.
+  assert.equal(
+    resolveRuntimeConfig({ minTtlSeconds: String(maxSeconds + 1) }).minTtlSeconds,
+    maxSeconds + 1,
   );
 });
 
