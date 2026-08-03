@@ -3,7 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 
 export function serverHash(serverUrl) {
-  return crypto.createHash("md5").update(serverUrl, "utf8").digest("hex");
+  return crypto.createHash("sha256").update(serverUrl, "utf8").digest("hex");
 }
 
 export function tokenCachePath(cacheRoot, serverUrl) {

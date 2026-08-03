@@ -78,7 +78,16 @@ function resolveTelemetryEnabled(options = {}, env = {}) {
 function resolveTelemetryUrl({ telemetryUrl, baseUrl }, env = {}) {
   const configured = firstOptionValue(telemetryUrl) || env.CALLE_TELEMETRY_URL;
   if (configured) {
-    return String(configured);
+    const url = String(configured);
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "https:") {
+        throw new Error(`Telemetry URL must use HTTPS, got: ${parsed.protocol}`);
+      }
+    } catch (err) {
+      throw new Error(`Invalid CALLE_TELEMETRY_URL: ${err.message}`);
+    }
+    return url;
   }
   return `${normalizeBaseUrl(baseUrl)}/api/ui-telemetry/track`;
 }
@@ -122,7 +131,37 @@ export function formatIntegrationHeader(integrationContext) {
   return `${source}/${integration}/${version}`;
 }
 
+const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+
+function requireHttpsUrl(value, name) {
+  if (!value) {
+    return value;
+  }
+  let parsed;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(`${name} must be a valid URL`);
+  }
+  if (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && LOOPBACK_HOSTNAMES.has(parsed.hostname))) {
+    throw new Error(`${name} must use HTTPS (got '${parsed.protocol}')`);
+  }
+  return value;
+}
+
 export function resolveRuntimeConfig(options = {}, env = process.env) {
+  if (options.baseUrl) {
+    requireHttpsUrl(options.baseUrl, "--base-url");
+  }
+  if (options.serverUrl) {
+    requireHttpsUrl(options.serverUrl, "--server-url");
+  }
+  if (options.brokerBaseUrl) {
+    requireHttpsUrl(options.brokerBaseUrl, "--broker-base-url");
+  }
+  if (options.authBaseUrl) {
+    requireHttpsUrl(options.authBaseUrl, "--auth-base-url");
+  }
   const baseUrl = normalizeBaseUrl(options.baseUrl || DEFAULT_BASE_URL);
   const channel = options.channel || DEFAULT_CHANNEL;
   const serverUrl = resolveServerUrl({ serverUrl: options.serverUrl, baseUrl, channel });
@@ -144,7 +183,14 @@ export function resolveRuntimeConfig(options = {}, env = process.env) {
     minTtlSeconds: Number(options.minTtlSeconds || DEFAULT_MIN_TTL_SECONDS),
     serverName: options.serverName || DEFAULT_SERVER_NAME,
     telemetryEnabled: resolveTelemetryEnabled(options, env),
-    telemetryUrl: resolveTelemetryUrl({ telemetryUrl: options.telemetryUrl, baseUrl }, env),
+    telemetryUrl: (() => {
+      try {
+        return resolveTelemetryUrl({ telemetryUrl: options.telemetryUrl, baseUrl }, env);
+      } catch (err) {
+        process.stderr.write(`[calle] Warning: ${err.message} — telemetry disabled.\n`);
+        return null;
+      }
+    })(),
     telemetryTimeoutSeconds: Number(
       firstOptionValue(options.telemetryTimeoutSeconds) ||
         env.CALLE_TELEMETRY_TIMEOUT_SECONDS ||

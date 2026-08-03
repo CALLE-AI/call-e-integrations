@@ -2,6 +2,29 @@ import { pendingCachePath, pendingIsExpired, readPendingLogin, removeFile, token
 import { INTEGRATION_HEADER, SESSION_SECRET_HEADER } from "./constants.js";
 import { HttpStatusError, requestJson } from "./http.js";
 
+const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+
+function normalizeHostname(hostname) {
+  return hostname.replace(/^\[/u, "").replace(/\]$/u, "").toLowerCase();
+}
+
+export function isSafeBrokerLoginUrl(rawUrl) {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol === "https:") {
+      return true;
+    }
+
+    return parsed.protocol === "http:" && LOOPBACK_HOSTNAMES.has(normalizeHostname(parsed.hostname));
+  } catch {
+    return false;
+  }
+}
+
+export function sanitizeBrokerLoginUrl(rawUrl) {
+  return isSafeBrokerLoginUrl(rawUrl) ? new URL(rawUrl).href : null;
+}
+
 function integrationHeaders(config) {
   return config?.integrationHeader ? { [INTEGRATION_HEADER]: config.integrationHeader } : {};
 }
@@ -147,16 +170,20 @@ export async function loginWithBroker(config, {
 
   const { pending, created } = await ensurePendingLogin(config, { fetchImpl, forceLogin });
   if (created) {
+    const safeLoginUrl = sanitizeBrokerLoginUrl(pending.login_url);
     stderr("Open the brokered login URL in your browser to continue:");
-    stderr(pending.login_url);
-    if (!noBrowserOpen) {
-      await openBrowser(pending.login_url);
+    stderr(safeLoginUrl ?? "[authorization URL unavailable]");
+    if (!noBrowserOpen && safeLoginUrl) {
+      await openBrowser(safeLoginUrl);
     }
   }
 
   const deadline = Date.now() + Number(config.pollTimeoutSeconds || 300) * 1000;
+  const maxAttempts = Number(config.pollMaxAttempts || 0) || 600;
+  let attempt = 0;
   let current = pending;
-  while (Date.now() < deadline) {
+  while (Date.now() < deadline && attempt < maxAttempts) {
+    attempt += 1;
     const statusPayload = await getBrokerSessionStatus(config, current, { fetchImpl });
     const status = String(statusPayload.status || current.status || "PENDING").toUpperCase();
     current = {
