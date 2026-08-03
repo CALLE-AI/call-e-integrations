@@ -6,12 +6,65 @@ export function serverHash(serverUrl) {
   return crypto.createHash("sha256").update(serverUrl, "utf8").digest("hex");
 }
 
+/**
+ * Legacy hash used before the cache directory was renamed to sha256.
+ * Kept for migration: if a token exists under the legacy path but not the
+ * current path, migrateTokenCache() moves it automatically.
+ */
+export function legacyServerHash(serverUrl) {
+  return crypto.createHash("md5").update(serverUrl, "utf8").digest("hex");
+}
+
 export function tokenCachePath(cacheRoot, serverUrl) {
   return path.join(cacheRoot, serverHash(serverUrl), "token.json");
 }
 
 export function pendingCachePath(cacheRoot, serverUrl) {
   return path.join(cacheRoot, serverHash(serverUrl), "pending_login.json");
+}
+
+/**
+ * Migrate token and pending-login files from the legacy (md5) cache directory
+ * to the current (sha256) cache directory when they differ.  No-op when the
+ * two hashes produce the same directory name (i.e. before the sha256 switch).
+ */
+export function migrateTokenCache(cacheRoot, serverUrl) {
+  const legacyDir = path.join(cacheRoot, legacyServerHash(serverUrl));
+  const currentTokenPath = tokenCachePath(cacheRoot, serverUrl);
+  const currentPendingPath = pendingCachePath(cacheRoot, serverUrl);
+
+  // If the current paths already exist, or the legacy dir is identical to the
+  // current dir (no migration needed), bail out.
+  const currentDir = path.dirname(currentTokenPath);
+  if (legacyDir === currentDir) {
+    return;
+  }
+
+  const legacyTokenPath = path.join(legacyDir, "token.json");
+  const legacyPendingPath = path.join(legacyDir, "pending_login.json");
+
+  try {
+    if (!fs.existsSync(currentTokenPath) && fs.existsSync(legacyTokenPath)) {
+      ensurePrivateDir(path.dirname(currentTokenPath));
+      fs.renameSync(legacyTokenPath, currentTokenPath);
+    }
+    if (!fs.existsSync(currentPendingPath) && fs.existsSync(legacyPendingPath)) {
+      ensurePrivateDir(path.dirname(currentPendingPath));
+      fs.renameSync(legacyPendingPath, currentPendingPath);
+    }
+    // Remove legacy directory if now empty
+    try {
+      const remaining = fs.readdirSync(legacyDir);
+      if (remaining.length === 0) {
+        fs.rmdirSync(legacyDir);
+      }
+    } catch {
+      // Best effort only.
+    }
+  } catch {
+    // Migration failures are non-fatal; the caller will proceed with the
+    // current path, and users can re-authenticate if needed.
+  }
 }
 
 export function ensurePrivateDir(dirPath) {

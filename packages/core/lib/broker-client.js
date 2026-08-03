@@ -1,4 +1,4 @@
-import { pendingCachePath, pendingIsExpired, readPendingLogin, removeFile, tokenCachePath, tokenIsUsable, writePrivateJson, readJson } from "./cache.js";
+import { migrateTokenCache, pendingCachePath, pendingIsExpired, readPendingLogin, removeFile, tokenCachePath, tokenIsUsable, writePrivateJson, readJson } from "./cache.js";
 import { INTEGRATION_HEADER, SESSION_SECRET_HEADER } from "./constants.js";
 import { HttpStatusError, requestJson } from "./http.js";
 
@@ -160,6 +160,10 @@ export async function loginWithBroker(config, {
   noBrowserOpen = false,
   stderr = () => {},
 } = {}) {
+  // Migrate token files from legacy cache directory (md5) to current (sha256)
+  // when the hash algorithm was upgraded.  No-op when the two paths are identical.
+  migrateTokenCache(config.cacheRoot, config.serverUrl);
+
   const cachePath = tokenCachePath(config.cacheRoot, config.serverUrl);
   const pendingPath = pendingCachePath(config.cacheRoot, config.serverUrl);
   const cached = readJson(cachePath);

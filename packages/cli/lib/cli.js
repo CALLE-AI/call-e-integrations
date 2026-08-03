@@ -9,7 +9,7 @@ import {
   tokenIsUsable,
 } from "./cache.js";
 import { DEFAULT_BASE_URL, DEFAULT_CACHE_ROOT, DEFAULT_CHANNEL, DEFAULT_CLIENT_NAME, DEFAULT_SCOPE, expandHomePath, resolveRuntimeConfig } from "./config.js";
-import { ensurePendingLogin, loginWithBroker, sanitizeBrokerLoginUrl } from "./broker-client.js";
+import { ensurePendingLogin, isSafeBrokerLoginUrl, loginWithBroker, sanitizeBrokerLoginUrl } from "./broker-client.js";
 import {
   AuthRequiredError,
   McpHttpError,
@@ -483,7 +483,7 @@ function loginCommand(config) {
 }
 
 function callStatusCommand(config, runId, timezone = null) {
-  return [
+  const parts = [
     "calle",
     "call",
     "status",
@@ -492,11 +492,13 @@ function callStatusCommand(config, runId, timezone = null) {
     ...(timezone ? ["--timezone", timezone] : []),
     "--server-url",
     config.serverUrl,
-    "--cache-root",
-    config.cacheRoot,
-  ]
-    .map(shellQuote)
-    .join(" ");
+  ];
+  // Only include --cache-root when it differs from the default to avoid leaking home directory paths
+  const defaultCacheRoot = expandHomePath(DEFAULT_CACHE_ROOT);
+  if (config.cacheRoot !== defaultCacheRoot) {
+    parts.push("--cache-root", config.cacheRoot);
+  }
+  return parts.map(shellQuote).join(" ");
 }
 
 function isActivePendingLogin(pending) {
@@ -924,19 +926,24 @@ export async function runCli(argv, deps = {}) {
   const stdout = deps.stdout || ((text) => process.stdout.write(text));
   const stderr = deps.stderr || ((text) => process.stderr.write(`${text}\n`));
   const openBrowser = deps.openBrowser || (async (url) => {
-    let parsedUrl;
-    try {
-      parsedUrl = new URL(url);
-    } catch {
-      throw new Error(`Refusing to open browser: invalid login URL`);
-    }
-    if (parsedUrl.protocol !== "https:") {
-      throw new Error(`Refusing to open browser: login URL must use HTTPS (got '${parsedUrl.protocol}')`);
+    if (!isSafeBrokerLoginUrl(url)) {
+      throw new Error(`Refusing to open unsafe URL: expected https: or http: loopback`);
     }
     const { spawn } = await import("node:child_process");
-    const command = process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
-    const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
-    const child = spawn(command, args, { detached: true, stdio: "ignore" });
+    let command;
+    let args;
+    if (process.platform === "darwin") {
+      command = "open";
+      args = [url];
+    } else if (process.platform === "win32") {
+      // Use rundll32 to avoid cmd.exe shell processing of URL special chars (& etc.)
+      command = "rundll32.exe";
+      args = ["url.dll,FileProtocolHandler", url];
+    } else {
+      command = "xdg-open";
+      args = [url];
+    }
+    const child = spawn(command, args, { shell: false, detached: true, stdio: "ignore" });
     child.unref();
   });
 
@@ -1052,8 +1059,6 @@ export async function runCli(argv, deps = {}) {
     removeFile(pendingPath);
     writeJson(stdout, {
       server_url: config.serverUrl,
-      cache_path: cachePath,
-      pending_cache_path: pendingPath,
       removed_cache: cacheDocument !== null,
       removed_pending: pendingDocument !== null,
     });
