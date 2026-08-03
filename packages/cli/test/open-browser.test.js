@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
+import { browserOpenCommand } from "../lib/cli.js";
+
 // Regression: `auth login` opened the browser through cmd.exe on Windows.
 //
 //   spawn("cmd", ["/c", "start", "", url], { detached: true, stdio: "ignore" })
@@ -17,15 +19,58 @@ import test from "node:test";
 // login could not complete -- and the rest of the query string was executed as
 // shell commands. `stdio: "ignore"` meant the user saw none of it.
 //
-// The opener now uses rundll32, which takes the URL as one argument and never
-// parses it. This test pins the underlying cmd behaviour so nobody reintroduces
-// the old approach; it is skipped off Windows, where cmd does not exist.
+// The assertions below run against browserOpenCommand, the function the CLI
+// actually calls, so putting cmd.exe back makes them fail on every platform.
 
 const OAUTH_URL =
   "https://example.invalid/oauth/authorize" +
   "?client_id=calle&redirect_uri=http://localhost:9999/cb&state=abc123&scope=mcp";
 
 const onWindows = process.platform === "win32";
+
+test("windows opens the URL with System32's rundll32, by absolute path", () => {
+  const [command, args] = browserOpenCommand(OAUTH_URL, "win32", { SystemRoot: "C:\\Windows" });
+
+  assert.equal(command, "C:\\Windows\\System32\\rundll32.exe");
+  assert.deepEqual(args, ["url.dll,FileProtocolHandler", OAUTH_URL]);
+});
+
+test("windows never routes the URL through a shell", () => {
+  const [command, args] = browserOpenCommand(OAUTH_URL, "win32", { SystemRoot: "C:\\Windows" });
+
+  assert.doesNotMatch(command, /(^|[\\/])cmd(\.exe)?$/i);
+  assert.ok(!args.includes("/c"), "no cmd switch in the argv");
+  assert.ok(!args.includes("start"), "no start builtin in the argv");
+});
+
+test("windows names the opener by a qualified path, not a bare executable", () => {
+  const [command] = browserOpenCommand(OAUTH_URL, "win32", { SystemRoot: "C:\\Windows" });
+
+  // A bare "rundll32" would be resolved with the CreateProcess search order,
+  // which looks in the current directory before System32.
+  assert.ok(/^[A-Za-z]:\\/.test(command), `expected an absolute path, got ${command}`);
+  assert.match(command, /\\System32\\rundll32\.exe$/i);
+});
+
+test("windows takes the system directory from the environment", () => {
+  const [command] = browserOpenCommand(OAUTH_URL, "win32", { SystemRoot: "D:\\WINNT" });
+
+  assert.equal(command, "D:\\WINNT\\System32\\rundll32.exe");
+});
+
+test("the URL travels as one argv entry, so nothing can split it", () => {
+  const [, args] = browserOpenCommand(OAUTH_URL, "win32", { SystemRoot: "C:\\Windows" });
+  const urlArgs = args.filter((arg) => arg.includes("example.invalid"));
+
+  assert.equal(urlArgs.length, 1);
+  assert.equal(urlArgs[0], OAUTH_URL);
+  assert.ok(urlArgs[0].includes("&scope=mcp"), "the query survives whole");
+});
+
+test("macos and linux keep their openers", () => {
+  assert.deepEqual(browserOpenCommand(OAUTH_URL, "darwin", {}), ["open", [OAUTH_URL]]);
+  assert.deepEqual(browserOpenCommand(OAUTH_URL, "linux", {}), ["xdg-open", [OAUTH_URL]]);
+});
 
 test("cmd.exe mangles a URL containing &", { skip: !onWindows }, () => {
   const result = spawnSync("cmd", ["/c", "echo", OAUTH_URL], { encoding: "utf8" });
@@ -39,16 +84,4 @@ test("cmd.exe mangles a URL containing &", { skip: !onWindows }, () => {
       "the platform changed and the comment above needs revisiting",
   );
   assert.ok(received.startsWith("https://example.invalid/oauth/authorize?client_id=calle"));
-});
-
-test("rundll32 receives the URL intact", { skip: !onWindows }, () => {
-  // Argument passing only -- `echo` stands in for rundll32 so nothing opens.
-  // The point is that the URL survives as a single argv entry.
-  const result = spawnSync(
-    process.execPath,
-    ["-e", "process.stdout.write(process.argv[1])", OAUTH_URL],
-    { encoding: "utf8" },
-  );
-
-  assert.equal((result.stdout || "").trim(), OAUTH_URL);
 });

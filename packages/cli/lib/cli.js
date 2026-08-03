@@ -914,22 +914,36 @@ async function handleCallCommand({ command, positional, options, config, deps, s
   }
 }
 
+// Picks the program that opens a URL in the user's browser.
+//
+// Windows is handled without cmd.exe on purpose. `cmd /c start "" <url>` lets cmd
+// parse the URL, and `&` is a command separator there -- an OAuth URL is truncated
+// at the first `&` (losing redirect_uri, state and scope) and the remaining query
+// fragments are run as shell commands. rundll32 takes the URL as a single argument
+// and never parses it.
+//
+// The Windows opener is named by its fully qualified path. An unqualified
+// "rundll32" would be looked up with the CreateProcess search order, which checks
+// the current directory before System32, so running `calle auth login` from an
+// untrusted checkout holding a planted rundll32.exe would execute it.
+// https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessa
+//
+// Exported so the tests can assert the exact executable and argv the CLI uses.
+export function browserOpenCommand(url, platform = process.platform, env = process.env) {
+  if (platform === "darwin") return ["open", [url]];
+  if (platform !== "win32") return ["xdg-open", [url]];
+
+  const systemRoot = env.SystemRoot || env.SYSTEMROOT || env.windir || "C:\\Windows";
+  const rundll32 = `${systemRoot.replace(/[\\/]+$/, "")}\\System32\\rundll32.exe`;
+  return [rundll32, ["url.dll,FileProtocolHandler", url]];
+}
+
 export async function runCli(argv, deps = {}) {
   const stdout = deps.stdout || ((text) => process.stdout.write(text));
   const stderr = deps.stderr || ((text) => process.stderr.write(`${text}\n`));
   const openBrowser = deps.openBrowser || (async (url) => {
     const { spawn } = await import("node:child_process");
-    // Windows is handled without cmd.exe on purpose. `cmd /c start "" <url>`
-    // lets cmd parse the URL, and `&` is a command separator there -- an OAuth
-    // URL is truncated at the first `&` (losing redirect_uri, state and scope)
-    // and the remaining query fragments are run as shell commands. rundll32
-    // takes the URL as a single argument and never parses it.
-    const [command, args] =
-      process.platform === "darwin"
-        ? ["open", [url]]
-        : process.platform === "win32"
-          ? ["rundll32", ["url.dll,FileProtocolHandler", url]]
-          : ["xdg-open", [url]];
+    const [command, args] = browserOpenCommand(url, process.platform, process.env);
     const child = spawn(command, args, { detached: true, stdio: "ignore" });
     // Without a listener an 'error' event (a missing opener, say) becomes an
     // uncaught exception. Failing to open a browser should not take the CLI
