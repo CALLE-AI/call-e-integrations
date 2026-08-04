@@ -1,5 +1,16 @@
 # @call-e/cli
 
+## 0.3.8
+
+### Patch Changes
+
+- [#71](https://github.com/CALLE-AI/call-e-integrations/pull/71) [`bc70f48`](https://github.com/CALLE-AI/call-e-integrations/commit/bc70f486e996b7aff845c11242838d4e11e5e079) Thanks [@EazyHood](https://github.com/EazyHood)! - Open the browser without cmd.exe on Windows during `auth login`.
+
+  `cmd /c start "" <url>` let cmd parse the OAuth URL, and `&` is a command separator there, so the URL was truncated at the first `&` (losing `redirect_uri`, `state` and `scope`) and the rest of the query string was run as shell commands. The opener is now `rundll32`, which takes the URL as a single argument, named by its fully qualified `%SystemRoot%\System32` path so the executable is not resolved through the current working directory.
+
+- Updated dependencies [[`566008b`](https://github.com/CALLE-AI/call-e-integrations/commit/566008bab86008bc9019c45478122beeaffa5f60)]:
+  - @call-e/core@0.2.4
+
 ## 0.3.7
 
 ### Patch Changes
