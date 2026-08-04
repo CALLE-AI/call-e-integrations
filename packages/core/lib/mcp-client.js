@@ -2,6 +2,7 @@ import { readJson, tokenCachePath, tokenIsUsable } from "./cache.js";
 import {
   DEFAULT_MCP_CLIENT_NAME,
   DEFAULT_MCP_CLIENT_VERSION,
+  DEFAULT_TIMEOUT_SECONDS,
   INTEGRATION_HEADER,
   MCP_PROTOCOL_VERSION,
 } from "./constants.js";
@@ -50,6 +51,18 @@ function parseResponseBody(text) {
   return JSON.parse(text);
 }
 
+// The `|| DEFAULT_TIMEOUT_SECONDS` fallback keeps an unreadable duration away from
+// setTimeout, which fires after 1ms when the delay is NaN and aborts the request
+// before it leaves.
+function timeoutMsFromSeconds(seconds) {
+  return Math.max(Math.ceil(Number(seconds || DEFAULT_TIMEOUT_SECONDS) * 1000), 1000);
+}
+
+// More than one ceiling is in play now, so the message says which one ran out.
+function timeoutLabel(timeoutMs) {
+  return `${Number((timeoutMs / 1000).toFixed(3))}s`;
+}
+
 async function requestJsonRpc(fetchImpl, url, { headers, payload, timeoutMs }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -94,7 +107,10 @@ async function requestJsonRpc(fetchImpl, url, { headers, payload, timeoutMs }) {
     return { body, headers: responseHeaders };
   } catch (error) {
     if (error?.name === "AbortError") {
-      throw new McpHttpError(`MCP request timed out for ${payload.method}`, { code: "http_error" });
+      throw new McpHttpError(
+        `MCP request timed out for ${payload.method} after ${timeoutLabel(timeoutMs)}`,
+        { code: "http_error" },
+      );
     }
     throw error;
   } finally {
@@ -142,7 +158,7 @@ function accessTokenFromCache(config) {
 async function openMcpSession({ config, fetchImpl }) {
   requireFetch(fetchImpl);
   const accessToken = accessTokenFromCache(config);
-  const timeoutMs = Math.max(Math.ceil(Number(config.timeoutSeconds || 15) * 1000), 1000);
+  const timeoutMs = timeoutMsFromSeconds(config.timeoutSeconds);
   const commonHeaders = {
     Accept: "application/json, text/event-stream",
     "Content-Type": "application/json",
@@ -199,6 +215,7 @@ export async function callMcpTool({
   toolName,
   toolArguments = {},
   requestMeta = null,
+  timeoutSeconds = null,
   fetchImpl = globalThis.fetch,
 } = {}) {
   const { rpcHeaders, timeoutMs } = await openMcpSession({ config, fetchImpl });
@@ -217,7 +234,9 @@ export async function callMcpTool({
       method: "tools/call",
       params: toolCallParams,
     }),
-    timeoutMs,
+    // A slow tool can carry its own ceiling. The handshake above keeps the shared
+    // one, so a server that never answers initialize still fails fast.
+    timeoutMs: timeoutSeconds ? timeoutMsFromSeconds(timeoutSeconds) : timeoutMs,
   });
   return response.body?.result ?? {};
 }

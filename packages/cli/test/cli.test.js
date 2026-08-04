@@ -6,7 +6,12 @@ import assert from "node:assert/strict";
 
 import { POST_AUTH_HELP_MESSAGE, preAuthHelpMessage, runCli } from "../lib/cli.js";
 import { pendingCachePath, tokenCachePath, writePrivateJson } from "../lib/cache.js";
-import { CLI_VERSION, resolveRuntimeConfig } from "../lib/config.js";
+import {
+  CLI_VERSION,
+  DEFAULT_PLAN_TIMEOUT_SECONDS,
+  DEFAULT_TIMEOUT_SECONDS,
+  resolveRuntimeConfig,
+} from "../lib/config.js";
 
 const defaultIntegrationHeader = `cli/cli/${CLI_VERSION}`;
 
@@ -1967,5 +1972,91 @@ test("resolveRuntimeConfig keeps accepting valid values and defaults", () => {
   assert.equal(
     resolveRuntimeConfig({ timeoutSeconds: undefined }).timeoutSeconds,
     defaults.timeoutSeconds,
+  );
+});
+
+test("resolveRuntimeConfig gives planning its own request ceiling", () => {
+  // plan_call regularly runs for about as long as the shared ceiling allows, so the
+  // default sat exactly on the common case. Planning gets a longer one of its own
+  // and every other request keeps the short one.
+  const defaults = resolveRuntimeConfig({}, {});
+  assert.equal(defaults.timeoutSeconds, DEFAULT_TIMEOUT_SECONDS);
+  assert.equal(defaults.planTimeoutSeconds, DEFAULT_PLAN_TIMEOUT_SECONDS);
+  assert.ok(
+    DEFAULT_PLAN_TIMEOUT_SECONDS > DEFAULT_TIMEOUT_SECONDS,
+    "planning needs more room than the shared ceiling, not less",
+  );
+
+  // An explicit flag is the user's ceiling for every request, in both directions.
+  assert.equal(resolveRuntimeConfig({ timeoutSeconds: "30" }, {}).planTimeoutSeconds, 30);
+  assert.equal(resolveRuntimeConfig({ timeoutSeconds: "5" }, {}).planTimeoutSeconds, 5);
+
+  // Absent stays absent, the same way it does for timeoutSeconds itself.
+  assert.equal(
+    resolveRuntimeConfig({ timeoutSeconds: "" }, {}).planTimeoutSeconds,
+    DEFAULT_PLAN_TIMEOUT_SECONDS,
+  );
+  assert.equal(
+    resolveRuntimeConfig({ timeoutSeconds: undefined }, {}).planTimeoutSeconds,
+    DEFAULT_PLAN_TIMEOUT_SECONDS,
+  );
+});
+
+test("plan_call requests use the planning ceiling and other calls keep the short one", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-plan-timeout");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl);
+
+  // The transport builds the timeout message from the same value it arms the
+  // AbortController with, so the reported ceiling is the effective one.
+  const fetchAbortingOnToolCall = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") {
+      return jsonRpcResponse(
+        { jsonrpc: "2.0", id: payload.id, result: {} },
+        { headers: { "mcp-session-id": "sess-plan-timeout" } },
+      );
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonRpcResponse({});
+    }
+    if (payload.method === "tools/call") {
+      const abortError = new Error("aborted");
+      abortError.name = "AbortError";
+      throw abortError;
+    }
+    throw new Error(`unexpected MCP method: ${payload.method}`);
+  };
+
+  async function timeoutMessageFor(argv) {
+    const result = await run([...argv, "--base-url", "https://mcp.example", "--cache-root", cacheRoot], {
+      fetchImpl: fetchAbortingOnToolCall,
+    });
+    assert.equal(result.code, 1);
+    return JSON.parse(result.stdout).error.message;
+  }
+
+  const planArgs = ["--to-phone", "+15551234567", "--goal", "Confirm appointment"];
+  const planCeiling = `MCP request timed out for tools/call after ${DEFAULT_PLAN_TIMEOUT_SECONDS}s`;
+  const sharedCeiling = `MCP request timed out for tools/call after ${DEFAULT_TIMEOUT_SECONDS}s`;
+
+  assert.equal(await timeoutMessageFor(["call", "plan", ...planArgs]), planCeiling);
+  assert.equal(await timeoutMessageFor(["call", "start", ...planArgs]), planCeiling);
+  assert.equal(
+    await timeoutMessageFor(["mcp", "call", "plan_call", "--args-json", '{"user_input":"Call Alex"}']),
+    planCeiling,
+  );
+
+  // An explicit --timeout-seconds still wins for planning.
+  assert.equal(
+    await timeoutMessageFor(["call", "plan", ...planArgs, "--timeout-seconds", "30"]),
+    "MCP request timed out for tools/call after 30s",
+  );
+
+  // Only planning is slow, so the other tool calls are unchanged.
+  assert.equal(await timeoutMessageFor(["call", "status", "--run-id", "run_123"]), sharedCeiling);
+  assert.equal(
+    await timeoutMessageFor(["mcp", "call", "get_call_run", "--args-json", '{"run_id":"run_123"}']),
+    sharedCeiling,
   );
 });

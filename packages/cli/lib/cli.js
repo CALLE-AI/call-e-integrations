@@ -641,6 +641,14 @@ function mcpSuccessPayload({ config, toolName = null, result, method = null }) {
   };
 }
 
+// plan_call is the slow one. It regularly runs for about as long as the shared
+// request ceiling allows, so planning gets the longer ceiling resolved in config.
+// planTimeoutSeconds is the explicit --timeout-seconds whenever the flag was given,
+// so an override still wins here.
+function planRequestTimeoutSeconds(config) {
+  return config.planTimeoutSeconds ?? config.timeoutSeconds;
+}
+
 function buildPlanArguments(options) {
   const toPhones = optionValues(options.toPhone)
     .map((value) => String(value).trim())
@@ -777,12 +785,14 @@ async function handleMcpCommand({ command, positional, options, config, deps, st
         throw new InvalidArgumentsError("Usage: calle mcp call <tool-name> --args-json '<json>'");
       }
       const toolName = positional[0];
+      const isPlanCall = toolName === "plan_call";
       const toolArguments = parseJsonObject(options.argsJson, "--args-json");
       const result = await callMcpTool({
         config,
         toolName,
         toolArguments,
-        requestMeta: toolName === "plan_call" ? buildPlanRequestMeta(options, deps.env || process.env) : null,
+        requestMeta: isPlanCall ? buildPlanRequestMeta(options, deps.env || process.env) : null,
+        timeoutSeconds: isPlanCall ? planRequestTimeoutSeconds(config) : null,
         fetchImpl: deps.fetchImpl || globalThis.fetch,
       });
       writeJson(stdout, mcpSuccessPayload({ config, toolName, result }));
@@ -818,6 +828,7 @@ async function handleCallCommand({ command, positional, options, config, deps, s
         toolName,
         toolArguments: buildPlanArguments(options),
         requestMeta: buildPlanRequestMeta(options, deps.env || process.env),
+        timeoutSeconds: planRequestTimeoutSeconds(config),
         fetchImpl: deps.fetchImpl || globalThis.fetch,
       });
       writeJson(stdout, mcpSuccessPayload({ config, toolName, result }));
@@ -831,6 +842,7 @@ async function handleCallCommand({ command, positional, options, config, deps, s
         toolName: "plan_call",
         toolArguments: buildPlanArguments(options),
         requestMeta: buildPlanRequestMeta(options, deps.env || process.env),
+        timeoutSeconds: planRequestTimeoutSeconds(config),
         fetchImpl: deps.fetchImpl || globalThis.fetch,
       });
       const structuredPlan = structuredPayload(planResult);

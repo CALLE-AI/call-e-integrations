@@ -38,6 +38,8 @@ export interface CallMcpToolOptions extends McpRequestOptions {
   toolName: string;
   toolArguments?: JsonObject;
   requestMeta?: JsonObject | null;
+  /** Ceiling for the tools/call request only. Defaults to config.timeoutSeconds. */
+  timeoutSeconds?: number | null;
 }
 
 export class AuthRequiredError extends Error {
