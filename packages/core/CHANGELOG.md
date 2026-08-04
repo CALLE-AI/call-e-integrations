@@ -1,5 +1,13 @@
 # @call-e/core
 
+## 0.2.5
+
+### Patch Changes
+
+- [#73](https://github.com/CALLE-AI/call-e-integrations/pull/73) [`89a5237`](https://github.com/CALLE-AI/call-e-integrations/commit/89a5237f9b0a8d82a79752c4f09dde2a8c9f9ba9) Thanks [@EazyHood](https://github.com/EazyHood)! - Guard the MCP request timeout against a non-numeric duration.
+
+  `Math.max(NaN, 1000)` is `NaN`, and `setTimeout(fn, NaN)` fires after 1ms, so an unreadable timeout aborted every request immediately instead of falling back to a usable one.
+
 ## 0.2.4
 
 ### Patch Changes

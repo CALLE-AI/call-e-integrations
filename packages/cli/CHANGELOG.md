@@ -1,5 +1,18 @@
 # @call-e/cli
 
+## 0.3.9
+
+### Patch Changes
+
+- [#73](https://github.com/CALLE-AI/call-e-integrations/pull/73) [`89a5237`](https://github.com/CALLE-AI/call-e-integrations/commit/89a5237f9b0a8d82a79752c4f09dde2a8c9f9ba9) Thanks [@EazyHood](https://github.com/EazyHood)! - Reject duration flags that are not plain numbers, and bound the ones backed by a timer.
+
+  `--timeout-seconds 30s` used to resolve to `NaN`, which reached the MCP timeout arithmetic where `Math.max(NaN, 1000)` stays `NaN` and `setTimeout` substitutes 1ms, so every call aborted before it left. Durations are now validated where they are read, with the offending flag named in the error.
+
+  The constraints are per option rather than shared: `--min-ttl-seconds 0` keeps working, since zero disables the minimum remaining-lifetime window, while the timeout flags stay strictly positive. Timer-backed values are also capped at 2147483 seconds, because `setTimeout` collapses any longer delay to 1ms and would reproduce the same immediate abort.
+
+- Updated dependencies [[`89a5237`](https://github.com/CALLE-AI/call-e-integrations/commit/89a5237f9b0a8d82a79752c4f09dde2a8c9f9ba9)]:
+  - @call-e/core@0.2.5
+
 ## 0.3.8
 
 ### Patch Changes
