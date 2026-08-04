@@ -8,7 +8,7 @@ import {
   tokenCachePath,
   tokenIsUsable,
 } from "./cache.js";
-import { DEFAULT_BASE_URL, DEFAULT_CHANNEL, DEFAULT_CLIENT_NAME, DEFAULT_SCOPE, resolveRuntimeConfig } from "./config.js";
+import { DEFAULT_BASE_URL, DEFAULT_CHANNEL, DEFAULT_CLIENT_NAME, DEFAULT_PLAN_TIMEOUT_SECONDS, DEFAULT_SCOPE, DEFAULT_TIMEOUT_SECONDS, resolveRuntimeConfig } from "./config.js";
 import { ensurePendingLogin, loginWithBroker } from "./broker-client.js";
 import {
   AuthRequiredError,
@@ -74,7 +74,7 @@ Common options:
   --client-name <name>         Default: ${DEFAULT_CLIENT_NAME}
   --scope <scope>              Default: ${DEFAULT_SCOPE}
   --cache-root <path>
-  --timeout-seconds <seconds>
+  --timeout-seconds <seconds>  Default: ${DEFAULT_TIMEOUT_SECONDS}, ${DEFAULT_PLAN_TIMEOUT_SECONDS} for plan_call
   --poll-timeout-seconds <seconds>
   --server-name <name>          Default: calle
   --force-login

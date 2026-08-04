@@ -68,3 +68,55 @@ get_call_run
 If the same URL works from the user's terminal but fails only inside the Cursor
 agent shell, the issue is the Cursor sandbox policy rather than CALL-E service
 availability.
+
+## `calle call plan` fails with `MCP request timed out for tools/call`
+
+### Symptoms
+
+Planning fails while the rest of the CLI works:
+
+- `calle call plan` exits with:
+
+  ```text
+  MCP request timed out for tools/call after 15s
+  ```
+
+- `calle auth status` and `calle mcp tools` succeed on the same machine.
+- The same plan completes when it is rerun with a longer `--timeout-seconds`.
+
+### Cause
+
+`plan_call` runs for about as long as the shared request ceiling allows, so a
+normal plan can finish just after the ceiling every other request uses. This is a
+client-side timeout rather than a server rejection, so the request may have been
+accepted even though the CLI stopped waiting for it.
+
+Planning carries its own default ceiling of 120 seconds, so the shared 15 second
+default no longer applies to it. An explicit `--timeout-seconds` is the ceiling
+for every request, planning included, so a value shorter than planning needs
+still times out.
+
+### Fix
+
+Run the plan without the flag to get the planning default:
+
+```bash
+calle call plan --to-phone +15551234567
+```
+
+Raise the ceiling explicitly when planning needs longer than that:
+
+```bash
+calle call plan --to-phone +15551234567 --timeout-seconds 180
+```
+
+### Verify
+
+The message names the ceiling that ran out, so it reports which value was in
+effect:
+
+```text
+MCP request timed out for tools/call after 15s
+```
+
+A plan that completes returns its payload on stdout instead.
