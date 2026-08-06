@@ -101,13 +101,13 @@ still times out.
 Run the plan without the flag to get the planning default:
 
 ```bash
-calle call plan --to-phone +15551234567
+calle call plan --to-phone +15551234567 --goal "Confirm the appointment"
 ```
 
 Raise the ceiling explicitly when planning needs longer than that:
 
 ```bash
-calle call plan --to-phone +15551234567 --timeout-seconds 180
+calle call plan --to-phone +15551234567 --goal "Confirm the appointment" --timeout-seconds 180
 ```
 
 ### Verify
