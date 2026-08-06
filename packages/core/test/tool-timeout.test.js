@@ -13,9 +13,20 @@ import { McpHttpError, callMcpTool, listMcpTools } from "@call-e/core/mcp-client
 //
 // The transport builds the timeout message from the same value it arms the
 // AbortController with, so the reported ceiling is the effective one and these
-// tests can read it without waiting for a real timer.
+// tests can read it without waiting for a real timer. The one case that does wait
+// is the overflow test at the bottom, because a collapsed delay is a wall clock
+// fact rather than a string.
 
 const SERVER_URL = "https://example.test/mcp/openagent_oauth";
+
+// Node keeps a timer delay in a signed 32 bit int, so this is the last whole second
+// that can arm one. Computed here rather than imported so the test pins the number
+// the transport is supposed to use.
+const MAX_TIMEOUT_SECONDS = Math.floor(2_147_483_647 / 1000); // 2147483
+
+function label(value) {
+  return typeof value === "string" ? `"${value}"` : String(value);
+}
 
 function mcpConfig() {
   const cacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), "calle-core-tool-timeout-"));
@@ -56,6 +67,30 @@ function fetchAbortingOn(method) {
       return jsonRpcResponse({ result: {} }, { headers: { "mcp-session-id": "sess-1" } });
     }
     return jsonRpcResponse({ result: {} });
+  };
+}
+
+// Answers the handshake, then leaves tools/call open, so the only thing that ends the
+// request is the transport's own timer. A ref'd interval stands in for the socket a
+// real fetch would be holding, because the transport unrefs its timer.
+function fetchHangingOnToolCall() {
+  return async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") {
+      return jsonRpcResponse({ result: {} }, { headers: { "mcp-session-id": "sess-1" } });
+    }
+    if (payload.method !== "tools/call") {
+      return jsonRpcResponse({ result: {} });
+    }
+    return new Promise((_resolve, reject) => {
+      const keepAlive = setInterval(() => {}, 25);
+      init.signal.addEventListener("abort", () => {
+        clearInterval(keepAlive);
+        const abortError = new Error("aborted");
+        abortError.name = "AbortError";
+        reject(abortError);
+      });
+    });
   };
 }
 
@@ -121,11 +156,28 @@ test("a tool call without an override keeps the shared ceiling", async () => {
 });
 
 test("an unusable per-call timeout falls back to the shared ceiling", async () => {
-  // setTimeout(fn, NaN) fires after 1ms, so a junk override must not reach the
-  // timer. Zero would mean abort immediately, which is not a ceiling either.
+  // setTimeout collapses a delay it cannot store into 1ms, so an unreadable override
+  // must never reach the timer: "120s" parses to NaN, Infinity and anything past
+  // MAX_TIMEOUT_SECONDS overflow the 32 bit delay. A negative value used to clamp to
+  // the one second floor instead of falling back. Zero is not a ceiling either.
   const config = mcpConfig();
+  const unusable = [
+    "120s",
+    "",
+    NaN,
+    Infinity,
+    -Infinity,
+    -1,
+    -120,
+    0,
+    MAX_TIMEOUT_SECONDS + 1,
+    Number.MAX_SAFE_INTEGER,
+    null,
+    undefined,
+    {},
+  ];
 
-  for (const bad of [Number("120s"), 0, null, undefined]) {
+  for (const bad of unusable) {
     assert.equal(
       await timeoutMessage(() =>
         callMcpTool({
@@ -136,7 +188,69 @@ test("an unusable per-call timeout falls back to the shared ceiling", async () =
         }),
       ),
       "MCP request timed out for tools/call after 15s",
-      `timeoutSeconds ${String(bad)} must fall back`,
+      `timeoutSeconds ${label(bad)} must fall back to the shared ceiling`,
+    );
+  }
+});
+
+test("a readable per-call timeout is used as given, up to the timer maximum", async () => {
+  // The other half of the validator: the bound is inclusive and a usable value is not
+  // swallowed. The one second floor is the transport's, so a sub-second override still
+  // leaves the request a whole second.
+  const config = mcpConfig();
+  const usable = [
+    [MAX_TIMEOUT_SECONDS, `${MAX_TIMEOUT_SECONDS}s`],
+    [120, "120s"],
+    ["45", "45s"],
+    [0.25, "1s"],
+  ];
+
+  for (const [seconds, expected] of usable) {
+    assert.equal(
+      await timeoutMessage(() =>
+        callMcpTool({
+          config,
+          toolName: "plan_call",
+          timeoutSeconds: seconds,
+          fetchImpl: fetchAbortingOn("tools/call"),
+        }),
+      ),
+      `MCP request timed out for tools/call after ${expected}`,
+      `timeoutSeconds ${label(seconds)} must arm the timer as given`,
+    );
+  }
+});
+
+test("an overflowing per-call timeout waits the shared ceiling instead of aborting at once", async () => {
+  // The message alone cannot show this half of the defect. Each of these armed a 1ms
+  // delay (the one second floor for the negative), so the request aborted long before
+  // the ceiling it reported. A shared ceiling of 1.5 seconds tells the three outcomes
+  // apart, which is why this is the one test that waits for a real timer.
+  const config = { ...mcpConfig(), timeoutSeconds: 1.5 };
+  const measured = await Promise.all(
+    ["120s", -1, Infinity, MAX_TIMEOUT_SECONDS + 1].map(async (bad) => {
+      const startedAt = process.hrtime.bigint();
+      const message = await timeoutMessage(() =>
+        callMcpTool({
+          config,
+          toolName: "plan_call",
+          timeoutSeconds: bad,
+          fetchImpl: fetchHangingOnToolCall(),
+        }),
+      );
+      return { bad, message, elapsedMs: Number(process.hrtime.bigint() - startedAt) / 1e6 };
+    }),
+  );
+
+  for (const { bad, message, elapsedMs } of measured) {
+    assert.equal(
+      message,
+      "MCP request timed out for tools/call after 1.5s",
+      `timeoutSeconds ${label(bad)} must report the shared ceiling`,
+    );
+    assert.ok(
+      elapsedMs > 1200,
+      `timeoutSeconds ${label(bad)} aborted after ${elapsedMs.toFixed(0)}ms, so it did not wait the 1500ms shared ceiling`,
     );
   }
 });

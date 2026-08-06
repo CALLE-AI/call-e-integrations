@@ -4,6 +4,7 @@ import {
   DEFAULT_MCP_CLIENT_VERSION,
   DEFAULT_TIMEOUT_SECONDS,
   INTEGRATION_HEADER,
+  MAX_TIMER_SECONDS,
   MCP_PROTOCOL_VERSION,
 } from "./constants.js";
 
@@ -51,11 +52,25 @@ function parseResponseBody(text) {
   return JSON.parse(text);
 }
 
-// The `|| DEFAULT_TIMEOUT_SECONDS` fallback keeps an unreadable duration away from
-// setTimeout, which fires after 1ms when the delay is NaN and aborts the request
-// before it leaves.
+// Milliseconds for a duration that can actually arm a timer. Null when it cannot.
+// A ceiling is usable only when it is finite, above zero and inside MAX_TIMER_SECONDS,
+// because setTimeout turns every other value into a 1ms delay: NaN from "120s",
+// Infinity plus anything past the timer maximum all abort the request before it
+// leaves. Null means unreadable rather than short, so callers fall back to a ceiling
+// they already have instead of clamping a nonsense value into range. The CLI rejects
+// the same values on --timeout-seconds; this repeats the bound because callMcpTool is
+// public and its per-call override arrives straight from a caller.
+function usableTimeoutMs(seconds) {
+  const parsed = Number(seconds);
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > MAX_TIMER_SECONDS) {
+    return null;
+  }
+  return Math.max(Math.ceil(parsed * 1000), 1000);
+}
+
+// The shared session ceiling. An unreadable config value keeps the package default.
 function timeoutMsFromSeconds(seconds) {
-  return Math.max(Math.ceil(Number(seconds || DEFAULT_TIMEOUT_SECONDS) * 1000), 1000);
+  return usableTimeoutMs(seconds) ?? usableTimeoutMs(DEFAULT_TIMEOUT_SECONDS);
 }
 
 // More than one ceiling is in play now, so the message says which one ran out.
@@ -234,9 +249,11 @@ export async function callMcpTool({
       method: "tools/call",
       params: toolCallParams,
     }),
-    // A slow tool can carry its own ceiling. The handshake above keeps the shared
-    // one, so a server that never answers initialize still fails fast.
-    timeoutMs: timeoutSeconds ? timeoutMsFromSeconds(timeoutSeconds) : timeoutMs,
+    // A slow tool can carry its own ceiling. An unusable override falls back to the
+    // shared ceiling this session already computed rather than to a fixed default, and
+    // the handshake above always keeps the shared one, so a server that never answers
+    // initialize still fails fast.
+    timeoutMs: usableTimeoutMs(timeoutSeconds) ?? timeoutMs,
   });
   return response.body?.result ?? {};
 }

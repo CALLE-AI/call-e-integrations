@@ -9,6 +9,7 @@ import {
   DEFAULT_SCOPE,
   DEFAULT_TIMEOUT_SECONDS,
   INTEGRATION_HEADER,
+  MAX_TIMER_SECONDS,
   SESSION_SECRET_HEADER,
 } from "@call-e/core/constants";
 import {
@@ -57,15 +58,13 @@ function hasOptionValue(value) {
   return provided !== undefined && provided !== null && provided !== "";
 }
 
-// Node turns any setTimeout delay above this into 1ms, which brings back the very
-// immediate-abort failure this validator exists to prevent: --timeout-seconds 2147484
-// is 2,147,484,000ms, so the request would abort at once instead of waiting.
-// https://nodejs.org/api/timers.html#settimeoutcallback-delay-args
-const MAX_TIMER_DELAY_MS = 2_147_483_647;
-const MAX_TIMER_SECONDS = Math.floor(MAX_TIMER_DELAY_MS / 1000);
-
 // Zero is meaningful for --min-ttl-seconds (it disables the minimum remaining-lifetime
 // window) and meaningless for a timeout, so the bounds are per option rather than shared.
+// MAX_TIMER_SECONDS comes from @call-e/core/constants, where the transport applies the
+// same bound to its own per-call ceiling. Node turns any longer setTimeout delay into
+// 1ms, which brings back the very immediate-abort failure this validator exists to
+// prevent: --timeout-seconds 2147484 is 2,147,484,000ms, so the request would abort at
+// once instead of waiting. The flag rejects such a value; the transport falls back.
 function secondsOption(value, fallback, flag, { allowZero = false, timerBacked = true } = {}) {
   const raw = hasOptionValue(value) ? firstOptionValue(value) : fallback;
   const parsed = Number(raw);

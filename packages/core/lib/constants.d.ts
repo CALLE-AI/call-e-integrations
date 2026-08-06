@@ -7,5 +7,7 @@ export const DEFAULT_MIN_TTL_SECONDS: 300;
 export const DEFAULT_MCP_CLIENT_NAME: "calle";
 export const DEFAULT_MCP_CLIENT_VERSION: "unknown";
 export const MCP_PROTOCOL_VERSION: "2025-11-25";
+export const MAX_TIMER_DELAY_MS: 2147483647;
+export const MAX_TIMER_SECONDS: 2147483;
 export const SESSION_SECRET_HEADER: "X-OpenAgent-Session-Secret";
 export const INTEGRATION_HEADER: "X-Call-E-Integration";
