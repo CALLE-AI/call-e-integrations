@@ -44,7 +44,7 @@ their network requests or output.
 | `--scope` | Text | `openid email profile` | Auth commands | No | No | OAuth scopes requested during brokered login. | `calle auth login --scope "openid email profile"` |
 | `--cache-root` | Path | `~/.calle-mcp/cli` | All commands | No | No | Directory for token, pending login, and telemetry cache files. `~` is expanded. | `calle auth status --cache-root ~/.calle-mcp/cli` |
 | `--min-ttl-seconds` | Number | `300` | Auth login/status, MCP and call token checks | No | No | Minimum remaining token lifetime for a cached token to count as usable. | `calle auth status --min-ttl-seconds 60` |
-| `--timeout-seconds` | Number | `15` | Auth, MCP, and call network requests | No | No | Request timeout in seconds. | `calle mcp tools --timeout-seconds 30` |
+| `--timeout-seconds` | Number | `15`, `120` for `plan_call` | Auth, MCP, and call network requests | No | No | Request timeout in seconds. Planning carries a longer default because `plan_call` runs for about as long as the shared ceiling allows. An explicit value is the ceiling for every request, planning included. | `calle mcp tools --timeout-seconds 30` |
 | `--poll-timeout-seconds` | Number | `300` | `auth login` | No | No | Maximum time to poll for brokered login completion. | `calle auth login --poll-timeout-seconds 600` |
 | `--server-name` | Text | `calle` | `mcp config` | No | No | MCP server key used in the generated client configuration. | `calle mcp config --server-name calle` |
 | `--json` | Boolean | `false` | All commands | No | No | Accepted for compatibility. Successful command stdout is already JSON except help. | `calle auth status --json` |
