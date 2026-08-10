@@ -1,5 +1,22 @@
 # @call-e/cli
 
+## 0.4.0
+
+### Minor Changes
+
+- [`64227fe`](https://github.com/CALLE-AI/call-e-integrations/commit/64227fe79fec27d01afc8992ed422e0f75be34ec) - Add hierarchical command help and direct help-command recommendations for
+  invalid CLI arguments.
+
+- [`d5bf6c1`](https://github.com/CALLE-AI/call-e-integrations/commit/d5bf6c1578f51d35f51d1e4b610a35df88275b8e) - Report staged call workflow failures, retain stable run IDs when status lookup fails, and add private recovery for uncertain call submissions.
+
+### Patch Changes
+
+- [`e966ea7`](https://github.com/CALLE-AI/call-e-integrations/commit/e966ea7c7b63e591e8952452a7bba8eda67e9871) - Give `plan_call` requests a 150-second CLI default timeout while preserving the
+  15-second default for other MCP requests and explicit `--timeout-seconds`
+  overrides.
+- Updated dependencies [[`e966ea7`](https://github.com/CALLE-AI/call-e-integrations/commit/e966ea7c7b63e591e8952452a7bba8eda67e9871)]:
+  - @call-e/core@0.3.0
+
 ## 0.3.9
 
 ### Patch Changes

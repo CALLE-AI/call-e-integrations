@@ -40,7 +40,7 @@ export const DEFAULT_POLL_TIMEOUT_SECONDS = 300;
 export const DEFAULT_PLAN_CALL_TIMEOUT_SECONDS = 150;
 export const DEFAULT_TELEMETRY_TIMEOUT_SECONDS = 1.5;
 export const DEFAULT_CACHE_ROOT = path.join(os.homedir(), ".calle-mcp", "cli");
-export const CLI_VERSION = "0.3.9";
+export const CLI_VERSION = "0.4.0";
 
 function firstOptionValue(value) {
   return Array.isArray(value) ? value[0] : value;

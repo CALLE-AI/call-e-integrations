@@ -1,5 +1,13 @@
 # @call-e/core
 
+## 0.3.0
+
+### Minor Changes
+
+- [`e966ea7`](https://github.com/CALLE-AI/call-e-integrations/commit/e966ea7c7b63e591e8952452a7bba8eda67e9871) - Give `plan_call` requests a 150-second CLI default timeout while preserving the
+  15-second default for other MCP requests and explicit `--timeout-seconds`
+  overrides.
+
 ## 0.2.5
 
 ### Patch Changes
