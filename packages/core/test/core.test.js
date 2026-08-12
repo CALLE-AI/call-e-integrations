@@ -488,3 +488,105 @@ test("MCP client reports request timeouts", async () => {
     },
   );
 });
+
+// The delay handed to setTimeout is decided just before each request is sent, so a stub
+// that records delays.at(-1) per method reads the exact timer armed for that request.
+async function withTimeoutDelayCapture(delays, run) {
+  const realSetTimeout = globalThis.setTimeout;
+  globalThis.setTimeout = (handler, delay, ...rest) => {
+    delays.push(delay);
+    return realSetTimeout(handler, delay, ...rest);
+  };
+  try {
+    await run();
+  } finally {
+    globalThis.setTimeout = realSetTimeout;
+  }
+}
+
+function recordingMcpFetch(delays, seen) {
+  return async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    seen[payload.method] = delays.at(-1);
+    if (payload.method === "initialize") {
+      return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "mcp-session-timeout" } });
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonResponse({});
+    }
+    if (payload.method === "tools/list") {
+      return jsonResponse({ result: { tools: [] } });
+    }
+    if (payload.method === "tools/call") {
+      return jsonResponse({ result: { content: [{ type: "text", text: "ok" }] } });
+    }
+    throw new Error(`Unexpected MCP method ${payload.method}`);
+  };
+}
+// APPEND-TIMEOUT-TESTS-HERE
+
+test("MCP client clamps an oversized tool-call timeout so the request is not aborted immediately", async () => {
+  const config = mcpConfig(makeTempRoot("calle-core-timeout-cap"));
+  const delays = [];
+  const seen = {};
+  await withTimeoutDelayCapture(delays, () =>
+    callMcpTool({
+      config,
+      toolName: "plan_call",
+      toolArguments: { goal: "Confirm the appointment" },
+      timeoutSeconds: 5_000_000,
+      fetchImpl: recordingMcpFetch(delays, seen),
+    }),
+  );
+  // 5_000_000s is 5e9ms, past the 2_147_483_647ms setTimeout ceiling. Unclamped it would
+  // collapse to a 1ms abort; clamped it stays at the ceiling.
+  assert.equal(seen["tools/call"], 2_147_483_647);
+});
+
+test("MCP client falls back to the session timeout when a tool-call override is unusable", async () => {
+  const config = { ...mcpConfig(makeTempRoot("calle-core-timeout-nan")), timeoutSeconds: 20 };
+  const delays = [];
+  const seen = {};
+  await withTimeoutDelayCapture(delays, () =>
+    callMcpTool({
+      config,
+      toolName: "plan_call",
+      toolArguments: { goal: "Confirm the appointment" },
+      timeoutSeconds: Number.NaN,
+      fetchImpl: recordingMcpFetch(delays, seen),
+    }),
+  );
+  // A non-finite override used to reach setTimeout as NaN, which fires at 1ms. It now
+  // falls back to the 20s session timeout the handshake computed.
+  assert.equal(seen["tools/call"], 20_000);
+});
+// APPEND-TIMEOUT-TESTS-2
+
+test("MCP client clamps an oversized session timeout from config", async () => {
+  const config = { ...mcpConfig(makeTempRoot("calle-core-session-cap")), timeoutSeconds: 5_000_000 };
+  const delays = [];
+  const seen = {};
+  await withTimeoutDelayCapture(delays, () =>
+    listMcpTools({ config, fetchImpl: recordingMcpFetch(delays, seen) }),
+  );
+  // openMcpSession derives the shared session timeout, so the handshake and the list call
+  // both stay at the ceiling instead of collapsing to a 1ms abort.
+  assert.equal(seen["initialize"], 2_147_483_647);
+  assert.equal(seen["tools/list"], 2_147_483_647);
+});
+
+test("MCP client keeps an in-range tool-call timeout unchanged", async () => {
+  const config = mcpConfig(makeTempRoot("calle-core-timeout-ok"));
+  const delays = [];
+  const seen = {};
+  await withTimeoutDelayCapture(delays, () =>
+    callMcpTool({
+      config,
+      toolName: "plan_call",
+      toolArguments: { goal: "Confirm the appointment" },
+      timeoutSeconds: 150,
+      fetchImpl: recordingMcpFetch(delays, seen),
+    }),
+  );
+  assert.equal(seen["tools/call"], 150_000);
+});
