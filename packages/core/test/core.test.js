@@ -523,10 +523,14 @@ function recordingMcpFetch(delays, seen) {
     throw new Error(`Unexpected MCP method ${payload.method}`);
   };
 }
-// APPEND-TIMEOUT-TESTS-HERE
+// Node's setTimeout collapses any delay above 2_147_483_647ms (~24.8 days) to 1ms, so the
+// core validates the requested seconds against this ceiling and falls back to a safe timeout
+// rather than arming the timer with a disabled or immediate-abort value. MAX_TIMER_SECONDS
+// is the largest whole-second override the timer keeps intact, matching mcp-client.js.
+const MAX_TIMER_SECONDS = Math.floor(2_147_483_647 / 1000);
 
-test("MCP client clamps an oversized tool-call timeout so the request is not aborted immediately", async () => {
-  const config = mcpConfig(makeTempRoot("calle-core-timeout-cap"));
+async function toolCallDelay(overrideSeconds, sessionTimeoutSeconds, rootName) {
+  const config = { ...mcpConfig(makeTempRoot(rootName)), timeoutSeconds: sessionTimeoutSeconds };
   const delays = [];
   const seen = {};
   await withTimeoutDelayCapture(delays, () =>
@@ -534,59 +538,72 @@ test("MCP client clamps an oversized tool-call timeout so the request is not abo
       config,
       toolName: "plan_call",
       toolArguments: { goal: "Confirm the appointment" },
-      timeoutSeconds: 5_000_000,
+      timeoutSeconds: overrideSeconds,
       fetchImpl: recordingMcpFetch(delays, seen),
     }),
   );
-  // 5_000_000s is 5e9ms, past the 2_147_483_647ms setTimeout ceiling. Unclamped it would
-  // collapse to a 1ms abort; clamped it stays at the ceiling.
-  assert.equal(seen["tools/call"], 2_147_483_647);
-});
+  return seen["tools/call"];
+}
 
-test("MCP client falls back to the session timeout when a tool-call override is unusable", async () => {
-  const config = { ...mcpConfig(makeTempRoot("calle-core-timeout-nan")), timeoutSeconds: 20 };
-  const delays = [];
-  const seen = {};
-  await withTimeoutDelayCapture(delays, () =>
-    callMcpTool({
-      config,
-      toolName: "plan_call",
-      toolArguments: { goal: "Confirm the appointment" },
-      timeoutSeconds: Number.NaN,
-      fetchImpl: recordingMcpFetch(delays, seen),
-    }),
-  );
-  // A non-finite override used to reach setTimeout as NaN, which fires at 1ms. It now
-  // falls back to the 20s session timeout the handshake computed.
-  assert.equal(seen["tools/call"], 20_000);
-});
-// APPEND-TIMEOUT-TESTS-2
-
-test("MCP client clamps an oversized session timeout from config", async () => {
-  const config = { ...mcpConfig(makeTempRoot("calle-core-session-cap")), timeoutSeconds: 5_000_000 };
+async function sessionDelays(sessionTimeoutSeconds, rootName) {
+  const config = { ...mcpConfig(makeTempRoot(rootName)), timeoutSeconds: sessionTimeoutSeconds };
   const delays = [];
   const seen = {};
   await withTimeoutDelayCapture(delays, () =>
     listMcpTools({ config, fetchImpl: recordingMcpFetch(delays, seen) }),
   );
-  // openMcpSession derives the shared session timeout, so the handshake and the list call
-  // both stay at the ceiling instead of collapsing to a 1ms abort.
-  assert.equal(seen["initialize"], 2_147_483_647);
-  assert.equal(seen["tools/list"], 2_147_483_647);
+  return seen;
+}
+
+test("MCP client falls back to the session timeout for an oversized tool-call override", async () => {
+  // One second past the ceiling is invalid, not a 24.8-day timeout, so the request keeps the
+  // 20s session timeout the handshake computed.
+  assert.equal(await toolCallDelay(MAX_TIMER_SECONDS + 1, 20, "calle-core-tool-over"), 20_000);
+});
+
+test("MCP client falls back to the session timeout for a non-finite tool-call override", async () => {
+  assert.equal(await toolCallDelay(Number.POSITIVE_INFINITY, 20, "calle-core-tool-inf"), 20_000);
+});
+
+test("MCP client falls back to the session timeout for a NaN tool-call override", async () => {
+  assert.equal(await toolCallDelay(Number.NaN, 20, "calle-core-tool-nan"), 20_000);
+});
+
+test("MCP client falls back to the session timeout for a negative tool-call override", async () => {
+  assert.equal(await toolCallDelay(-30, 20, "calle-core-tool-neg"), 20_000);
+});
+
+test("MCP client accepts a tool-call override at the timer ceiling", async () => {
+  // The boundary value is the largest delay setTimeout keeps intact, so it passes through.
+  assert.equal(await toolCallDelay(MAX_TIMER_SECONDS, 20, "calle-core-tool-max"), MAX_TIMER_SECONDS * 1000);
 });
 
 test("MCP client keeps an in-range tool-call timeout unchanged", async () => {
-  const config = mcpConfig(makeTempRoot("calle-core-timeout-ok"));
-  const delays = [];
-  const seen = {};
-  await withTimeoutDelayCapture(delays, () =>
-    callMcpTool({
-      config,
-      toolName: "plan_call",
-      toolArguments: { goal: "Confirm the appointment" },
-      timeoutSeconds: 150,
-      fetchImpl: recordingMcpFetch(delays, seen),
-    }),
-  );
-  assert.equal(seen["tools/call"], 150_000);
+  assert.equal(await toolCallDelay(150, 15, "calle-core-tool-ok"), 150_000);
+});
+
+test("MCP client falls back to the default timeout for an oversized session timeout", async () => {
+  // openMcpSession derives the shared session timeout, so an out-of-range config value falls
+  // back to the 15s default for the handshake and the list call instead of disabling the timer.
+  const seen = await sessionDelays(MAX_TIMER_SECONDS + 1, "calle-core-session-over");
+  assert.equal(seen["initialize"], 15_000);
+  assert.equal(seen["tools/list"], 15_000);
+});
+
+test("MCP client falls back to the default timeout for a non-finite session timeout", async () => {
+  const seen = await sessionDelays(Number.POSITIVE_INFINITY, "calle-core-session-inf");
+  assert.equal(seen["initialize"], 15_000);
+  assert.equal(seen["tools/list"], 15_000);
+});
+
+test("MCP client falls back to the default timeout for a negative session timeout", async () => {
+  const seen = await sessionDelays(-5, "calle-core-session-neg");
+  assert.equal(seen["initialize"], 15_000);
+  assert.equal(seen["tools/list"], 15_000);
+});
+
+test("MCP client accepts a session timeout at the timer ceiling", async () => {
+  const seen = await sessionDelays(MAX_TIMER_SECONDS, "calle-core-session-max");
+  assert.equal(seen["initialize"], MAX_TIMER_SECONDS * 1000);
+  assert.equal(seen["tools/list"], MAX_TIMER_SECONDS * 1000);
 });

@@ -9,19 +9,23 @@ import {
 
 // setTimeout collapses any delay above 2_147_483_647ms (~24.8 days) to 1ms, so a very
 // large timeout fires the abort almost at once and cancels the request the caller meant
-// to keep waiting on. The CLI already caps --timeout-seconds at this ceiling (see
-// packages/cli/lib/config.js), but the public callMcpTool timeoutSeconds override and a
-// caller-built config.timeoutSeconds reach the timer arithmetic below without that bound,
-// so clamp it here rather than trusting the value.
+// to keep waiting on. Capping an oversized value at that ceiling instead would be worse:
+// it turns a malformed or attacker-influenced timeout into a ~24.8-day one that holds the
+// request, socket, AbortController and caller resources open rather than failing. The CLI
+// validates --timeout-seconds against this ceiling (see packages/cli/lib/config.js), but
+// the public callMcpTool timeoutSeconds override and a caller-built config.timeoutSeconds
+// reach the timer arithmetic below without it, so validate the seconds here and fall back
+// to a safe timeout rather than trusting or capping the value.
 const MIN_TIMEOUT_MS = 1000;
-const MAX_TIMEOUT_MS = 2_147_483_647;
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
+const MAX_TIMER_SECONDS = Math.floor(MAX_TIMER_DELAY_MS / 1000);
 
 function boundedTimeoutMs(seconds, fallbackMs) {
-  const requestedMs = Math.ceil(Number(seconds) * 1000);
-  if (!Number.isFinite(requestedMs) || requestedMs <= 0) {
+  const parsed = Number(seconds);
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > MAX_TIMER_SECONDS) {
     return fallbackMs;
   }
-  return Math.min(Math.max(requestedMs, MIN_TIMEOUT_MS), MAX_TIMEOUT_MS);
+  return Math.max(Math.ceil(parsed * 1000), MIN_TIMEOUT_MS);
 }
 
 export class AuthRequiredError extends Error {
