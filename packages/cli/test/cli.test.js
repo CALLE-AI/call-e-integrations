@@ -1764,10 +1764,11 @@ test("call recover reuses the original confirmation after a run_call timeout", a
   assert.equal(firstPayload.call_started, "unknown");
   assert.equal(firstPayload.retry_safe, false);
   assert.doesNotMatch(firstResult.stdout, /plan-secret|confirm-secret/);
-  assert.equal(
-    fs.statSync(callRecoveryCachePath(cacheRoot, serverUrl, firstPayload.recovery_id)).mode & 0o777,
-    0o600
-  );
+  const recoveryPath = callRecoveryCachePath(cacheRoot, serverUrl, firstPayload.recovery_id);
+  assert.equal(fs.existsSync(recoveryPath), true);
+  if (process.platform !== "win32") {
+    assert.equal(fs.statSync(recoveryPath).mode & 0o777, 0o600);
+  }
 
   const recoveredResult = await run(
     [
