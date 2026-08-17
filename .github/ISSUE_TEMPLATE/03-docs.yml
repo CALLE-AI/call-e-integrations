@@ -1,0 +1,37 @@
+name: Documentation improvement
+description: Report missing, unclear, or inaccurate documentation
+type: Task
+labels:
+  - status:needs-triage
+  - area:docs
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Documentation location
+      description: Link to the README section, guide, example, API reference, or file.
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is missing, unclear, or inaccurate?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed improvement
+      description: Explain the result the documentation should provide.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Integration context
+      description: Describe what you were trying to build or operate.
+    validations:
+      required: false
