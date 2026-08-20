@@ -362,7 +362,7 @@ Use these country codes with the SDK and API recipient settings.
 | United States of America | `US` | +1 | English | Local |
 | Singapore | `SG` | +65 | English | Local |
 | Malaysia | `MY` | +60 | English, Chinese | Local |
-| India | `IN` | +91 | English, Hindi | Local |
+| India | `IN` | +91 | English, Hindi | International |
 | United Arab Emirates | `AE` | +971 | English, Arabic | Local |
 | Australia | `AU` | +61 | English | Local |
 | Canada | `CA` | +1 | English | International |
