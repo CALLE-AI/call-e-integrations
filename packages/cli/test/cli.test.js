@@ -960,7 +960,9 @@ test("mcp call forwards plan_call arguments and request meta", async () => {
       return jsonRpcResponse({
         jsonrpc: "2.0",
         id: payload.id,
-        result: { structuredContent: { plan_id: "plan-1" } },
+        result: {
+          content: [{ type: "text", text: '{"plan_id":"plan-1"}' }],
+        },
       });
     }
     throw new Error(`unexpected method: ${payload.method}`);
@@ -1000,6 +1002,7 @@ test("mcp call forwards plan_call arguments and request meta", async () => {
   assert.equal(calls[0]._meta["openai/organization"], undefined);
   assert.equal(payload.ok, true);
   assert.equal(payload.tool_name, "plan_call");
+  assert.deepEqual(payload.result.structuredContent, { plan_id: "plan-1" });
 });
 
 test("mcp call gives plan_call an extended default timeout and honors an explicit override", async () => {
@@ -1328,21 +1331,32 @@ test("call start plans and runs without printing confirmation data", async () =>
         return jsonRpcResponse({
           jsonrpc: "2.0",
           id: payload.id,
-          result: { structuredContent: { plan_id: "plan-1", confirm_token: "confirm-1" } },
+          result: {
+            content: [
+              {
+                type: "text",
+                text: '{"plan_id":"plan-1","confirm_token":"confirm-1","ready_to_run":true}',
+              },
+            ],
+          },
         });
       }
       if (payload.params.name === "run_call") {
         return jsonRpcResponse({
           jsonrpc: "2.0",
           id: payload.id,
-          result: { structuredContent: { run_id: "run-1", status: "STARTED" } },
+          result: {
+            content: [{ type: "text", text: '{"run_id":"run-1","status":"STARTED"}' }],
+          },
         });
       }
       if (payload.params.name === "get_call_run") {
         return jsonRpcResponse({
           jsonrpc: "2.0",
           id: payload.id,
-          result: { structuredContent: { run_id: "run-1", status: "IN_PROGRESS" } },
+          result: {
+            content: [{ type: "text", text: '{"run_id":"run-1","status":"IN_PROGRESS"}' }],
+          },
         });
       }
     }
