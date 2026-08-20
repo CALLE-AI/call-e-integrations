@@ -1,5 +1,11 @@
 # @call-e/cli
 
+## 0.5.0
+
+### Minor Changes
+
+- [`4dabb17`](https://github.com/CALLE-AI/call-e-integrations/commit/4dabb176aba07111f5823c65e0fe46507ef2e78e) - Add CLI version output flags and a command that links to the supported regions and languages.
+
 ## 0.4.0
 
 ### Minor Changes
