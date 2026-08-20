@@ -4,8 +4,8 @@ This is the canonical reference for `calle` commands, options, defaults, and
 parameter examples. When changing CLI commands or options, update this document
 and any synchronized command guidance in the same change.
 
-Successful command stdout is JSON except `--help` and `-h`. Some
-top-level or local failures may print plain stderr.
+Successful command stdout is JSON except `--help`, `-h`, `--version`, and `-V`.
+Some top-level or local failures may print plain stderr.
 
 ## Finding Command Help
 
@@ -38,6 +38,16 @@ subcommand are rejected instead of being silently ignored.
 | `calle call run` | Run a planned phone call, then fetch status once. | `--plan-id`, `--confirm-token` |
 | `calle call recover` | Safely repeat an uncertain `run_call` with its original private confirmation data. | `--recovery-id` |
 | `calle call status` | Query a call run through `get_call_run`. | `--run-id` |
+| `calle regions list` | Print the supported regions and languages documentation URL. | None |
+
+`calle regions list` is local and does not require authentication or call
+`plan_call`. It returns:
+
+```json
+{
+  "supported_regions_and_languages_url": "https://github.com/CALLE-AI/call-e-integrations#supported-regions-and-languages"
+}
+```
 
 If `plan_call` returns `ready_to_run: false`, `calle call start` exits without
 calling `run_call`. The JSON error uses code `plan_not_ready` and includes the
@@ -71,13 +81,14 @@ with boolean `retry_safe` and boolean-or-`"unknown"` `call_started` guidance.
 
 ## Common Options
 
-These options are accepted by all commands because runtime configuration is
-resolved before command dispatch. Some commands only use the subset relevant to
-their network requests or output.
+These options are accepted by all commands. Runtime configuration is resolved
+before command dispatch; some commands only use the subset relevant to their
+network requests or output.
 
 | Option | Value | Default | Applies to | Required | Repeatable | Purpose | Example |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `--help`, `-h` | Boolean | `false` | Every command level | No | No | Print help for the current root, group, or subcommand and exit. | `calle call plan --help` |
+| `--version`, `-V` | Boolean | `false` | Every command level | No | No | Print the installed CLI version and exit. | `calle --version` |
 | `--base-url` | URL | `https://seleven-mcp-sg.airudder.com` | All commands | No | No | Base CALL-E service URL used to derive broker, auth, MCP, and telemetry URLs unless those are set separately. | `calle mcp tools --base-url https://example.test` |
 | `--broker-base-url` | URL | `--base-url` | Auth commands | No | No | Broker API base URL for browser login sessions. | `calle auth login --broker-base-url https://example.test` |
 | `--server-url` | URL | `<base-url>/mcp/<channel>` | MCP and call commands, auth cache identity | No | No | Remote MCP server URL and token cache identity. | `calle mcp tools --server-url https://example.test/mcp/openagent_oauth` |
@@ -90,7 +101,7 @@ their network requests or output.
 | `--timeout-seconds` | Number | `15`; `plan_call`: `150` | Auth, MCP, and call network requests | No | No | Request timeout in seconds. An explicit value overrides the extended `plan_call` default. | `calle mcp tools --timeout-seconds 30` |
 | `--poll-timeout-seconds` | Number | `300` | `auth login` | No | No | Maximum time to poll for brokered login completion. | `calle auth login --poll-timeout-seconds 600` |
 | `--server-name` | Text | `calle` | `mcp config` | No | No | MCP server key used in the generated client configuration. | `calle mcp config --server-name calle` |
-| `--json` | Boolean | `false` | All commands | No | No | Accepted for compatibility. Successful command stdout is already JSON except help. | `calle auth status --json` |
+| `--json` | Boolean | `false` | All commands | No | No | Accepted for compatibility. Successful command stdout is already JSON except help and version output. | `calle auth status --json` |
 
 ## Auth Options
 

@@ -126,6 +126,7 @@ test("prints command-specific help for every supported subcommand", async () => 
     ["call", "run"],
     ["call", "recover"],
     ["call", "status"],
+    ["regions", "list"],
   ];
 
   for (const command of commands) {
@@ -135,6 +136,24 @@ test("prints command-specific help for every supported subcommand", async () => 
     assert.match(result.stdout, new RegExp(`Usage: calle ${command.join(" ")}`));
     assert.equal(result.stderr, "");
   }
+});
+
+test("prints the CLI version with both version flags", async () => {
+  for (const flag of ["--version", "-V"]) {
+    const result = await run([flag]);
+
+    assert.deepEqual(result, { code: 0, stdout: `${CLI_VERSION}\n`, stderr: "" });
+  }
+});
+
+test("prints the supported regions and languages documentation URL", async () => {
+  const result = await run(["regions", "list"]);
+
+  assert.equal(result.code, 0);
+  assert.deepEqual(JSON.parse(result.stdout), {
+    supported_regions_and_languages_url: "https://github.com/CALLE-AI/call-e-integrations#supported-regions-and-languages",
+  });
+  assert.equal(result.stderr, "");
 });
 
 test("call plan argument errors recommend its command-specific help", async () => {

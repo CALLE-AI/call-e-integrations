@@ -38,6 +38,7 @@ calle auth login --start-only --no-browser-open
 ## Verify
 
 ```bash
+calle --version
 calle auth status
 calle mcp tools
 ```

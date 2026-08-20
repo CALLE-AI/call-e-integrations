@@ -19,6 +19,7 @@ import {
   DEFAULT_CLIENT_NAME,
   DEFAULT_PLAN_CALL_TIMEOUT_SECONDS,
   DEFAULT_SCOPE,
+  CLI_VERSION,
   resolveRuntimeConfig,
 } from "./config.js";
 import { ensurePendingLogin, loginWithBroker } from "./broker-client.js";
@@ -90,6 +91,7 @@ I'll keep you updated on the phone status, call content, and summary.`;
 
 const POST_AUTH_HELP_HINT_TYPE = "post_auth_help";
 const PRE_AUTH_HELP_HINT_TYPE = "pre_auth_help";
+const SUPPORTED_REGIONS_AND_LANGUAGES_URL = "https://github.com/CALLE-AI/call-e-integrations#supported-regions-and-languages";
 
 const COMMAND_GROUPS = {
   auth: {
@@ -206,6 +208,16 @@ const COMMAND_GROUPS = {
       },
     },
   },
+  regions: {
+    summary: "Find supported CALL-E regions and languages",
+    commands: {
+      list: {
+        summary: "Print the supported regions and languages documentation URL",
+        usage: "calle regions list [options]",
+        examples: ["calle regions list"],
+      },
+    },
+  },
 };
 
 const COMMON_OPTION_NAMES = new Set([
@@ -240,6 +252,7 @@ const COMMAND_OPTION_NAMES = {
   "call run": new Set(["plan-id", "confirm-token", "timezone"]),
   "call recover": new Set(["recovery-id", "timezone"]),
   "call status": new Set(["run-id", "cursor", "limit", "timezone"]),
+  "regions list": new Set(),
 };
 
 const KNOWN_OPTION_NAMES = new Set([
@@ -266,7 +279,8 @@ const COMMON_HELP = `Global options (accepted by every command):
   --telemetry[=true|false]
   --telemetry-url <url>
   --telemetry-timeout-seconds <seconds>
-  --help, -h                   Show help for the current command`;
+  --help, -h                   Show help for the current command
+  --version, -V                Show the CLI version`;
 
 function helpCommandFor(group, command) {
   if (COMMAND_GROUPS[group]?.commands?.[command]) {
@@ -1553,6 +1567,10 @@ async function runCliCommand(argv, deps = {}) {
     printHelp(stdout, argv);
     return 0;
   }
+  if (argv.includes("--version") || argv.includes("-V")) {
+    stdout(`${CLI_VERSION}\n`);
+    return 0;
+  }
 
   const [group, command, ...rest] = argv;
   const { options, positional, optionNames } = parseOptions(rest);
@@ -1681,6 +1699,14 @@ async function runCliCommand(argv, deps = {}) {
 
   if (group === "call") {
     return handleCallCommand({ command, positional, options, config, deps, stdout, stderr, captureTelemetry });
+  }
+
+  if (group === "regions" && command === "list") {
+    assertNoUnexpectedPositional(positional);
+    writeJson(stdout, {
+      supported_regions_and_languages_url: SUPPORTED_REGIONS_AND_LANGUAGES_URL,
+    });
+    return 0;
   }
 
   throw new InvalidArgumentsError(`Unknown command: ${[group, command].filter(Boolean).join(" ")}`);

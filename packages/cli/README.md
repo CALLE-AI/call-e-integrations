@@ -36,6 +36,7 @@ calle call plan --help
 <!-- sync-with: docs/cli-reference.md#commands -->
 
 ```bash
+calle --version
 calle auth login
 calle auth login --start-only --no-browser-open
 calle auth status
@@ -49,6 +50,7 @@ calle call start --to-phone +15551234567 --goal "Confirm the appointment"
 calle call run --plan-id <plan_id> --confirm-token <confirm_token>
 calle call recover --recovery-id <recovery_id>
 calle call status --run-id <run_id>
+calle regions list
 ```
 
 Defaults:
@@ -103,9 +105,9 @@ original confirmation context without printing it. If only the initial status
 query fails, the command still returns the accepted `run_id` and a `call status`
 `next_command`.
 
-Successful command stdout is JSON except `--help`. Some top-level or local
-failures may print plain stderr. Access tokens are read from the local cache and
-are never printed.
+Successful command stdout is JSON except help and version output. Some
+top-level or local failures may print plain stderr. Access tokens are read from
+the local cache and are never printed.
 
 ## Options
 
