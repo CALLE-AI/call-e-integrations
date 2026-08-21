@@ -1,6 +1,6 @@
 {
   "name": "@call-e/core",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Shared CALL-E runtime helpers for brokered auth, local token cache, and MCP HTTP calls.",
   "type": "module",
   "types": "./lib/index.d.ts",
