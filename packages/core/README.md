@@ -60,6 +60,19 @@ The override applies only to the tool call. MCP session initialization keeps
 using `config.timeoutSeconds`; when the override is omitted, the tool call uses
 that configured timeout too.
 
+## Tool Result Payloads
+
+`callMcpTool` returns the MCP `CallToolResult` envelope and preserves its raw
+`content`, `isError`, and metadata fields. When `structuredContent` is absent
+but a text content block contains a JSON object, the client also exposes that
+object as `structuredContent`. Non-JSON text, arrays, and scalar JSON remain
+unchanged.
+
+See the
+[MCP tool result envelope](https://github.com/CALLE-AI/call-e-integrations/blob/main/docs/mcp/openagent-oauth.md#tool-result-envelope)
+for the direct wire shape, compatibility fallback, and Python SDK field-name
+differences.
+
 ## Broker Login Lifetime
 
 Broker session timing is server-directed:

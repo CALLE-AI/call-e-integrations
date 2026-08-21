@@ -7,6 +7,44 @@ and any synchronized command guidance in the same change.
 Successful command stdout is JSON except `--help`, `-h`, `--version`, and `-V`.
 Some top-level or local failures may print plain stderr.
 
+## JSON Result Envelopes
+
+`calle mcp call`, `calle call plan`, and `calle call status` wrap the MCP tool
+result in CLI metadata. Read the actionable object from
+`result.structuredContent`:
+
+```json
+{
+  "ok": true,
+  "server_url": "https://example.test/mcp/openagent_oauth",
+  "tool_name": "plan_call",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"plan_id\":\"plan_123\",\"ready_to_run\":true}"
+      }
+    ],
+    "structuredContent": {
+      "plan_id": "plan_123",
+      "ready_to_run": true
+    }
+  }
+}
+```
+
+The CLI preserves the raw MCP `content` array. When the server omits
+`structuredContent` but one text block contains a JSON object, the CLI exposes
+that parsed object at `result.structuredContent` as a compatibility fallback.
+Plain text, invalid JSON, arrays, and scalar JSON remain content only.
+
+`call start`, `call run`, and `call recover` return workflow envelopes. Read
+the latest `get_call_run` object from `status_result.structuredContent`. When
+`run_result` is present, it is the initial `run_call` acknowledgement rather
+than the latest call state. See the
+[MCP tool result envelope](../../../docs/mcp/openagent-oauth.md#tool-result-envelope)
+for the direct protocol shape and SDK field-name differences.
+
 ## Finding Command Help
 
 Help is available at the root, command-group, and subcommand levels:

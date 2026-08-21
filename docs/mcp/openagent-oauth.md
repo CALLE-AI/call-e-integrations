@@ -106,6 +106,63 @@ plan_call -> run_call -> get_call_run
 `plan_call` prepares the call. `run_call` starts the prepared call. `get_call_run`
 reads progress and results.
 
+## Tool Result Envelope
+
+All three tools return an MCP `CallToolResult` inside the JSON-RPC
+`response.result` field. On the wire, `content` is the compatibility content
+array and `structuredContent` is the optional machine-readable JSON object:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "calle-plan_call",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"plan_id\":\"plan_123\",\"ready_to_run\":true}"
+      }
+    ],
+    "structuredContent": {
+      "plan_id": "plan_123",
+      "ready_to_run": true,
+      "confirm_token": "<opaque confirmation token>"
+    }
+  }
+}
+```
+
+Prefer `structuredContent` whenever it is present. A text block containing
+serialized JSON is a compatibility representation, not a guaranteed
+`content[0].text` contract: MCP content can contain multiple text or non-text
+blocks, and the JSON text block is not required to be first.
+
+`@call-e/core` and the CALL-E CLI preserve the raw `CallToolResult`. If a
+content-only result has a text block that parses as a JSON object, they also
+expose that object locally as `structuredContent`. They do not parse prose,
+JSON arrays or scalars, Markdown fences, or combined fragments. Direct MCP
+clients that do not use `@call-e/core` must implement that fallback themselves
+when they need compatibility with a content-only response.
+
+The MCP wire name and JavaScript or TypeScript property are
+`structuredContent`. The official Python SDK 1.x uses the same attribute name;
+Python SDK 2.x exposes `structured_content` on Python objects while serializing
+the wire field as `structuredContent`. See the official Python SDK
+[field-name migration](https://github.com/modelcontextprotocol/python-sdk/blob/main/docs/migration.md#field-names-changed-from-camelcase-to-snake_case).
+
+After extracting the structured object, use these handoff fields:
+
+| Tool | Fields used by the next step |
+| --- | --- |
+| `plan_call` | `ready_to_run`, `plan_id`, `confirm_token`, and any `clarifying_questions` |
+| `run_call` | `run_id`, current `status`, and `next_step` when present |
+| `get_call_run` | `run_id`, `status`, `activity`, result fields, and `next_step` when present |
+
+These are workflow handoff fields, not an exhaustive output schema. Follow the
+current tool definitions returned by `tools/list` and do not infer fields that
+the server did not return. See the MCP specification for
+[structured tool results](https://modelcontextprotocol.io/specification/2025-11-25/server/tools#structured-content).
+
 ### `plan_call`
 
 Use `plan_call` first. It creates or refines a call plan and does not place a

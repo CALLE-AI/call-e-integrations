@@ -394,6 +394,71 @@ test("MCP client calls tools through an initialized session", async () => {
   assert.deepEqual(result, { content: [{ type: "text", text: "ok" }] });
 });
 
+test("MCP client normalizes tool payloads without discarding the raw envelope", async () => {
+  const config = mcpConfig(makeTempRoot("calle-core-mcp-tool-payload"));
+  const toolResults = [
+    {
+      content: [{ type: "text", text: '{"plan_id":"plan-text","ready_to_run":true}' }],
+      isError: false,
+      _meta: { trace_id: "trace-1" },
+    },
+    {
+      content: [{ type: "text", text: '{"plan_id":"plan-text"}' }],
+      structuredContent: { plan_id: "plan-camel" },
+      structured_content: { plan_id: "plan-snake" },
+    },
+    {
+      content: [{ type: "text", text: '{"plan_id":"plan-text"}' }],
+      structured_content: { plan_id: "plan-snake" },
+    },
+    {
+      content: [
+        { type: "text", text: "not json" },
+        { type: "text", text: '["not","an","object"]' },
+        { type: "image", data: "ignored", mimeType: "image/png" },
+        { type: "text", text: '{"run_id":"run-text"}' },
+      ],
+    },
+    {
+      content: [
+        { type: "text", text: "not json" },
+        { type: "text", text: "42" },
+      ],
+    },
+  ];
+  let toolCallIndex = 0;
+  const fetchImpl = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") {
+      return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "mcp-session-payload" } });
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonResponse({});
+    }
+    if (payload.method === "tools/call") {
+      const result = toolResults[toolCallIndex];
+      toolCallIndex += 1;
+      return jsonResponse({ result });
+    }
+    throw new Error(`Unexpected MCP method ${payload.method}`);
+  };
+
+  const results = [];
+  for (let index = 0; index < toolResults.length; index += 1) {
+    results.push(await callMcpTool({ config, toolName: "plan_call", fetchImpl }));
+  }
+
+  assert.deepEqual(results[0].structuredContent, { plan_id: "plan-text", ready_to_run: true });
+  assert.deepEqual(results[0].content, toolResults[0].content);
+  assert.equal(results[0].isError, false);
+  assert.deepEqual(results[0]._meta, { trace_id: "trace-1" });
+  assert.deepEqual(results[1].structuredContent, { plan_id: "plan-camel" });
+  assert.deepEqual(results[2].structuredContent, { plan_id: "plan-snake" });
+  assert.deepEqual(results[2].structured_content, { plan_id: "plan-snake" });
+  assert.deepEqual(results[3].structuredContent, { run_id: "run-text" });
+  assert.deepEqual(results[4], toolResults[4]);
+});
+
 test("MCP client forwards request meta on tool calls", async () => {
   const config = mcpConfig(makeTempRoot("calle-core-mcp-call-meta"));
   const fetchImpl = async (_url, init) => {

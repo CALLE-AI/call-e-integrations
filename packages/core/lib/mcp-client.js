@@ -122,6 +122,57 @@ function nonEmptyMetaObject(value) {
   return Object.keys(value).length > 0 ? value : null;
 }
 
+function objectRecord(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value;
+}
+
+function jsonObjectFromTextContent(content) {
+  if (!Array.isArray(content)) {
+    return null;
+  }
+
+  for (const item of content) {
+    if (item?.type !== "text" || typeof item.text !== "string" || !item.text.trim()) {
+      continue;
+    }
+    try {
+      const parsed = objectRecord(JSON.parse(item.text));
+      if (parsed) {
+        return parsed;
+      }
+    } catch {
+      // Text content is not required to contain JSON.
+    }
+  }
+
+  return null;
+}
+
+function normalizeMcpToolResult(result) {
+  const envelope = objectRecord(result);
+  if (!envelope) {
+    return {};
+  }
+
+  if (objectRecord(envelope.structuredContent)) {
+    return envelope;
+  }
+
+  const structuredContent = objectRecord(envelope.structured_content)
+    || jsonObjectFromTextContent(envelope.content);
+  if (!structuredContent) {
+    return envelope;
+  }
+
+  return {
+    ...envelope,
+    structuredContent,
+  };
+}
+
 export function currentTokenDocument(config) {
   const cacheDocument = readJson(tokenCachePath(config.cacheRoot, config.serverUrl));
   if (!tokenIsUsable(cacheDocument, config.minTtlSeconds)) {
@@ -223,5 +274,5 @@ export async function callMcpTool({
     }),
     timeoutMs: toolCallTimeoutMs,
   });
-  return response.body?.result ?? {};
+  return normalizeMcpToolResult(response.body?.result);
 }
