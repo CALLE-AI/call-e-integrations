@@ -2,9 +2,31 @@ import { readJson, tokenCachePath, tokenIsUsable } from "./cache.js";
 import {
   DEFAULT_MCP_CLIENT_NAME,
   DEFAULT_MCP_CLIENT_VERSION,
+  DEFAULT_TIMEOUT_SECONDS,
   INTEGRATION_HEADER,
   MCP_PROTOCOL_VERSION,
 } from "./constants.js";
+
+// setTimeout collapses any delay above 2_147_483_647ms (~24.8 days) to 1ms, so a very
+// large timeout fires the abort almost at once and cancels the request the caller meant
+// to keep waiting on. Capping an oversized value at that ceiling instead would be worse:
+// it turns a malformed or attacker-influenced timeout into a ~24.8-day one that holds the
+// request, socket, AbortController and caller resources open rather than failing. The CLI
+// validates --timeout-seconds against this ceiling (see packages/cli/lib/config.js), but
+// the public callMcpTool timeoutSeconds override and a caller-built config.timeoutSeconds
+// reach the timer arithmetic below without it, so validate the seconds here and fall back
+// to a safe timeout rather than trusting or capping the value.
+const MIN_TIMEOUT_MS = 1000;
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
+const MAX_TIMER_SECONDS = Math.floor(MAX_TIMER_DELAY_MS / 1000);
+
+function boundedTimeoutMs(seconds, fallbackMs) {
+  const parsed = Number(seconds);
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > MAX_TIMER_SECONDS) {
+    return fallbackMs;
+  }
+  return Math.max(Math.ceil(parsed * 1000), MIN_TIMEOUT_MS);
+}
 
 export class AuthRequiredError extends Error {
   constructor(message = "A usable CALL-E auth token is required.") {
@@ -193,7 +215,7 @@ function accessTokenFromCache(config) {
 async function openMcpSession({ config, fetchImpl }) {
   requireFetch(fetchImpl);
   const accessToken = accessTokenFromCache(config);
-  const timeoutMs = Math.max(Math.ceil(Number(config.timeoutSeconds || 15) * 1000), 1000);
+  const timeoutMs = boundedTimeoutMs(config.timeoutSeconds, DEFAULT_TIMEOUT_SECONDS * 1000);
   const commonHeaders = {
     Accept: "application/json, text/event-stream",
     "Content-Type": "application/json",
@@ -264,7 +286,7 @@ export async function callMcpTool({
   }
   const toolCallTimeoutMs = timeoutSeconds === null
     ? timeoutMs
-    : Math.max(Math.ceil(Number(timeoutSeconds) * 1000), 1000);
+    : boundedTimeoutMs(timeoutSeconds, timeoutMs);
   const response = await requestJsonRpc(fetchImpl, config.serverUrl, {
     headers: rpcHeaders,
     payload: buildJsonRpcPayload({
