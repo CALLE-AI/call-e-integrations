@@ -17,7 +17,7 @@ New users get 20 free calls to get started. [Sign up now!](https://www.heycall-e
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-CALL--E-orange)
 ![Cursor](https://img.shields.io/badge/Cursor-CALL--E-blue)
 ![OpenClaw](https://img.shields.io/badge/OpenClaw-ClawHub-purple)
-![Hermes Agent](https://img.shields.io/badge/Hermes%20Agent-ClawHub%20Prompt-green)
+![Hermes Agent](https://img.shields.io/badge/Hermes%20Agent-CALL--E-green)
 ![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-blue)
 
 </div>
@@ -125,6 +125,15 @@ Choose the integration path that fits your use case:
 Install CALL-E for me: https://open.heycall-e.com/document/mcp-archive/CALL-E-installation-guide.md
 ```
 Works in Claude Code, Codex, Cursor, and any agent that can run shell commands. The linked guide stays up to date, so the prompt never changes.
+
+**Hermes Agent** installs as a native plugin instead:
+
+```bash
+hermes plugins install CALLE-AI/call-e-integrations/packages/hermes-plugin/plugin --enable
+hermes gateway restart
+```
+
+Registers five CALL-E tools and prompts for sign-in on first use. See the [Hermes plugin install guide](https://github.com/CALLE-AI/call-e-integrations/blob/main/docs/install/hermes-plugin.md).
 
 For manual setup, expand the table below or see the [full install guide](https://github.com/CALLE-AI/call-e-integrations/blob/main/docs/install/install-guide.md).
 
