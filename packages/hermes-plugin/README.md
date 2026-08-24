@@ -8,7 +8,11 @@ instructions are in
 
 ```bash
 hermes plugins install CALLE-AI/call-e-integrations/packages/hermes-plugin/plugin --enable
+hermes gateway restart
 ```
+
+Installs to `<hermes home>/plugins/calle`. The gateway restart is required —
+tools are registered at gateway start.
 
 ## Layout
 

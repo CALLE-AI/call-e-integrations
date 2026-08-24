@@ -84,6 +84,9 @@ and half the answer comes back.
 
 ## Authorization
 
+If these tools are missing entirely after an install, the gateway has not been
+restarted since. Tools are registered at gateway start.
+
 If any tool reports that it is not authorized, call `calle_auth` with
 `action: start`. Show the user the returned URL and wait. **Do not ask them to
 reply with anything from the page.** When they say they are done, call

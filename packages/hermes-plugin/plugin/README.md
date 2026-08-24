@@ -11,7 +11,11 @@ deleted its copy.
 
 ```bash
 hermes plugins install CALLE-AI/call-e-integrations/packages/hermes-plugin/plugin --enable
+hermes gateway restart
 ```
+
+The restart is required: tools are registered when the gateway starts, so the
+plugin is not available until it does.
 
 Then, in a conversation:
 

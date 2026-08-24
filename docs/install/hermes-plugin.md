@@ -14,6 +14,27 @@ hermes plugins install CALLE-AI/call-e-integrations/packages/hermes-plugin/plugi
 is no sparse checkout and no marketplace entry point to add. `--enable` turns
 the plugin on without a second command.
 
+The plugin installs to `<hermes home>/plugins/calle`.
+
+## Restart The Gateway
+
+Tools are registered when the gateway starts, so a newly installed plugin is
+not available until it restarts:
+
+```bash
+hermes gateway restart
+```
+
+Confirm it loaded:
+
+```bash
+hermes plugins list
+hermes tools list
+```
+
+`calle` should appear as an enabled plugin and as an enabled toolset under
+**Plugin toolsets**.
+
 ## Authorize
 
 In a Hermes conversation:
@@ -86,12 +107,13 @@ From a clone of this repository:
 hermes plugins install file:///path/to/call-e-integrations#packages/hermes-plugin/plugin --force --enable
 ```
 
-The `#subdir` fragment works for any scheme. Restart the Hermes gateway so the
-new plugin directory is picked up, then check it loaded:
+The `#subdir` fragment works for any scheme. Restart the gateway so the new
+plugin directory is picked up, then check it loaded:
 
 ```bash
+hermes gateway restart
 hermes plugins list
-hermes tools
+hermes tools list
 ```
 
 ## Verify The Package
