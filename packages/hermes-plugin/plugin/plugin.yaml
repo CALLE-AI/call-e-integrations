@@ -1,0 +1,16 @@
+name: calle
+version: 0.1.0
+description: >-
+  Place phone calls through CALL-E and read back what was said. The agent
+  plans a call and shows you the plan; nothing is dialled until you say so.
+  Person calls disclose that the caller is an AI. Outcomes are stored locally,
+  so a call remains readable after the provider deletes its own copy.
+  Requires the calle CLI and a browser sign-in via the calle_auth tool.
+author: CALLE AI
+kind: standalone
+provides_tools:
+  - calle_auth
+  - calle_plan
+  - calle_run
+  - calle_status
+  - calle_show

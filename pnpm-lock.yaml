@@ -44,6 +44,8 @@ importers:
 
   packages/cursor-plugin: {}
 
+  packages/hermes-plugin: {}
+
   packages/openclaw-cli-skill: {}
 
   packages/skills-sh-skill: {}

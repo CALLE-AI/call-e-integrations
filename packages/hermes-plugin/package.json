@@ -1,0 +1,45 @@
+{
+  "name": "@call-e/hermes-plugin",
+  "version": "0.1.0",
+  "description": "Hermes Agent plugin bundle for CALL-E CLI workflows.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CALLE-AI/call-e-integrations.git",
+    "directory": "packages/hermes-plugin"
+  },
+  "homepage": "https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/hermes-plugin",
+  "bugs": {
+    "url": "https://github.com/CALLE-AI/call-e-integrations/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "README.md",
+    "plugin"
+  ],
+  "keywords": [
+    "ai-agent",
+    "calle",
+    "call-e",
+    "hermes",
+    "hermes-agent",
+    "hermes-plugin",
+    "nous-research",
+    "plugin",
+    "cli",
+    "mcp",
+    "phone-call",
+    "voice-call"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "check": "node ./scripts/check-plugin.mjs",
+    "test": "node --test ./test/*.test.js",
+    "pack:dry-run": "npm pack --dry-run"
+  }
+}
