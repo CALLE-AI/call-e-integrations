@@ -361,8 +361,8 @@ Use these country codes with the SDK and API recipient settings.
 | --- | --- | --- | --- | --- |
 | United States of America | `US` | +1 | English | Local |
 | Singapore | `SG` | +65 | English | Local |
-| Malaysia | `MY` | +60 | English, Chinese | Local |
-| India | `IN` | +91 | English, Hindi | International |
+| Malaysia | `MY` | +60 | English, Chinese, Malay | Local |
+| India | `IN` | +91 | English, Hindi, Tamil | International |
 | United Arab Emirates | `AE` | +971 | English, Arabic | Local |
 | Australia | `AU` | +61 | English | Local |
 | Canada | `CA` | +1 | English | International |
@@ -386,13 +386,21 @@ Use these country codes with the SDK and API recipient settings.
 | Cameroon | `CM` | +237 | English, French | International |
 | Mozambique | `MZ` | +258 | English, Portuguese | International |
 | Saudi Arabia | `SA` | +966 | English, Arabic | International |
-| Finland | `FI` | +358 | English | International |
+| Finland | `FI` | +358 | English, Finnish | International |
 | Ukraine | `UA` | +380 | English, Ukrainian | International |
-| Sri Lanka | `LK` | +94 | English, Tamil | International |
+| Sri Lanka | `LK` | +94 | English, Tamil, Sinhala | International |
 | Botswana | `BW` | +267 | English | International |
 | Pakistan | `PK` | +92 | English, Urdu | International |
 | Turkey | `TR` | +90 | Turkish | International |
 | Honduras | `HN` | +504 | English, Spanish | International |
+| Spain | `ES` | +34 | English, Spanish | International |
+| Taiwan | `TW` | +886 | English | International |
+| South Africa | `ZA` | +27 | English | International |
+| Egypt | `EG` | +20 | English, Arabic | International |
+| Ghana | `GH` | +233 | English | International |
+| Israel | `IL` | +972 | English, Hebrew | International |
+| Ireland | `IE` | +353 | English | International |
+| Tunisia | `TN` | +216 | English | International |
 
 **Notes**
 
