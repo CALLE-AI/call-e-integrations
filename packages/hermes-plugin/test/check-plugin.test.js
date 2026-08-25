@@ -151,6 +151,45 @@ test("rejects missing CLI attribution in the command reference", () => {
   assert.match(output, /attribution/u);
 });
 
+// The reviewer's release-path finding: `pnpm version-packages` bumps
+// package.json, and every other surface carrying a version has to follow. The
+// manifest is the single source the runtime reads, so a bump that updates
+// package.json and plugin.yaml leaves nothing else behind.
+test("a version bump keeps the package synchronized", () => {
+  const bump = (work) => {
+    for (const [file, pattern] of [
+      ["package.json", /"version": "\d+\.\d+\.\d+"/u],
+      ["plugin/plugin.yaml", /version: \d+\.\d+\.\d+/u],
+    ]) {
+      const target = path.join(work, file);
+      const source = fs.readFileSync(target, "utf8");
+      fs.writeFileSync(
+        target,
+        source.replace(pattern, file.endsWith(".json") ? '"version": "9.9.9"' : "version: 9.9.9"),
+      );
+    }
+  };
+  const { ok, output } = checkWith(bump);
+  assert.equal(ok, true, output);
+});
+
+test("rejects a bump that updates only package.json", () => {
+  const { ok, output } = checkWith((work) =>
+    edit(work, "package.json", (s) => s.replace(/"version": "\d+\.\d+\.\d+"/u, '"version": "9.9.9"')),
+  );
+  assert.equal(ok, false);
+  assert.match(output, /version must match/u);
+});
+
+// The runtime version must not be a second literal that a bump can miss.
+test("the adapter reads its version from the manifest", () => {
+  const adapter = fs.readFileSync(
+    path.join(PACKAGE_ROOT, "plugin", "adapter.py"), "utf8",
+  );
+  assert.match(adapter, /__version__ = _package_version\(\)/u);
+  assert.doesNotMatch(adapter, /^__version__ = ["']\d+\.\d+\.\d+["']/mu);
+});
+
 test("rejects an unpublishable package", () => {
   const { ok, output } = checkWith((work) =>
     edit(work, "package.json", (s) => s.replace('"type": "module",', '"private": true,\n  "type": "module",')),

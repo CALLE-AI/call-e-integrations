@@ -1,0 +1,4 @@
+# Python build artefacts. These appear the moment anyone runs the handler
+# tests and would otherwise be published and shipped to users.
+__pycache__/
+*.py[cod]

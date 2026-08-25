@@ -73,6 +73,16 @@ Planning and dialling are separate tools. `calle_plan` returns a
 `confirm_summary` for the user to read; `calle_run` takes the `plan_id`. The
 call authorization stays in local state and is never returned to the agent.
 
+`calle_run` registers a `pre_tool_call` hook that escalates to Hermes'
+human-approval gate — the same `[o]nce/[s]ession/[a]lways/[d]eny` prompt used
+for dangerous shell commands. The host resolves it at the dispatch site and is
+fail-closed: a denial, a timeout, or an error in the gate all block the call,
+and the tool never runs. The prompt names the callee, the number and the
+purpose, so an `[a]lways` answer does not authorize calls to anyone else.
+
+A plan is single-use: if a run already exists for it, `calle_run` reports that
+run rather than placing a second call.
+
 Calls to a person open by disclosing that the caller is an AI and that the call
 is transcribed. There is no flag to remove it.
 
@@ -123,6 +133,16 @@ pnpm --filter @call-e/hermes-plugin check
 pnpm --filter @call-e/hermes-plugin test
 pnpm --filter @call-e/hermes-plugin pack:dry-run
 ```
+
+The handler tests run against a fake provider and place no calls:
+
+```bash
+python3 packages/hermes-plugin/plugin/test_handlers.py
+```
+
+They assert on side effects rather than return values — that planning submits
+nothing, that a run submits exactly once, and that a retry after a reported
+failure submits nothing at all.
 
 ## More
 

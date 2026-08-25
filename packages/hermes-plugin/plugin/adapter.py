@@ -36,6 +36,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import tempfile
 import sys
 import time
 from datetime import datetime, timezone
@@ -47,10 +48,18 @@ PROVIDER = os.environ.get("CALL_PROVIDER", "calle")
 
 REGION = os.environ.get("CALL_REGION") or None
 
-VALID_REGIONS = {
-    "US", "SG", "MY", "IN", "AE", "AU", "CA", "GB", "VN",
-    "DE", "JP", "FR", "MX", "BR", "ID", "PH", "KE",
-}
+# No local list of valid regions.
+#
+# A copy of the provider's supported regions can only ever go stale, and a
+# stale copy fails in the worst direction: it refuses a region the provider
+# supports, for a call that would have worked. The provider owns the list and
+# is the only thing that can answer authoritatively, so the region is passed
+# through in the shape the API expects and the provider decides.
+#
+# The check that IS worth doing locally is the format one, below: two letters,
+# uppercase. That catches "usa", "uk " and "United States" without pretending
+# to know which codes are live this month.
+_REGION_FORMAT = re.compile(r"^[A-Z]{2}$")
 
 LANGUAGE = os.environ.get("CALL_LANGUAGE", "English")
 
@@ -103,7 +112,27 @@ if CALLE_REQUEST_TIMEOUT_S >= CLI_TIMEOUT_S:
 DEFAULT_MAX_WAIT_S = int(os.environ.get("CALL_MAX_WAIT", "360"))
 
 DEFAULT_CALLER_REFERENCE = "my client"
-__version__ = "0.1.0"
+def _package_version(default: str = "0.1.0") -> str:
+    """Version from plugin.yaml, which the release process keeps in step.
+
+    Hard-coding it here is what let `pnpm version-packages` bump package.json
+    and leave this behind, failing the package check and blocking the release.
+    One source, read at import, with a literal fallback for a copy of this file
+    used outside the plugin directory.
+    """
+    manifest = Path(__file__).resolve().parent / "plugin.yaml"
+    try:
+        for line in manifest.read_text(encoding="utf-8").splitlines():
+            if line.startswith("version:"):
+                value = line.split(":", 1)[1].strip().strip("\"'")
+                if value:
+                    return value
+    except OSError:
+        pass
+    return default
+
+
+__version__ = _package_version()
 
 POLL_FLOOR_S = 5
 POLL_CEILING_S = 30
@@ -210,16 +239,18 @@ def _has_call_consent(phone: str) -> bool:
 
 
 def _validate_region(region: str | None) -> str | None:
-    """Fail locally and free on a bad region, not at call time."""
+    """Normalise a region code. Format only -- the provider owns the list."""
     if region is None:
         return None
     r = region.strip().upper()
-    if r not in VALID_REGIONS:
+    if not r:
+        return None
+    if not _REGION_FORMAT.match(r):
         raise CallAgentError(
-            f"region {region!r} is not a CALL-E recipient region. "
-            f"Valid: {', '.join(sorted(VALID_REGIONS))}. "
-            "Note GB, not UK. Omit --region entirely to let CALL-E resolve "
-            "it from the phone number."
+            f"region {region!r} is not a two-letter region code. Use the "
+            "ISO 3166-1 alpha-2 form -- GB rather than UK, US rather than USA "
+            "-- or omit the region entirely and let the provider resolve it "
+            "from the phone number."
         )
     return r
 
@@ -233,12 +264,48 @@ def _state_path(key: str) -> Path:
     return STATE_DIR / f"{safe}.json"
 
 
+def _secure_state_dir() -> None:
+    """State directory owner-only, before anything is written into it.
+
+    POSIX modes are advisory on Windows -- chmod there toggles a read-only bit
+    and nothing more. The protection is real on Linux and macOS; on Windows it
+    is best-effort and the directory inherits its ACL from the parent.
+    """
+    STATE_DIR.mkdir(parents=True, mode=0o700, exist_ok=True)
+    try:
+        STATE_DIR.chmod(0o700)
+    except OSError:
+        pass
+
+
 def save_state(key: str, data: dict) -> None:
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    # The plan sidecar holds the confirm_token, which authorises a charged call
+    # for about a day and cannot be revoked. So the mode is set AT CREATION,
+    # not after: a chmod that follows the write leaves a window in which the
+    # file exists under the process umask. The temporary name is unique per
+    # call and opened O_EXCL, so a pre-existing file or symlink at that path
+    # is an error rather than a target to follow.
+    _secure_state_dir()
     p = _state_path(key)
-    tmp = p.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, indent=2))
-    tmp.replace(p)
+    fd, tmp_name = tempfile.mkstemp(
+        dir=str(STATE_DIR), prefix=f".{p.stem}.", suffix=".tmp"
+    )
+    tmp = Path(tmp_name)
+    try:
+        # os.fdopen takes ownership of the descriptor, so closing the wrapper
+        # closes it exactly once. Windows will not rename a file that still
+        # has an open handle, and leaving the mkstemp descriptor open here is
+        # what made this fail there while passing on POSIX.
+        with os.fdopen(fd, "w") as handle:
+            handle.write(json.dumps(data, indent=2))
+        # chmod on the path, not fchmod on the descriptor: fchmod does not
+        # exist on Windows. Still before the rename, so the file is never
+        # readable by others at its final name.
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, p)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
     try:
         p.chmod(0o600)
     except OSError:
@@ -960,7 +1027,12 @@ def cmd_run(args: argparse.Namespace) -> dict:
         carry = dict(state)
         carry["run_id"] = run_id
         carry["ran_at"] = _now()
-        save_state(run_id, carry)
+        # The run-keyed copy exists so a status poll can find the plan
+        # context from a run id alone. It must NOT carry the confirm_token:
+        # a second copy under a second key outlives any pruning that works by
+        # plan id, and the credential is live for about a day.
+        run_carry = {k: v for k, v in carry.items() if k != "confirm_token"}
+        save_state(run_id, run_carry)
         save_state(args.plan_id, carry)
 
     envelope["fields_requested"] = state.get("fields_requested", [])
@@ -1029,11 +1101,48 @@ def cmd_status(args: argparse.Namespace) -> dict:
 
 
 def cmd_show(args: argparse.Namespace) -> dict:
-    state = load_state(args.id)
-    if not state:
-        raise CallAgentError(f"no local state for {args.id}")
+    """Read back whatever is stored locally under an id.
+
+    An id may be a plan_id or a run_id, and a terminal outcome is written to a
+    SEPARATE sidecar from the plan record. Reading only the plan record is why
+    this returned nothing useful for a finished call: the outcome was on disk
+    the whole time under a different name.
+
+    Local persistence is the answer to a provider that deletes runs within
+    days and reports a deleted run as failed, so this must find the outcome
+    whichever id the caller happens to hold.
+    """
+    state = load_state(args.id) or {}
+    result = _load_result(args.id)
+
+    # A plan record carries the run it produced; follow it to that outcome.
+    if not result:
+        run_id = state.get("run_id")
+        if run_id:
+            result = _load_result(run_id)
+
+    if not state and not result:
+        raise CallAgentError(
+            f"no local record for {args.id} (looked for a plan record and a "
+            f"call outcome)"
+        )
+
     state.pop("confirm_token", None)
-    return state
+    if not result:
+        return state
+
+    # The outcome is the answer; the plan record is context. Nesting it rather
+    # than merging keeps a plan field from shadowing a result field of the same
+    # name -- both records carry purpose, to_phones and fields_requested.
+    merged = dict(result)
+    merged.pop("confirm_token", None)
+    if state:
+        merged["plan"] = {
+            k: v for k, v in state.items()
+            if k in ("plan_id", "to_phones", "callee_name", "callee_type",
+                     "purpose", "goal_returned", "field_keys", "created_at")
+        }
+    return merged
 
 
 def main() -> int:

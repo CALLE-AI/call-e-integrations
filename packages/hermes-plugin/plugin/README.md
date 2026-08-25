@@ -3,9 +3,11 @@
 Place phone calls from Hermes and read back what was said.
 
 The agent plans the call and shows you the plan. Nothing is dialled until you
-say so. Calls to people open by disclosing that the caller is an AI. Outcomes
-are written to your own disk, so a call is still readable after CALL-E has
-deleted its copy.
+say so — placing a call goes through Hermes' own approval prompt, which names
+the callee and the number, and which fails closed if you deny it, ignore it, or
+it errors. Calls to people open by disclosing that the caller is an AI.
+Outcomes are written to your own disk, so a call is still readable after CALL-E
+has deleted its copy.
 
 ## Install
 
@@ -74,6 +76,18 @@ my client."* Ask the agent to give your name and it will be said aloud instead.
 If you keep a record of who has agreed to be called, point `CALL_CONSENT_CMD`
 at a command that takes `--phone` and exits `0` when that number has consented.
 Person calls will then be refused unless it does. Unset, no check is made.
+
+## What it will not do
+
+- **Dial without asking you.** `calle_run` escalates to the host approval gate
+  before it runs. The agent cannot skip it, and neither a prompt injected
+  through a call transcript nor a model that decides to hurry can reach the
+  provider without your answer.
+- **Place the same call twice.** A plan is single-use. If a run already exists
+  for it, the tool reports that run instead of dialling again.
+- **Approve future calls by accident.** The approval prompt names this callee,
+  this number and this purpose, so answering "always" applies to that, not to
+  calling anyone else.
 
 ## Notes
 

@@ -244,11 +244,48 @@ function checkAdapter({ packageRoot, failures }) {
   // Redaction is what keeps the credential out of the recorded argv.
   assert(/_redact_argv/u.test(source), failures, "plugin/adapter.py must redact the confirm token from recorded argv.");
 
+  // The pre-dial approval gate is the package's central safety property and
+  // is one line in __init__.py. Assert it is still wired, in both files.
+  const initPath = path.join(packageRoot, "plugin", "__init__.py");
+  if (fs.existsSync(initPath)) {
+    const initCode = pythonCodeOnly(fs.readFileSync(initPath, "utf8"));
+    assert(
+      /register_hook\(\s*["']pre_tool_call["']/u.test(initCode),
+      failures,
+      "plugin/__init__.py must register the pre_tool_call approval hook.",
+    );
+  }
+
+  const handlerTestPath = path.join(packageRoot, "plugin", "test_handlers.py");
+  assert(
+    fs.existsSync(handlerTestPath),
+    failures,
+    "plugin/test_handlers.py is required: the handlers must be executed by a test, not only inspected.",
+  );
+
   const toolsPath = path.join(packageRoot, "plugin", "tools.py");
   if (fs.existsSync(toolsPath)) {
     const toolsCode = pythonCodeOnly(fs.readFileSync(toolsPath, "utf8"));
     assert(!/confirm_token/u.test(toolsCode), failures, "plugin/tools.py must not touch confirm_token; it never leaves the adapter's local state.");
     assert(!/cache_path|expires_at/u.test(toolsCode), failures, "plugin/tools.py must not surface cache_path or expires_at.");
+    assert(
+      /def pre_tool_call/u.test(toolsCode),
+      failures,
+      "plugin/tools.py must define the pre_tool_call approval hook.",
+    );
+    assert(
+      /["']action["']\s*:\s*["']approve["']/u.test(toolsCode),
+      failures,
+      "plugin/tools.py pre_tool_call must escalate calle_run to the human-approval gate.",
+    );
+    // Every attribute the adapter reads must be declared here. This is the
+    // defect that shipped: tools.py built an args object the adapter then
+    // read a missing field from -- AFTER the call had been placed.
+    assert(
+      /_VERB_ARGS/u.test(toolsCode) && /_assert_contract\(\)/u.test(toolsCode),
+      failures,
+      "plugin/tools.py must declare _VERB_ARGS and check it against the adapter at import.",
+    );
   }
 }
 

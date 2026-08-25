@@ -51,6 +51,12 @@ needs at runtime has to live inside it. The validator and tests are for CI.
 npm run check
 npm test
 npm run pack:dry-run
+python3 plugin/test_handlers.py
 ```
+
+`check` and `npm test` validate the package's shape. `test_handlers.py`
+executes the tool handlers against a fake provider and asserts on side effects
+— how many times a call was submitted — because a package that only inspects
+files cannot catch a handler that places a call and then reports failure.
 
 MIT.

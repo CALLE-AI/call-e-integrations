@@ -1,0 +1,3 @@
+# Python build artefacts, created by running the handler tests.
+__pycache__/
+*.py[cod]

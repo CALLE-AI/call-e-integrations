@@ -262,11 +262,151 @@ CALLE_SHOW_SCHEMA = {
 
 
 # ---------------------------------------------------------------------------
+# Pre-dial approval
+# ---------------------------------------------------------------------------
+
+def _describe_call(args: dict) -> str:
+    """One line naming who is about to be called, and why."""
+    plan_id = str((args or {}).get("plan_id") or "").strip() or "unknown plan"
+    try:
+        state = adapter.load_state(plan_id) or {}
+    except Exception:
+        state = {}
+
+    phones = state.get("to_phones") or []
+    who = state.get("callee_name") or "an unknown callee"
+    kind = state.get("callee_type") or "callee"
+    purpose = state.get("purpose") or ""
+
+    if not phones:
+        return ""
+    where = ", ".join(str(p) for p in phones)
+    line = f"Place a real phone call to {who} ({kind}) at {where}"
+    if purpose:
+        line += f" to {purpose}"
+    return line + "."
+
+
+def pre_tool_call(tool_name: str = "", args: Any = None, **_kw):
+    """Escalate calle_run to the human-approval gate.
+
+    Returning {"action": "approve", ...} hands the call to the same gate that
+    Tier-2 dangerous shell commands use. The host resolves it at the dispatch
+    site and is fail-closed: a denial, a timeout, or an error in the gate all
+    become a block, and the handler never runs.
+
+    This is why the property does not depend on the skill file, which Hermes
+    does not load from a plugin directory, nor on the model choosing to ask.
+    A transcript that tells the agent to call someone else still arrives here.
+
+    No rule_key is supplied deliberately. Without one the host derives the
+    allowlist key from the tool name and a hash of the message below -- and
+    the message names this callee, this number and this purpose. So answering
+    [a]lways to one call does not authorise a call to anyone else. A generic
+    reason would turn a single [a]lways into a standing permission to dial.
+    """
+    if tool_name != "calle_run":
+        return None
+
+    description = _describe_call(args if isinstance(args, dict) else {})
+    if not description:
+        # A plan whose recipients cannot be read is a plan that cannot be
+        # described, and a confirmation prompt that cannot say who is about to
+        # be called is not a confirmation. Block rather than ask.
+        plan_id = str((args or {}).get("plan_id") or "").strip() or "(none given)"
+        return {
+            "action": "block",
+            "message": (
+                f"Refusing to dial: no local record of plan {plan_id}, so the "
+                "callee and number cannot be confirmed. Re-plan with "
+                "calle_plan."
+            ),
+        }
+
+    return {"action": "approve", "message": description}
+
+
+# ---------------------------------------------------------------------------
 # Handlers
 # ---------------------------------------------------------------------------
 
-def _ns(**kw) -> argparse.Namespace:
-    return argparse.Namespace(**kw)
+# Every attribute each adapter verb reads off its args object.
+#
+# The adapter is a CLI: argparse guarantees every one of these exists, with a
+# default, before a verb runs. Building a Namespace by hand here removes that
+# guarantee -- and a missing field does not fail before the call is placed. In
+# `cmd_run` the provider is invoked first and `wait` is read afterwards, so an
+# absent attribute raises AFTER a real phone has rung and been charged, and the
+# handler reports failure for a call that actually happened.
+#
+# So the fields are declared once, per verb, and _ns fills every one of them.
+# _assert_contract then checks this table against the adapter at import time,
+# because a table that silently drifts is the same defect wearing a hat.
+_VERB_ARGS = {
+    "plan": {
+        "to": None, "purpose": None, "field": None,
+        "callee_type": "business", "callee_name": None, "caller_name": None,
+        "region": None, "language": None,
+    },
+    "run": {"plan_id": None, "wait": True, "max_wait": None},
+    "status": {"run_id": None, "wait": True, "max_wait": None},
+    "show": {"id": None},
+}
+
+
+def _ns(verb: str, **kw) -> argparse.Namespace:
+    """Args for an adapter verb, with every field it reads present."""
+    fields = dict(_VERB_ARGS[verb])
+    unknown = set(kw) - set(fields)
+    if unknown:
+        raise KeyError(f"{verb}: unknown args {sorted(unknown)}")
+    fields.update(kw)
+    return argparse.Namespace(**fields)
+
+
+def _assert_contract() -> None:
+    """Fail at import if the adapter reads an arg this module does not set.
+
+    Cheap, and it turns a silent post-submission AttributeError into a loud
+    failure before any tool is registered.
+    """
+    import ast
+    import inspect
+
+    source = inspect.getsource(adapter)
+    tree = ast.parse(source)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef) or not node.name.startswith("cmd_"):
+            continue
+        verb = node.name[len("cmd_"):]
+        if verb not in _VERB_ARGS:
+            continue
+        read = {
+            child.attr
+            for child in ast.walk(node)
+            if isinstance(child, ast.Attribute)
+            and isinstance(child.value, ast.Name)
+            and child.value.id == "args"
+        }
+        missing = read - set(_VERB_ARGS[verb]) - {"last_argv"}
+        if missing:
+            raise RuntimeError(
+                f"calle plugin: adapter.cmd_{verb} reads args "
+                f"{sorted(missing)} that tools._VERB_ARGS does not set. "
+                "Update _VERB_ARGS."
+            )
+
+
+_assert_contract()
+
+
+def _coerce_wait(raw: Any, default: int) -> int:
+    """A positive number of seconds, or the default."""
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return default
+    return value if value > 0 else default
 
 
 def _handle_calle_auth(args: dict, **kw) -> str:
@@ -372,6 +512,7 @@ def _handle_calle_plan(args: dict, **kw) -> str:
         return tool_error("`field` must be a non-empty list of questions.")
 
     ns = _ns(
+        "plan",
         to=[str(p).strip() for p in to],
         purpose=str(args.get("purpose") or "").strip(),
         field=[str(f) for f in field],
@@ -388,9 +529,25 @@ def _handle_calle_plan(args: dict, **kw) -> str:
     except Exception as exc:
         return tool_error(f"calle_plan failed: {type(exc).__name__}: {exc}")
 
+    # Recorded for the approval prompt: the gate has only the plan_id, and a
+    # confirmation that cannot name the callee and the number is not a
+    # confirmation of anything.
+    try:
+        state = adapter.load_state(envelope.get("plan_id", "")) or {}
+        state.update({
+            "to_phones": ns.to,
+            "callee_name": ns.callee_name,
+            "callee_type": ns.callee_type,
+            "purpose": ns.purpose,
+        })
+        adapter.save_state(envelope["plan_id"], state)
+    except Exception:
+        pass
+
     envelope["next"] = (
         "Show confirm_summary to the user verbatim and ask whether to place "
-        "the call. Call calle_run only after they agree."
+        "the call. calle_run also requires a separate confirmation from the "
+        "user before it will dial."
     )
     return tool_result(envelope)
 
@@ -403,13 +560,69 @@ def _handle_calle_run(args: dict, **kw) -> str:
     if not plan_id:
         return tool_error("plan_id is required. Call calle_plan first.")
 
-    ns = _ns(plan_id=plan_id, max_wait=args.get("max_wait"))
+    max_wait = _coerce_wait(args.get("max_wait"), adapter.DEFAULT_MAX_WAIT_S)
+
+    # A plan is single-use. If this plan already submitted a run, poll that run
+    # instead of submitting again: a second submission is a second real call to
+    # the same person, and the most likely reason an agent retries is that the
+    # first attempt returned something it read as a failure.
     try:
-        return tool_result(adapter.cmd_run(ns))
+        prior = adapter.load_state(plan_id)
+    except Exception:
+        prior = {}
+    prior_run = (prior or {}).get("run_id")
+    if prior_run:
+        try:
+            envelope = adapter.cmd_status(
+                _ns("status", run_id=prior_run, max_wait=max_wait)
+            )
+            envelope["note"] = (
+                f"plan {plan_id} was already run as {prior_run}; reporting that "
+                "call rather than placing another."
+            )
+            return tool_result(envelope)
+        except Exception as exc:
+            # Deliberately broad. A narrower clause was the original defect in
+            # this handler: the expected exception type was caught and every
+            # other one escaped, so the caller saw a crash rather than an
+            # instruction not to re-run. On this path a crash is the worst
+            # possible answer, because retrying is what it invites.
+            return tool_error(
+                f"plan {plan_id} was already run as {prior_run}, and its status "
+                f"could not be read: {type(exc).__name__}: {exc}. DO NOT re-run "
+                f"this plan -- poll calle_status or calle_show with run_id "
+                f"{prior_run}.",
+                run_id=prior_run,
+                call_placed=True,
+            )
+
+    try:
+        return tool_result(adapter.cmd_run(_ns("run", plan_id=plan_id, max_wait=max_wait)))
     except adapter.CallAgentError as exc:
         return tool_error(str(exc))
     except Exception as exc:
-        return tool_error(f"calle_run failed: {type(exc).__name__}: {exc}")
+        # The call may already have been placed: the provider is invoked before
+        # the outcome is assembled. Never phrase this so that retrying looks
+        # like the remedy.
+        try:
+            after = adapter.load_state(plan_id) or {}
+        except Exception:
+            after = {}
+        run_id = after.get("run_id")
+        if run_id:
+            return tool_error(
+                f"The call was placed as run {run_id}, but reading its outcome "
+                f"failed: {type(exc).__name__}: {exc}. DO NOT run this plan "
+                f"again -- poll calle_status with run_id {run_id}.",
+                run_id=run_id,
+                call_placed=True,
+            )
+        return tool_error(
+            f"calle_run failed before a run id was recorded: "
+            f"{type(exc).__name__}: {exc}. A call may still have been placed; "
+            f"check with calle_show on plan {plan_id} before retrying.",
+            call_placed="unknown",
+        )
 
 
 def _handle_calle_status(args: dict, **kw) -> str:
@@ -420,7 +633,11 @@ def _handle_calle_status(args: dict, **kw) -> str:
     if not run_id:
         return tool_error("run_id is required.")
 
-    ns = _ns(run_id=run_id, max_wait=args.get("max_wait"))
+    ns = _ns(
+        "status",
+        run_id=run_id,
+        max_wait=_coerce_wait(args.get("max_wait"), adapter.DEFAULT_MAX_WAIT_S),
+    )
     try:
         return tool_result(adapter.cmd_status(ns))
     except adapter.CallAgentError as exc:
@@ -434,7 +651,7 @@ def _handle_calle_show(args: dict, **kw) -> str:
     if not ident:
         return tool_error("id is required (a plan_id or a run_id).")
     try:
-        return tool_result(adapter.cmd_show(_ns(id=ident)))
+        return tool_result(adapter.cmd_show(_ns("show", id=ident)))
     except adapter.CallAgentError as exc:
         return tool_error(str(exc))
     except Exception as exc:
