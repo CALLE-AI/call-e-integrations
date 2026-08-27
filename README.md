@@ -98,6 +98,7 @@ flowchart LR
 | **Scheduled and Batch Calling** | Schedule individual calls or send a batch task to multiple recipients |
 | **In-Task Optimization** | Adapts call strategy based on prior attempts within the same task |
 | **Real-World Voice Handling** | Manages live pickup, voicemail, call screening, hold, transfers, silence, and interruptions |
+| **IVR Navigation** | Detects and navigates IVR menus during outbound calls, using DTMF keypad input when needed to reach the requested department, queue, automated service, or person |
 | **Multiple Integration Paths** | Agent plugins, MCP, SDKs, APIs, and enterprise systems |
 | **Safety and Governance** | Number governance, rate limits, concurrency controls, blocklists, kill switches, redacted logs, and audit trails |
 
