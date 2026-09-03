@@ -186,6 +186,17 @@ The Codex, Claude Code, Cursor plugin, OpenClaw, and skills.sh skills use the
 repository-local CLI when available, then a global `calle`, then the
 npm fallback.
 
+### New Users Without A Provisioned Account
+
+`calle auth login` authenticates an **existing** CALL-E account. The brokered
+redirect currently lands on a dashboard login page that accepts only
+Account/Password credentials and shows no visible signup path, so first-time
+users without a provisioned account cannot complete onboarding from it.
+
+While a product-side account-provisioning route is being added, see
+[#103](https://github.com/CALLE-AI/call-e-integrations/issues/103) for the
+current status and supported new-user path.
+
 ## Safety
 
 CALL-E can place real outbound phone calls. Integrations must plan first,

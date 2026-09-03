@@ -59,6 +59,17 @@ After the user confirms authorization is complete, finish the pending login:
 env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 calle auth login --no-browser-open
 ```
 
+## Step 3.5 New Users Need A Provisioned Account
+
+`calle auth login` authenticates an **existing** CALL-E account. The brokered
+redirect currently lands on a dashboard login page that accepts only
+Account/Password credentials and shows no visible signup path, so first-time
+users without a provisioned account cannot complete onboarding from it.
+
+While a product-side account-provisioning route is being added, see
+[#103](https://github.com/CALLE-AI/call-e-integrations/issues/103) for the
+current status and supported new-user path.
+
 ## Step 4 Verify
 
 ```bash
