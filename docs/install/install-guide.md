@@ -186,16 +186,23 @@ The Codex, Claude Code, Cursor plugin, OpenClaw, and skills.sh skills use the
 repository-local CLI when available, then a global `calle`, then the
 npm fallback.
 
-### New Users Without A Provisioned Account
+### First-Time Users: Create The Account
 
-`calle auth login` authenticates an **existing** CALL-E account. The brokered
-redirect currently lands on a dashboard login page that accepts only
-Account/Password credentials and shows no visible signup path, so first-time
-users without a provisioned account cannot complete onboarding from it.
+`calle auth login` authenticates the CALL-E account that the dashboard
+provisions for you. The first-time-user path is:
 
-While a product-side account-provisioning route is being added, see
-[#103](https://github.com/CALLE-AI/call-e-integrations/issues/103) for the
-current status and supported new-user path.
+1. `calle auth login` opens the brokered dashboard sign-in.
+2. On the sign-in page choose **Continue with Google** and complete Google
+   sign-in.
+3. The dashboard provisions a workspace with the starter call entitlement.
+4. The browser returns to the broker session; `calle auth login` completes
+   the token exchange.
+
+The earlier credential-only login page (without a signup path) is tracked in
+[#103](https://github.com/CALLE-AI/call-e-integrations/issues/103).
+The onboarding blocker is considered mitigated pending an anonymous-user
+regression check; if you cannot complete step 2–4 with a fresh account,
+reply there.
 
 ## Safety
 
