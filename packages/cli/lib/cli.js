@@ -23,6 +23,7 @@ import {
   resolveRuntimeConfig,
 } from "./config.js";
 import { ensurePendingLogin, loginWithBroker } from "./broker-client.js";
+import { HttpStatusError } from "./http.js";
 import {
   AuthRequiredError,
   McpHttpError,
@@ -882,6 +883,34 @@ function errorPayload(error, config, helpCommand = null) {
     };
   }
 
+  if (error instanceof HttpStatusError) {
+    const remoteError = parseRemoteErrorBody(error.responseText);
+    const brokerUnavailable = isBrokerRegistrationFailure(error);
+    const messageParts = [error.message];
+    if (remoteError?.message) {
+      messageParts.push(remoteError.message);
+    }
+    if (brokerUnavailable) {
+      messageParts.push(
+        "The CALL-E login service is unavailable. This is not a local configuration problem, so reinstalling the CLI will not help. Retry later, or use the Developer API with a dashboard API key, which does not depend on brokered login."
+      );
+    }
+    return {
+      exitCode: 1,
+      body: {
+        ok: false,
+        server_url: config?.serverUrl ?? null,
+        error: {
+          code: remoteError?.code
+            || (brokerUnavailable ? "broker_unavailable" : "http_error"),
+          message: messageParts.join(" "),
+          status_code: error.statusCode,
+          ...(remoteError ? { remote_error: remoteError } : {}),
+        },
+      },
+    };
+  }
+
   return {
     exitCode: 1,
     body: {
@@ -893,6 +922,41 @@ function errorPayload(error, config, helpCommand = null) {
       },
     },
   };
+}
+
+const REMOTE_ERROR_BODY_LIMIT = 500;
+
+function parseRemoteErrorBody(responseText) {
+  const text = String(responseText ?? "").trim();
+  if (!text) {
+    return null;
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { message: text.slice(0, REMOTE_ERROR_BODY_LIMIT) };
+  }
+  if (!parsed || typeof parsed !== "object") {
+    return { message: text.slice(0, REMOTE_ERROR_BODY_LIMIT) };
+  }
+  const source = parsed.error && typeof parsed.error === "object" ? parsed.error : parsed;
+  const code = typeof source.code === "string"
+    ? source.code
+    : (typeof parsed.error === "string" ? parsed.error : undefined);
+  const message = typeof source.message === "string" ? source.message : undefined;
+  if (!code && !message) {
+    return null;
+  }
+  return {
+    ...(code ? { code } : {}),
+    ...(message ? { message } : {}),
+  };
+}
+
+function isBrokerRegistrationFailure(error) {
+  return Number(error?.statusCode) >= 500
+    && /\/api\/v1\/openagent-auth\/sessions/u.test(String(error?.message ?? ""));
 }
 
 function writeCommandError(stdout, stderr, error, config, helpCommand = null) {
@@ -1716,10 +1780,6 @@ export async function runCli(argv, deps = {}) {
   try {
     return await runCliCommand(argv, deps);
   } catch (error) {
-    if (!(error instanceof InvalidArgumentsError)) {
-      throw error;
-    }
-
     const stdout = deps.stdout || ((text) => process.stdout.write(text));
     const stderr = deps.stderr || ((text) => process.stderr.write(`${text}\n`));
     const [group, command, ...rest] = argv;
@@ -1730,7 +1790,13 @@ export async function runCli(argv, deps = {}) {
     } catch {
       // Invalid option syntax may prevent runtime configuration from being resolved.
     }
-    return writeCommandError(stdout, stderr, error, config, helpCommandFor(group, command));
+    // Every failure leaves through the documented JSON envelope, not just argument errors.
+    // Agent hosts are instructed to treat all command output as JSON, so a transport or
+    // upstream failure that printed a bare string left them with nothing to parse.
+    const helpCommand = error instanceof InvalidArgumentsError
+      ? helpCommandFor(group, command)
+      : null;
+    return writeCommandError(stdout, stderr, error, config, helpCommand);
   }
 }
 

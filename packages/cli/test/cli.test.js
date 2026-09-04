@@ -370,6 +370,81 @@ test("auth login start-only returns authorization hint without polling", async (
   assert.doesNotMatch(result.stdout, /secret-1/);
 });
 
+test("auth login surfaces the upstream error body when brokered login registration fails", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-broker-5xx");
+  const fetchImpl = async (url, init) => {
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+      return new Response(
+        JSON.stringify({
+          error: "oauth_register_failed",
+          message: "Failed to register an OAuth client. err_type=HTTPStatusError",
+        }),
+        { status: 502, headers: { "content-type": "application/json" } }
+      );
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+
+  const result = await run(
+    [
+      "auth",
+      "login",
+      "--start-only",
+      "--no-browser-open",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.status_code, 502);
+  assert.equal(payload.error.code, "oauth_register_failed");
+  assert.deepEqual(payload.error.remote_error, {
+    code: "oauth_register_failed",
+    message: "Failed to register an OAuth client. err_type=HTTPStatusError",
+  });
+  assert.match(payload.error.message, /Failed to register an OAuth client/);
+  assert.match(payload.error.message, /login service is unavailable/);
+  assert.match(payload.error.message, /dashboard API key/);
+  assert.match(result.stderr, /Failed to register an OAuth client/);
+});
+
+test("auth login keeps a non-JSON upstream error body readable and bounded", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-broker-html");
+  const body = `<html><body>${"gateway ".repeat(200)}</body></html>`;
+  const fetchImpl = async (url, init) => {
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+      return new Response(body, { status: 503, headers: { "content-type": "text/html" } });
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+
+  const result = await run(
+    [
+      "auth",
+      "login",
+      "--start-only",
+      "--no-browser-open",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.status_code, 503);
+  assert.equal(payload.error.code, "broker_unavailable");
+  assert.ok(payload.error.remote_error.message.length <= 500);
+});
+
 test("auth login start-only replaces locally active pending cache when broker reports it expired", async () => {
   const cacheRoot = makeTempRoot("calle-cli-login-start-only-expired-broker");
   const serverUrl = "https://mcp.example/mcp/openagent_oauth";
