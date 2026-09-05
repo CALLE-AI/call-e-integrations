@@ -105,9 +105,12 @@ original confirmation context without printing it. If only the initial status
 query fails, the command still returns the accepted `run_id` and a `call status`
 `next_command`.
 
-Successful command stdout is JSON except help and version output. Some
-top-level or local failures may print plain stderr. Access tokens are read from
-the local cache and are never printed.
+Command stdout is JSON except help and version output, for failures as well as
+successes: every error writes a JSON envelope with a CLI-owned `error.code` to
+stdout, a one-line summary to stderr, and exits non-zero. Upstream error details
+appear only under `error.remote_error`, sanitized and bounded. See
+[Error Envelopes](./docs/cli-reference.md#error-envelopes). Access tokens are
+read from the local cache and are never printed.
 
 ## Options
 

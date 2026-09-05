@@ -4,8 +4,10 @@ This is the canonical reference for `calle` commands, options, defaults, and
 parameter examples. When changing CLI commands or options, update this document
 and any synchronized command guidance in the same change.
 
-Successful command stdout is JSON except `--help`, `-h`, `--version`, and `-V`.
-Some top-level or local failures may print plain stderr.
+Command stdout is JSON except `--help`, `-h`, `--version`, and `-V`. This holds
+for failures too: every error leaves through the same JSON envelope on stdout,
+with a one-line summary on stderr and a non-zero exit code. See
+[Error Envelopes](#error-envelopes).
 
 ## JSON Result Envelopes
 
@@ -44,6 +46,57 @@ the latest `get_call_run` object from `status_result.structuredContent`. When
 than the latest call state. See the
 [MCP tool result envelope](../../../docs/mcp/openagent-oauth.md#tool-result-envelope)
 for the direct protocol shape and SDK field-name differences.
+
+## Error Envelopes
+
+Every failure, including argument errors, transport failures, and upstream HTTP
+errors, writes one JSON object to stdout and exits non-zero:
+
+```json
+{
+  "ok": false,
+  "server_url": "https://example.test/mcp/openagent_oauth",
+  "error": {
+    "code": "broker_unavailable",
+    "message": "Client error '502 Bad Gateway' for url '...' Failed to register an OAuth client. The CALL-E login service is unavailable. ...",
+    "status_code": 502,
+    "remote_error": {
+      "code": "oauth_register_failed",
+      "message": "Failed to register an OAuth client."
+    }
+  }
+}
+```
+
+Stable fields:
+
+| Field | Always present | Meaning |
+| --- | --- | --- |
+| `ok` | yes | `false` for every error envelope. |
+| `server_url` | yes | Configured MCP server URL, or `null` when configuration could not be resolved. |
+| `error.code` | yes | A code owned by the CLI. Branch on this. |
+| `error.message` | yes | Human-readable summary; the same text is written to stderr. |
+| `error.status_code` | HTTP errors | Upstream HTTP status. |
+| `error.remote_error` | when an upstream body was readable | `{ code?, message? }` extracted from the upstream response, sanitized and bounded. Informational only. |
+| `error.cause_code` | transport errors | Node.js error code such as `ENOTFOUND` or `ECONNREFUSED`, when known. |
+| `help_command` | argument errors only | A directly runnable `--help` command. |
+
+`error.code` values:
+
+| Code | Exit | When |
+| --- | --- | --- |
+| `invalid_arguments` | 2 | Unknown command, missing or invalid option. `help_command` is set. |
+| `auth_required` | 1 | No usable token, or the server rejected the token. Run `auth login`. |
+| `broker_unavailable` | 1 | The brokered-login service returned a 5xx. Not a local problem. |
+| `http_error` | 1 | Any other non-success HTTP status from a CLI-side request. |
+| `transport_error` | 1 | The request never received a response: DNS, connection, TLS, or timeout. |
+| `mcp_error` | 1 | An MCP-level failure, including stage failures from `call` commands, which add `stage`, `call_started`, `retry_safe`, and recovery fields. |
+
+`error.code` is never taken from an upstream response. Upstream error codes and
+messages appear only under `error.remote_error`, after sanitization: unknown
+fields are dropped unread, codes are limited to `[A-Za-z0-9_.:-]` and 64
+characters, messages are limited to 500 characters, and terminal control
+sequences are removed before anything reaches stdout or stderr.
 
 ## Finding Command Help
 

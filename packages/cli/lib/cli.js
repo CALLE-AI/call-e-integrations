@@ -884,16 +884,15 @@ function errorPayload(error, config, helpCommand = null) {
   }
 
   if (error instanceof HttpStatusError) {
-    const remoteError = parseRemoteErrorBody(error.responseText);
+    const remoteError = sanitizedRemoteError(error.responseText);
     const brokerUnavailable = isBrokerRegistrationFailure(error);
-    const messageParts = [error.message];
+    // error.message embeds the upstream status text, so it is remote-influenced too.
+    const messageParts = [safeRemoteString(error.message, LOCAL_MESSAGE_LIMIT) ?? "HTTP request failed."];
     if (remoteError?.message) {
       messageParts.push(remoteError.message);
     }
     if (brokerUnavailable) {
-      messageParts.push(
-        "The CALL-E login service is unavailable. This is not a local configuration problem, so reinstalling the CLI will not help. Retry later, or use the Developer API with a dashboard API key, which does not depend on brokered login."
-      );
+      messageParts.push(BROKER_UNAVAILABLE_HINT);
     }
     return {
       exitCode: 1,
@@ -901,11 +900,29 @@ function errorPayload(error, config, helpCommand = null) {
         ok: false,
         server_url: config?.serverUrl ?? null,
         error: {
-          code: remoteError?.code
-            || (brokerUnavailable ? "broker_unavailable" : "http_error"),
+          // The top-level code is always locally owned. An upstream body must never be
+          // able to impersonate a stable local code such as `auth_required`.
+          code: brokerUnavailable ? "broker_unavailable" : "http_error",
           message: messageParts.join(" "),
           status_code: error.statusCode,
           ...(remoteError ? { remote_error: remoteError } : {}),
+        },
+      },
+    };
+  }
+
+  if (isTransportFailure(error)) {
+    const causeCode = safeRemoteCode(error?.cause?.code);
+    const detail = safeRemoteString(error?.message, LOCAL_MESSAGE_LIMIT) ?? "Request failed before a response was received.";
+    return {
+      exitCode: 1,
+      body: {
+        ok: false,
+        server_url: config?.serverUrl ?? null,
+        error: {
+          code: "transport_error",
+          message: causeCode ? `${detail} (${causeCode})` : detail,
+          ...(causeCode ? { cause_code: causeCode } : {}),
         },
       },
     };
@@ -918,39 +935,59 @@ function errorPayload(error, config, helpCommand = null) {
       server_url: config?.serverUrl ?? null,
       error: {
         code: "mcp_error",
-        message: error?.message || String(error),
+        message: safeRemoteString(error?.message ?? String(error), LOCAL_MESSAGE_LIMIT) ?? "Unknown error.",
       },
     },
   };
 }
 
-const REMOTE_ERROR_BODY_LIMIT = 500;
+const LOCAL_MESSAGE_LIMIT = 300;
+const REMOTE_MESSAGE_LIMIT = 500;
 
-function parseRemoteErrorBody(responseText) {
-  const text = String(responseText ?? "").trim();
-  if (!text) {
+const BROKER_UNAVAILABLE_HINT =
+  "The CALL-E login service is unavailable. This is not a local configuration problem, so reinstalling the CLI will not help. Retry later, or use the Developer API with a dashboard API key, which does not depend on brokered login.";
+
+/**
+ * Reduce an upstream HTTP error body to at most two sanitized strings.
+ *
+ * Allowlist only: `code` (or a string-valued `error`) and `message`, read from the top level
+ * or from a nested `error` object. Every other field is dropped unread, so token-like or
+ * internal fields in a response can never reach stdout or stderr. Both strings pass through
+ * the same sanitizer as MCP call errors; codes are additionally constrained to a machine-safe
+ * character set and length.
+ */
+function sanitizedRemoteError(responseText) {
+  const raw = typeof responseText === "string" ? responseText : "";
+  if (!raw.trim()) {
     return null;
   }
+
   let parsed;
   try {
-    parsed = JSON.parse(text);
+    parsed = JSON.parse(raw);
   } catch {
-    return { message: text.slice(0, REMOTE_ERROR_BODY_LIMIT) };
+    parsed = undefined;
   }
-  if (!parsed || typeof parsed !== "object") {
-    return { message: text.slice(0, REMOTE_ERROR_BODY_LIMIT) };
+
+  const record = recordObject(parsed);
+  if (!record) {
+    // Non-JSON (typically a gateway's HTML page) or a JSON array/scalar: keep a bounded,
+    // control-stripped excerpt and nothing else.
+    const message = safeRemoteString(raw, REMOTE_MESSAGE_LIMIT);
+    return message ? { message } : null;
   }
-  const source = parsed.error && typeof parsed.error === "object" ? parsed.error : parsed;
-  const code = typeof source.code === "string"
-    ? source.code
-    : (typeof parsed.error === "string" ? parsed.error : undefined);
-  const message = typeof source.message === "string" ? source.message : undefined;
-  if (!code && !message) {
+
+  const nested = recordObject(record.error) || {};
+  const codeValue = nested.code ?? record.code ?? (typeof record.error === "string" ? record.error : undefined);
+  const code = safeRemoteCode(codeValue);
+  const message = safeRemoteString(nested.message ?? record.message, REMOTE_MESSAGE_LIMIT);
+
+  if (code === undefined && message === undefined) {
     return null;
   }
   return {
-    ...(code ? { code } : {}),
-    ...(message ? { message } : {}),
+    ...(code !== undefined ? { code } : {}),
+    ...(message !== undefined ? { message } : {}),
   };
 }
 
@@ -959,11 +996,25 @@ function isBrokerRegistrationFailure(error) {
     && /\/api\/v1\/openagent-auth\/sessions/u.test(String(error?.message ?? ""));
 }
 
+// A rejected fetch (DNS failure, connection refused, TLS error) surfaces as a TypeError with
+// a `cause`; the core HTTP layer turns an aborted request into a plain timeout Error.
+function isTransportFailure(error) {
+  if (error instanceof HttpStatusError || error instanceof McpHttpError) {
+    return false;
+  }
+  if (error instanceof TypeError) {
+    return true;
+  }
+  return /^Request timed out for /u.test(String(error?.message ?? ""));
+}
+
 function writeCommandError(stdout, stderr, error, config, helpCommand = null) {
   const formatted = errorPayload(error, config, helpCommand);
   writeJson(stdout, formatted.body);
+  // Remote-derived strings are sanitized at the source; this is the last line of defence
+  // for the one channel that goes straight to a terminal.
   stderr([
-    formatted.body.error.message,
+    stripTerminalControls(formatted.body.error.message),
     ...(formatted.body.help_command ? [`Run '${formatted.body.help_command}' for usage.`] : []),
   ].join("\n"));
   return formatted.exitCode;
@@ -1082,11 +1133,38 @@ function structuredPayload(result) {
   return result?.structuredContent || result?.structured_content || result || {};
 }
 
+// ANSI/VT escape sequences (CSI, OSC, and single-character ESC forms) plus C0/C1 control
+// characters. Anything remote-supplied that reaches a log line or a terminal goes through
+// this, so a hostile or misconfigured upstream cannot inject cursor movement, colour, line
+// breaks, or hidden text into agent-visible output.
+const TERMINAL_CONTROL_RE =
+  /\u001b\[[0-?]*[ -\/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)|\u001b[@-_]|[\u0000-\u001f\u007f-\u009f]/gu;
+
+function stripTerminalControls(value) {
+  return String(value).replace(TERMINAL_CONTROL_RE, " ");
+}
+
 function safeRemoteString(value, maxLength = 1000) {
-  if (typeof value !== "string" || !value.trim()) {
+  if (typeof value !== "string") {
     return undefined;
   }
-  return value.trim().slice(0, maxLength);
+  const cleaned = stripTerminalControls(value).trim();
+  if (!cleaned) {
+    return undefined;
+  }
+  return cleaned.slice(0, maxLength);
+}
+
+// Machine codes from upstream are kept only as an opaque, normalized token under
+// `remote_error`; they never become the CLI's own `error.code`, which agent hosts branch on.
+const REMOTE_CODE_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/u;
+
+function safeRemoteCode(value) {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const cleaned = stripTerminalControls(value).trim();
+  return REMOTE_CODE_RE.test(cleaned) ? cleaned : undefined;
 }
 
 function safeRemoteCallError(result) {

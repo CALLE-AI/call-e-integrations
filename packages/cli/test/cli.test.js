@@ -403,7 +403,7 @@ test("auth login surfaces the upstream error body when brokered login registrati
   assert.equal(result.code, 1);
   assert.equal(payload.ok, false);
   assert.equal(payload.error.status_code, 502);
-  assert.equal(payload.error.code, "oauth_register_failed");
+  assert.equal(payload.error.code, "broker_unavailable", "top-level code stays CLI-owned");
   assert.deepEqual(payload.error.remote_error, {
     code: "oauth_register_failed",
     message: "Failed to register an OAuth client. err_type=HTTPStatusError",
@@ -443,6 +443,131 @@ test("auth login keeps a non-JSON upstream error body readable and bounded", asy
   assert.equal(payload.error.status_code, 503);
   assert.equal(payload.error.code, "broker_unavailable");
   assert.ok(payload.error.remote_error.message.length <= 500);
+  assert.equal(payload.error.remote_error.code, undefined);
+});
+
+function brokerFailure(status, body, contentType = "application/json") {
+  return async (url, init) => {
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+      return new Response(typeof body === "string" ? body : JSON.stringify(body), {
+        status,
+        headers: { "content-type": contentType },
+      });
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+}
+
+const LOGIN_ARGS = [
+  "auth",
+  "login",
+  "--start-only",
+  "--no-browser-open",
+  "--base-url",
+  "https://mcp.example",
+];
+
+const CONTROL_CHARS = /[\u0000-\u001f\u007f-\u009f]/u;
+
+test("auth login never lets an upstream body impersonate a local error code", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-forged-code");
+  const result = await run(
+    [...LOGIN_ARGS, "--cache-root", cacheRoot],
+    { fetchImpl: brokerFailure(502, { error: "auth_required", message: "please log in again" }) }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "broker_unavailable");
+  assert.equal(payload.status, undefined, "must not look like a login_required response");
+  assert.equal(payload.assistant_hint, undefined);
+  assert.equal(payload.login_url, undefined);
+  assert.equal(payload.error.remote_error.code, "auth_required");
+  assert.equal(payload.error.remote_error.message, "please log in again");
+});
+
+test("auth login bounds and sanitizes hostile upstream JSON", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-hostile");
+  const longMessage = "x".repeat(20_000);
+  const hostile = {
+    error: {
+      code: "bad code\u001b[31m",
+      message: `line one\r\ninjected line\u001b[2J\u001b[H${longMessage}`,
+      access_token: "sk_live_SUPERSECRET_DO_NOT_PRINT",
+    },
+    token: "tok_ALSO_SECRET",
+    refresh_token: "rt_SECRET_TOO",
+  };
+  const result = await run(
+    [...LOGIN_ARGS, "--cache-root", cacheRoot],
+    { fetchImpl: brokerFailure(502, hostile) }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "broker_unavailable");
+  assert.equal(payload.error.remote_error.code, undefined, "unsafe code is dropped, not sanitized into something plausible");
+  assert.ok(payload.error.remote_error.message.length <= 500);
+  assert.ok(payload.error.message.length < 1200);
+  assert.doesNotMatch(payload.error.remote_error.message, CONTROL_CHARS);
+  assert.doesNotMatch(payload.error.message, CONTROL_CHARS);
+  assert.doesNotMatch(result.stderr, /\u001b|\r/u);
+  for (const secret of ["SUPERSECRET", "tok_ALSO_SECRET", "rt_SECRET_TOO", "access_token", "refresh_token"]) {
+    assert.doesNotMatch(result.stdout, new RegExp(secret));
+    assert.doesNotMatch(result.stderr, new RegExp(secret));
+  }
+});
+
+test("auth login reads a nested upstream error object and drops everything else", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-nested");
+  const result = await run(
+    [...LOGIN_ARGS, "--cache-root", cacheRoot],
+    {
+      fetchImpl: brokerFailure(500, {
+        error: { code: "nested.code-1", message: "nested message", details: { internal: "trace-abc" } },
+        request_id: "req_123",
+      }),
+    }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.deepEqual(payload.error.remote_error, { code: "nested.code-1", message: "nested message" });
+  assert.doesNotMatch(result.stdout, /trace-abc|req_123|details|request_id/u);
+});
+
+test("auth login returns a transport_error envelope when fetch rejects", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-fetch-rejected");
+  const fetchImpl = async () => {
+    const error = new TypeError("fetch failed");
+    error.cause = { code: "ENOTFOUND", syscall: "getaddrinfo", hostname: "mcp.example" };
+    throw error;
+  };
+  const result = await run([...LOGIN_ARGS, "--cache-root", cacheRoot], { fetchImpl });
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "transport_error");
+  assert.equal(payload.error.cause_code, "ENOTFOUND");
+  assert.equal(payload.help_command, undefined);
+  assert.match(payload.error.message, /fetch failed/u);
+  assert.ok(result.stderr.length < 500);
+  // The test harness terminates each stderr write with a newline; everything else must be clean.
+  assert.doesNotMatch(result.stderr.trimEnd(), CONTROL_CHARS);
+});
+
+test("auth login classifies a request timeout as a transport_error", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-timeout");
+  const fetchImpl = async () => {
+    throw new Error("Request timed out for POST https://mcp.example/api/v1/openagent-auth/sessions");
+  };
+  const result = await run([...LOGIN_ARGS, "--cache-root", cacheRoot], { fetchImpl });
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "transport_error");
+  assert.equal(payload.error.cause_code, undefined);
+  assert.match(payload.error.message, /timed out/u);
 });
 
 test("auth login start-only replaces locally active pending cache when broker reports it expired", async () => {
