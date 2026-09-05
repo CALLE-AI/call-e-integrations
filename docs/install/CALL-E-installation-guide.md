@@ -61,21 +61,13 @@ env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_V
 
 ## Step 3.5 First-Time Users: Create The Account
 
-`calle auth login` authenticates the CALL-E account that the dashboard
-provisions for you. The first-time-user path is:
+<!-- sync-with: docs/install/install-guide.md#authentication-and-verification -->
 
-1. `calle auth login` opens the brokered dashboard sign-in.
-2. On the sign-in page choose **Continue with Google** and complete Google
-   sign-in.
-3. The dashboard provisions a workspace with the starter call entitlement.
-4. The browser returns to the broker session; `calle auth login` completes
-   the token exchange.
-
-The earlier credential-only login page (without a signup path) is tracked in
-[#103](https://github.com/CALLE-AI/call-e-integrations/issues/103).
-The onboarding blocker is considered mitigated pending an anonymous-user
-regression check; if you cannot complete step 2–4 with a fresh account,
-reply there.
+`calle auth login` uses the same flow for new and existing accounts: it opens
+the brokered dashboard sign-in, where **Continue with Google** registers a new
+account or signs in an existing one, then returns you to the same session to
+finish. Full first-time-user detail: install-guide.md →
+[First-Time Users](./install-guide.md#first-time-users-create-the-account).
 
 ## Step 4 Verify
 

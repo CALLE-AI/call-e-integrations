@@ -188,21 +188,17 @@ npm fallback.
 
 ### First-Time Users: Create The Account
 
-`calle auth login` authenticates the CALL-E account that the dashboard
-provisions for you. The first-time-user path is:
+`calle auth login` uses the same flow for new and existing accounts:
 
 1. `calle auth login` opens the brokered dashboard sign-in.
-2. On the sign-in page choose **Continue with Google** and complete Google
-   sign-in.
-3. The dashboard provisions a workspace with the starter call entitlement.
-4. The browser returns to the broker session; `calle auth login` completes
-   the token exchange.
+2. On the sign-in page choose **Continue with Google**. For a new Google
+   identity this registers the account; for an existing account it signs in.
+3. The dashboard shows that it is preparing your workspace, then returns you
+   to the same sign-in session so `calle auth login` can finish.
 
-The earlier credential-only login page (without a signup path) is tracked in
-[#103](https://github.com/CALLE-AI/call-e-integrations/issues/103).
-The onboarding blocker is considered mitigated pending an anonymous-user
-regression check; if you cannot complete step 2–4 with a fresh account,
-reply there.
+The Google sign-in route and the preserved broker session are confirmed on
+the deployed dashboard. If any step fails, see
+[Troubleshooting](./troubleshooting.md).
 
 ## Safety
 
