@@ -193,11 +193,11 @@ npm fallback.
 1. `calle auth login` opens the brokered dashboard sign-in.
 2. On the sign-in page choose **Continue with Google**. For a new Google
    identity this registers the account; for an existing account it signs in.
-3. The dashboard shows that it is preparing your workspace, then returns you
-   to the same sign-in session so `calle auth login` can finish.
+3. The dashboard shows that it is preparing your workspace. The Google flow
+   preserves the broker/MCP return parameters from the sign-in.
 
-The Google sign-in route and the preserved broker session are confirmed on
-the deployed dashboard. If any step fails, see
+The Google sign-in route and the preserved broker/MCP return parameters are
+confirmed on the deployed dashboard. If any step fails, see
 [Troubleshooting](./troubleshooting.md).
 
 ## Safety

@@ -61,12 +61,12 @@ env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_V
 
 ## Step 3.5 First-Time Users: Create The Account
 
-<!-- sync-with: docs/install/install-guide.md#authentication-and-verification -->
+<!-- sync-with: docs/install/install-guide.md#first-time-users-create-the-account -->
 
 `calle auth login` uses the same flow for new and existing accounts: it opens
 the brokered dashboard sign-in, where **Continue with Google** registers a new
-account or signs in an existing one, then returns you to the same session to
-finish. Full first-time-user detail: install-guide.md →
+account or signs in an existing one while preserving the broker/MCP return
+parameters. Full first-time-user detail:
 [First-Time Users](./install-guide.md#first-time-users-create-the-account).
 
 ## Step 4 Verify
