@@ -23,7 +23,14 @@ import {
   resolveRuntimeConfig,
 } from "./config.js";
 import { ensurePendingLogin, loginWithBroker } from "./broker-client.js";
-import { HttpStatusError } from "./http.js";
+import { HttpStatusError, TransportError } from "./http.js";
+import {
+  REMOTE_MESSAGE_LIMIT,
+  safeRemoteCode,
+  safeRemoteString,
+  sanitizeRemoteError,
+  stripTerminalControls,
+} from "./sanitize.js";
 import {
   AuthRequiredError,
   McpHttpError,
@@ -58,8 +65,11 @@ class CallStageError extends McpHttpError {
     recoveryId = null,
     nextCommand = null,
     remoteError = null,
+    transport = false,
+    timedOut = false,
+    cause,
   }) {
-    super(message, { code, statusCode });
+    super(message, { code, statusCode, transport, timedOut, ...(cause !== undefined ? { cause } : {}) });
     this.name = "CallStageError";
     this.stage = stage;
     this.callStarted = callStarted;
@@ -856,12 +866,17 @@ function errorPayload(error, config, helpCommand = null) {
     };
   }
 
+  const classified = classifyError(error);
+
   if (error instanceof McpHttpError) {
-    const remoteError = error instanceof CallStageError && error.remoteError
-      ? error.remoteError
-      : null;
+    const stageRemote = error instanceof CallStageError && error.remoteError ? error.remoteError : null;
+    // Display detail comes from the sanitized copy the core client attached, or from the
+    // stage's own sanitized remote fields. Never from `error.payload` directly.
+    const remoteError = error.remoteError
+      ?? (stageRemote?.message ? { message: stageRemote.message } : null);
+    const causeCode = safeRemoteCode(error.causeCode);
     return {
-      exitCode: 1,
+      exitCode: classified.exitCode,
       body: {
         ok: false,
         server_url: config?.serverUrl ?? null,
@@ -873,37 +888,33 @@ function errorPayload(error, config, helpCommand = null) {
           ...(error.nextCommand ? { next_command: error.nextCommand } : {}),
         } : {}),
         error: {
-          code: error.code || "mcp_error",
-          message: error.message,
+          code: classified.code,
+          message: localMessage(error.message),
           status_code: error.statusCode,
-          ...(remoteError?.error_code !== undefined ? { error_code: remoteError.error_code } : {}),
-          ...(remoteError?.status !== undefined ? { status: remoteError.status } : {}),
+          ...(classified.transport ? { transport: true } : {}),
+          ...(causeCode ? { cause_code: causeCode } : {}),
+          ...(stageRemote?.error_code !== undefined ? { error_code: stageRemote.error_code } : {}),
+          ...(stageRemote?.status !== undefined ? { status: stageRemote.status } : {}),
+          ...(remoteError ? { remote_error: remoteError } : {}),
         },
       },
     };
   }
 
   if (error instanceof HttpStatusError) {
-    const remoteError = sanitizedRemoteError(error.responseText);
-    const brokerUnavailable = isBrokerRegistrationFailure(error);
-    // error.message embeds the upstream status text, so it is remote-influenced too.
-    const messageParts = [safeRemoteString(error.message, LOCAL_MESSAGE_LIMIT) ?? "HTTP request failed."];
-    if (remoteError?.message) {
-      messageParts.push(remoteError.message);
-    }
-    if (brokerUnavailable) {
-      messageParts.push(BROKER_UNAVAILABLE_HINT);
-    }
+    const remoteError = sanitizeRemoteError(error.responseText);
+    const brokerUnavailable = classified.code === "broker_unavailable";
+    // The summary is authored here, from the status code and our own URL — never from the
+    // response, whose status text and body are both remote-controlled.
+    const summary = `HTTP ${error.statusCode ?? "error"} from ${describeUrl(error.url)}.`;
     return {
-      exitCode: 1,
+      exitCode: classified.exitCode,
       body: {
         ok: false,
         server_url: config?.serverUrl ?? null,
         error: {
-          // The top-level code is always locally owned. An upstream body must never be
-          // able to impersonate a stable local code such as `auth_required`.
-          code: brokerUnavailable ? "broker_unavailable" : "http_error",
-          message: messageParts.join(" "),
+          code: classified.code,
+          message: brokerUnavailable ? `${summary} ${BROKER_UNAVAILABLE_HINT}` : summary,
           status_code: error.statusCode,
           ...(remoteError ? { remote_error: remoteError } : {}),
         },
@@ -911,17 +922,20 @@ function errorPayload(error, config, helpCommand = null) {
     };
   }
 
-  if (isTransportFailure(error)) {
-    const causeCode = safeRemoteCode(error?.cause?.code);
-    const detail = safeRemoteString(error?.message, LOCAL_MESSAGE_LIMIT) ?? "Request failed before a response was received.";
+  if (error instanceof TransportError) {
+    const causeCode = safeRemoteCode(error.code);
+    const summary = error.timedOut
+      ? `Request timed out for ${error.method ?? "request"} ${describeUrl(error.url)}.`
+      : `Request failed before a response was received for ${error.method ?? "request"} ${describeUrl(error.url)}.`;
     return {
-      exitCode: 1,
+      exitCode: classified.exitCode,
       body: {
         ok: false,
         server_url: config?.serverUrl ?? null,
         error: {
           code: "transport_error",
-          message: causeCode ? `${detail} (${causeCode})` : detail,
+          message: causeCode && !error.timedOut ? `${summary} (${causeCode})` : summary,
+          transport: true,
           ...(causeCode ? { cause_code: causeCode } : {}),
         },
       },
@@ -929,83 +943,104 @@ function errorPayload(error, config, helpCommand = null) {
   }
 
   return {
-    exitCode: 1,
+    exitCode: classified.exitCode,
     body: {
       ok: false,
       server_url: config?.serverUrl ?? null,
       error: {
-        code: "mcp_error",
-        message: safeRemoteString(error?.message ?? String(error), LOCAL_MESSAGE_LIMIT) ?? "Unknown error.",
+        code: classified.code,
+        message: localMessage(error?.message ?? String(error)) ?? "Unexpected error.",
       },
     },
   };
 }
 
 const LOCAL_MESSAGE_LIMIT = 300;
-const REMOTE_MESSAGE_LIMIT = 500;
 
 const BROKER_UNAVAILABLE_HINT =
   "The CALL-E login service is unavailable. This is not a local configuration problem, so reinstalling the CLI will not help. Retry later, or use the Developer API with a dashboard API key, which does not depend on brokered login.";
 
 /**
- * Reduce an upstream HTTP error body to at most two sanitized strings.
+ * The complete set of `error.code` values the CLI can emit, with their exit codes.
  *
- * Allowlist only: `code` (or a string-valued `error`) and `message`, read from the top level
- * or from a nested `error` object. Every other field is dropped unread, so token-like or
- * internal fields in a response can never reach stdout or stderr. Both strings pass through
- * the same sanitizer as MCP call errors; codes are additionally constrained to a machine-safe
- * character set and length.
+ * This object IS the contract. `classifyError` never returns a code outside it,
+ * `errorTelemetryCode` reports the same value, and the test suite asserts that
+ * docs/cli-reference.md documents exactly this set — so the three cannot drift apart.
  */
-function sanitizedRemoteError(responseText) {
-  const raw = typeof responseText === "string" ? responseText : "";
-  if (!raw.trim()) {
-    return null;
-  }
+export const ERROR_CODES = Object.freeze({
+  invalid_arguments: { exitCode: 2, transport: false },
+  auth_required: { exitCode: 1, transport: false },
+  broker_unavailable: { exitCode: 1, transport: false },
+  http_error: { exitCode: 1, transport: false },
+  transport_error: { exitCode: 1, transport: true },
+  mcp_error: { exitCode: 1, transport: false },
+  plan_not_ready: { exitCode: 1, transport: false },
+  plan_call_invalid_response: { exitCode: 1, transport: false },
+  run_call_missing_run_id: { exitCode: 1, transport: false },
+  recovery_not_found: { exitCode: 1, transport: false },
+  recovery_storage_error: { exitCode: 1, transport: false },
+  plan_call_error: { exitCode: 1, transport: false },
+  plan_call_timeout: { exitCode: 1, transport: true },
+  run_call_error: { exitCode: 1, transport: false },
+  run_call_timeout: { exitCode: 1, transport: true },
+  get_call_run_error: { exitCode: 1, transport: false },
+  get_call_run_timeout: { exitCode: 1, transport: true },
+  internal_error: { exitCode: 1, transport: false },
+});
 
-  let parsed;
+/**
+ * Single place that maps a thrown error to a CLI-owned code. Used by the JSON envelope, by
+ * stderr, and by telemetry, so all three always agree.
+ */
+export function classifyError(error) {
+  if (error instanceof InvalidArgumentsError) {
+    return { code: "invalid_arguments", exitCode: 2, transport: false };
+  }
+  if (error instanceof AuthRequiredError || isUnauthorizedMcpError(error)) {
+    return { code: "auth_required", exitCode: 1, transport: false };
+  }
+  if (error instanceof McpHttpError) {
+    const candidate = typeof error.code === "string" && Object.hasOwn(ERROR_CODES, error.code)
+      ? error.code
+      : "mcp_error";
+    const transport = Boolean(error.transport || error.timedOut) || ERROR_CODES[candidate].transport;
+    return { code: candidate, exitCode: ERROR_CODES[candidate].exitCode, transport };
+  }
+  if (error instanceof HttpStatusError) {
+    const code = isBrokerRegistrationFailure(error) ? "broker_unavailable" : "http_error";
+    return { code, exitCode: 1, transport: false };
+  }
+  if (error instanceof TransportError) {
+    return { code: "transport_error", exitCode: 1, transport: true };
+  }
+  // Anything else is a local defect. It is never described as a network condition.
+  return { code: "internal_error", exitCode: 1, transport: false };
+}
+
+/** Bound and control-strip a message the CLI authored itself before it reaches an envelope. */
+function localMessage(value) {
+  return safeRemoteString(value, LOCAL_MESSAGE_LIMIT);
+}
+
+/** Origin and path of a URL we requested — ours to print, but never the query string. */
+function describeUrl(url) {
+  if (typeof url !== "string" || !url) {
+    return "the CALL-E service";
+  }
   try {
-    parsed = JSON.parse(raw);
+    const parsed = new URL(url);
+    return `${parsed.origin}${parsed.pathname}`;
   } catch {
-    parsed = undefined;
+    return "the CALL-E service";
   }
-
-  const record = recordObject(parsed);
-  if (!record) {
-    // Non-JSON (typically a gateway's HTML page) or a JSON array/scalar: keep a bounded,
-    // control-stripped excerpt and nothing else.
-    const message = safeRemoteString(raw, REMOTE_MESSAGE_LIMIT);
-    return message ? { message } : null;
-  }
-
-  const nested = recordObject(record.error) || {};
-  const codeValue = nested.code ?? record.code ?? (typeof record.error === "string" ? record.error : undefined);
-  const code = safeRemoteCode(codeValue);
-  const message = safeRemoteString(nested.message ?? record.message, REMOTE_MESSAGE_LIMIT);
-
-  if (code === undefined && message === undefined) {
-    return null;
-  }
-  return {
-    ...(code !== undefined ? { code } : {}),
-    ...(message !== undefined ? { message } : {}),
-  };
 }
 
 function isBrokerRegistrationFailure(error) {
-  return Number(error?.statusCode) >= 500
-    && /\/api\/v1\/openagent-auth\/sessions/u.test(String(error?.message ?? ""));
-}
-
-// A rejected fetch (DNS failure, connection refused, TLS error) surfaces as a TypeError with
-// a `cause`; the core HTTP layer turns an aborted request into a plain timeout Error.
-function isTransportFailure(error) {
-  if (error instanceof HttpStatusError || error instanceof McpHttpError) {
+  if (Number(error?.statusCode) < 500) {
     return false;
   }
-  if (error instanceof TypeError) {
-    return true;
-  }
-  return /^Request timed out for /u.test(String(error?.message ?? ""));
+  const url = typeof error?.url === "string" ? error.url : String(error?.message ?? "");
+  return /\/api\/v1\/openagent-auth\/sessions/u.test(url);
 }
 
 function writeCommandError(stdout, stderr, error, config, helpCommand = null) {
@@ -1029,16 +1064,7 @@ function prePlanInvokedCommand(group, command) {
 }
 
 function errorTelemetryCode(error) {
-  if (error instanceof InvalidArgumentsError) {
-    return "invalid_arguments";
-  }
-  if (error instanceof AuthRequiredError || isUnauthorizedMcpError(error)) {
-    return "auth_required";
-  }
-  if (error instanceof McpHttpError) {
-    return error.code || "mcp_error";
-  }
-  return "local_error";
+  return classifyError(error).code;
 }
 
 function errorTelemetryProperties(error) {
@@ -1133,40 +1159,8 @@ function structuredPayload(result) {
   return result?.structuredContent || result?.structured_content || result || {};
 }
 
-// ANSI/VT escape sequences (CSI, OSC, and single-character ESC forms) plus C0/C1 control
-// characters. Anything remote-supplied that reaches a log line or a terminal goes through
-// this, so a hostile or misconfigured upstream cannot inject cursor movement, colour, line
-// breaks, or hidden text into agent-visible output.
-const TERMINAL_CONTROL_RE =
-  /\u001b\[[0-?]*[ -\/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)|\u001b[@-_]|[\u0000-\u001f\u007f-\u009f]/gu;
-
-function stripTerminalControls(value) {
-  return String(value).replace(TERMINAL_CONTROL_RE, " ");
-}
-
-function safeRemoteString(value, maxLength = 1000) {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-  const cleaned = stripTerminalControls(value).trim();
-  if (!cleaned) {
-    return undefined;
-  }
-  return cleaned.slice(0, maxLength);
-}
-
-// Machine codes from upstream are kept only as an opaque, normalized token under
-// `remote_error`; they never become the CLI's own `error.code`, which agent hosts branch on.
-const REMOTE_CODE_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/u;
-
-function safeRemoteCode(value) {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-  const cleaned = stripTerminalControls(value).trim();
-  return REMOTE_CODE_RE.test(cleaned) ? cleaned : undefined;
-}
-
+// Remote strings are sanitized by @call-e/core/sanitize - one implementation shared with the
+// MCP client, so a message is made safe where the error is created, not where it is printed.
 function safeRemoteCallError(result) {
   const structured = recordObject(structuredPayload(result)) || {};
   const nestedError = recordObject(structured.error) || {};
@@ -1204,14 +1198,20 @@ function callStageErrorFrom(error, {
   if (error instanceof CallStageError) {
     return error;
   }
-  const timedOut = error instanceof McpHttpError && /timed out/iu.test(error.message);
+  // Only a genuine transport timeout (typed by the core client) becomes `<stage>_timeout`;
+  // matching on message text would let a remote string choose our error code.
+  const timedOut = error instanceof McpHttpError && error.timedOut === true;
   const remoteError = error instanceof McpHttpError && error.payload
     ? safeRemoteCallError(error.payload)
     : null;
+  // The summary is ours. The server's wording, if any, rides along under remote_error.
+  const message = timedOut
+    ? `${stage} timed out before the CLI received a response.`
+    : (error instanceof McpHttpError && error.transport
+      ? `${stage} failed before a response was received.`
+      : `${stage} failed.`);
   return new CallStageError(
-    timedOut
-      ? `${stage} timed out before the CLI received a response.`
-      : remoteError?.message || `${stage} failed: ${error?.message || String(error)}`,
+    message,
     {
       stage,
       code: timedOut ? `${stage}_timeout` : `${stage}_error`,
@@ -1221,6 +1221,9 @@ function callStageErrorFrom(error, {
       recoveryId,
       nextCommand,
       remoteError,
+      transport: error instanceof McpHttpError ? error.transport : false,
+      timedOut,
+      ...(error?.cause !== undefined ? { cause: error.cause } : {}),
     }
   );
 }
@@ -1533,16 +1536,20 @@ async function handleCallCommand({ command, positional, options, config, deps, s
       });
       const structuredPlan = structuredPayload(planResult);
       if (structuredPlan.ready_to_run === false) {
-        const question = Array.isArray(structuredPlan.clarifying_questions)
-          ? structuredPlan.clarifying_questions.find((item) => typeof item === "string" && item.trim())?.trim()
+        // The clarifying question is server text. It is shown under remote_error, sanitized
+        // and bounded, never interpolated into the CLI's own summary.
+        const rawQuestion = Array.isArray(structuredPlan.clarifying_questions)
+          ? structuredPlan.clarifying_questions.find((item) => typeof item === "string" && item.trim())
           : null;
+        const question = safeRemoteString(rawQuestion, REMOTE_MESSAGE_LIMIT);
         throw new CallStageError(
-          `Call plan needs more information before it can run${question ? `: ${question}` : "."}`,
+          "Call plan needs more information before it can run. See error.remote_error.message for the question the service asked.",
           {
             stage: "plan_call",
             code: "plan_not_ready",
             callStarted: false,
             retrySafe: true,
+            ...(question ? { remoteError: { message: question } } : {}),
           }
         );
       }

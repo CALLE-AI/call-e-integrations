@@ -1,24 +1,43 @@
 ---
+"@call-e/core": patch
 "@call-e/cli": patch
 ---
 
-Always emit the documented JSON error envelope, and surface upstream error detail safely.
+Always emit the documented JSON error envelope, with one sanitization boundary for remote text.
 
 `runCli` previously rethrew every error that was not an `InvalidArgumentsError`, so any
 transport or upstream HTTP failure escaped to `main()` and printed a bare message to stderr
 with nothing on stdout. Agent hosts are instructed to treat all command output as JSON, so a
 failed `auth login` left them with an empty stdout and no `error.code` to branch on.
 
-Every failure now leaves through `writeCommandError`. `error.code` is always CLI-owned:
-`broker_unavailable` when the brokered-login service returns a 5xx, `http_error` for other
-non-success statuses, and `transport_error` when `fetch` rejects or times out before a
-response arrives. Upstream detail is exposed only under `error.remote_error` after passing
-through the same sanitizer used for MCP call errors: only `code` and `message` are read
-(top-level or nested under `error`), all other fields are dropped unread, codes are
-constrained to `[A-Za-z0-9_.:-]` and 64 characters, messages are capped at 500 characters,
-and ANSI/C0/C1 terminal control sequences are stripped before anything reaches stdout or
-stderr. An upstream body cannot set the top-level code, so it cannot impersonate stable
-local codes such as `auth_required`.
+**core**
+
+- New `@call-e/core/sanitize`: `stripTerminalControls`, `redactSecrets`, `safeRemoteString`,
+  `safeRemoteCode`, `sanitizeRemoteError`. One implementation for every remote-supplied
+  string: terminal control sequences removed, credential-shaped substrings redacted, codes
+  constrained to `[A-Za-z0-9_.:-]{1,64}`, messages bounded to 500 characters, and only
+  `code` / `message` read from a body — every other field dropped unread.
+- `http.js` throws a typed `TransportError` when `fetch` rejects or times out, carrying
+  `url`, `method`, `timedOut`, and the cause's Node.js code. `HttpStatusError` now records
+  `url`.
+- `McpHttpError.message` is always locally authored. The server's JSON-RPC error text is kept
+  raw in `payload` and, sanitized, in the new `remoteError` field. Timeouts and rejected
+  fetches are `code: "transport_error"` with `transport: true` / `timedOut`.
+
+**cli**
+
+- Every failure leaves through `writeCommandError`. `error.code` comes from a single
+  exported `ERROR_CODES` table via `classifyError`, which the JSON envelope, stderr, and
+  telemetry all share; a test asserts the table matches `docs/cli-reference.md` exactly.
+- `error.message` and stderr are authored by the CLI and never contain remote text. Remote
+  detail — HTTP bodies, JSON-RPC errors, `plan_not_ready` clarifying questions — appears only
+  under `error.remote_error` after sanitization.
+- `transport_error` (and `error.transport: true`) is set only from the typed transport
+  boundary. An unrelated local `TypeError` is `internal_error`, never a network condition.
+- Hostile-input regressions: forged `auth_required`, 20 KB flat and nested bodies,
+  CR/LF/ANSI content, secret-like fields and secret-like substrings inside messages absent
+  from stdout and stderr, hostile MCP `tools/list` and `tools/call` errors, a hostile
+  clarifying question, rejected fetch, timeout, and an unrelated `TypeError`.
 
 Before, against a broker returning 502:
 
@@ -33,6 +52,7 @@ After:
   "ok": false,
   "error": {
     "code": "broker_unavailable",
+    "message": "HTTP 502 from https://.../api/v1/openagent-auth/sessions. The CALL-E login service is unavailable. ...",
     "status_code": 502,
     "remote_error": {
       "code": "oauth_register_failed",
@@ -42,4 +62,4 @@ After:
 }
 ```
 
-The CLI reference and README now document the error envelope and its stable fields.
+The CLI reference documents every stable envelope field and the complete `error.code` list.

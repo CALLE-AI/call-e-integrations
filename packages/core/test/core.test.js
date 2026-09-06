@@ -547,9 +547,92 @@ test("MCP client reports request timeouts", async () => {
     () => listMcpTools({ config, fetchImpl }),
     (error) => {
       assert.ok(error instanceof McpHttpError);
-      assert.equal(error.code, "http_error");
+      assert.equal(error.code, "transport_error");
+      assert.equal(error.transport, true);
+      assert.equal(error.timedOut, true);
       assert.match(error.message, /timed out/i);
       return true;
     },
   );
+});
+
+test("MCP client classifies a rejected fetch as transport, and keeps the server message out of Error.message", async () => {
+  const config = mcpConfig(makeTempRoot("calle-core-mcp-rejected"));
+  const dns = new TypeError("fetch failed");
+  dns.cause = { code: "ENOTFOUND" };
+  await assert.rejects(
+    () => listMcpTools({ config, fetchImpl: async () => { throw dns; } }),
+    (error) => {
+      assert.ok(error instanceof McpHttpError);
+      assert.equal(error.code, "transport_error");
+      assert.equal(error.transport, true);
+      assert.equal(error.timedOut, false);
+      assert.equal(error.causeCode, "ENOTFOUND");
+      return true;
+    },
+  );
+
+  const hostileConfig = mcpConfig(makeTempRoot("calle-core-mcp-hostile"));
+  const ESC = String.fromCharCode(27);
+  const hostileMessage = `${"x".repeat(2000)}${ESC}[31m secret=sk_live_ABCDEFGHIJKLMNOPQRSTUV`;
+  const fetchImpl = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") {
+      return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "mcp-session-9" } });
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonResponse({});
+    }
+    return jsonResponse({ error: { code: -32000, message: hostileMessage, access_token: "tok_SECRET_VALUE_123456" } });
+  };
+  await assert.rejects(
+    () => callMcpTool({ config: hostileConfig, toolName: "plan_call", fetchImpl }),
+    (error) => {
+      assert.ok(error instanceof McpHttpError);
+      assert.equal(error.code, "mcp_error");
+      assert.equal(error.message, "Remote MCP error for tools/call", "Error.message is authored locally");
+      assert.ok(error.remoteError.message.length <= 500);
+      assert.doesNotMatch(error.remoteError.message, /sk_live_|tok_SECRET/u);
+      assert.equal(error.remoteError.message.includes(ESC), false);
+      assert.equal(error.remoteError.code, "-32000");
+      return true;
+    },
+  );
+});
+
+test("sanitize helpers strip terminal controls, redact secrets, and bound length", async () => {
+  const { safeRemoteString, safeRemoteCode, redactSecrets, sanitizeRemoteError } = await import("@call-e/core/sanitize");
+  const ESC = String.fromCharCode(27);
+  const BEL = String.fromCharCode(7);
+  const cleaned = safeRemoteString(`a${ESC}[2J${ESC}]8;;http://x${BEL}link${ESC}]8;;${BEL}b\r\nc`);
+  assert.equal(cleaned.includes(ESC), false);
+  assert.doesNotMatch(cleaned, /[\r\n]/u);
+  assert.match(cleaned, /^a\s+link\s*b\s+c$/u);
+
+  // A bound on ordinary prose. (An unbroken 10,000-character run is redacted as an opaque
+  // token instead, which is the intended behaviour and is asserted below.)
+  assert.equal(safeRemoteString("word ".repeat(3000)).length, 500);
+  assert.equal(safeRemoteString("x".repeat(10_000)), "[redacted]");
+  assert.equal(safeRemoteString("   "), undefined);
+  assert.equal(safeRemoteString(42), undefined);
+
+  const bearer = redactSecrets("Authorization: Bearer abcdefghijklmnopqrstuvwxyz");
+  assert.doesNotMatch(bearer, /abcdefghijklmnopqrstuvwxyz/u);
+  assert.match(bearer, /^Authorization: .*\[redacted\]/u);
+  assert.match(redactSecrets("Bearer abcdefghijklmnopqrstuvwxyz"), /^Bearer \[redacted\]$/u);
+  assert.match(redactSecrets("access_token=abcd1234efgh"), /access_token=\[redacted\]/u);
+  assert.match(redactSecrets("key sk_live_ABCDEFGHIJKLMNOP1234 here"), /key \[redacted\] here/u);
+  assert.match(redactSecrets("hash 0123456789abcdef0123456789abcdef0123"), /hash \[redacted\]/u);
+  assert.equal(redactSecrets("Failed to register an OAuth client. err_type=HTTPStatusError"), "Failed to register an OAuth client. err_type=HTTPStatusError");
+
+  assert.equal(safeRemoteCode("oauth_register_failed"), "oauth_register_failed");
+  assert.equal(safeRemoteCode("nested.code-1"), "nested.code-1");
+  assert.equal(safeRemoteCode(`bad code${ESC}[31m`), undefined);
+  assert.equal(safeRemoteCode("x".repeat(65)), undefined);
+
+  assert.deepEqual(sanitizeRemoteError({ error: "auth_required", message: "please" }), { code: "auth_required", message: "please" });
+  assert.deepEqual(sanitizeRemoteError({ error: { code: "n.1", message: "m", details: { internal: "t" } }, request_id: "r" }), { code: "n.1", message: "m" });
+  assert.deepEqual(sanitizeRemoteError("<html>gateway</html>"), { message: "<html>gateway</html>" });
+  assert.equal(sanitizeRemoteError(""), null);
+  assert.equal(sanitizeRemoteError({ unrelated: true }), null);
 });

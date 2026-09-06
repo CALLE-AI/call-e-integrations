@@ -24,7 +24,8 @@
     "./config": "./lib/config.js",
     "./constants": "./lib/constants.js",
     "./http": "./lib/http.js",
-    "./mcp-client": "./lib/mcp-client.js"
+    "./mcp-client": "./lib/mcp-client.js",
+    "./sanitize": "./lib/sanitize.js"
   },
   "files": [
     "README.md",
@@ -42,7 +43,7 @@
   },
   "scripts": {
     "test": "node --test ./test/*.test.js",
-    "check": "node ../../scripts/check-runtime-syntax.mjs lib/broker-client.js lib/cache.js lib/config.js lib/constants.js lib/http.js lib/index.js lib/mcp-client.js && pnpm run check:types",
+    "check": "node ../../scripts/check-runtime-syntax.mjs lib/broker-client.js lib/cache.js lib/config.js lib/constants.js lib/http.js lib/index.js lib/mcp-client.js lib/sanitize.js && pnpm run check:types",
     "check:types": "tsc --noEmit --strict --module NodeNext --moduleResolution NodeNext --target ES2022 --skipLibCheck test/types.ts",
     "pack:dry-run": "npm pack --dry-run"
   }

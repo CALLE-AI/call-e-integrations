@@ -408,10 +408,15 @@ test("auth login surfaces the upstream error body when brokered login registrati
     code: "oauth_register_failed",
     message: "Failed to register an OAuth client. err_type=HTTPStatusError",
   });
-  assert.match(payload.error.message, /Failed to register an OAuth client/);
+  // The upstream wording is available, but only under remote_error. The summary and stderr
+  // are authored by the CLI.
+  assert.match(payload.error.remote_error.message, /Failed to register an OAuth client/);
+  assert.doesNotMatch(payload.error.message, /Failed to register an OAuth client/);
+  assert.match(payload.error.message, /^HTTP 502 from https:\/\/mcp\.example\/api\/v1\/openagent-auth\/sessions\./);
   assert.match(payload.error.message, /login service is unavailable/);
   assert.match(payload.error.message, /dashboard API key/);
-  assert.match(result.stderr, /Failed to register an OAuth client/);
+  assert.doesNotMatch(result.stderr, /Failed to register an OAuth client/);
+  assert.match(result.stderr, /login service is unavailable/);
 });
 
 test("auth login keeps a non-JSON upstream error body readable and bounded", async () => {
@@ -548,9 +553,14 @@ test("auth login returns a transport_error envelope when fetch rejects", async (
   assert.equal(result.code, 1);
   assert.equal(payload.ok, false);
   assert.equal(payload.error.code, "transport_error");
+  assert.equal(payload.error.transport, true);
   assert.equal(payload.error.cause_code, "ENOTFOUND");
   assert.equal(payload.help_command, undefined);
-  assert.match(payload.error.message, /fetch failed/u);
+  // Locally authored: names our request and the system error code, never the runtime's text.
+  assert.match(
+    payload.error.message,
+    /^Request failed before a response was received for POST https:\/\/mcp\.example\/api\/v1\/openagent-auth\/sessions\. \(ENOTFOUND\)$/u
+  );
   assert.ok(result.stderr.length < 500);
   // The test harness terminates each stderr write with a newline; everything else must be clean.
   assert.doesNotMatch(result.stderr.trimEnd(), CONTROL_CHARS);
@@ -559,15 +569,213 @@ test("auth login returns a transport_error envelope when fetch rejects", async (
 test("auth login classifies a request timeout as a transport_error", async () => {
   const cacheRoot = makeTempRoot("calle-cli-login-timeout");
   const fetchImpl = async () => {
-    throw new Error("Request timed out for POST https://mcp.example/api/v1/openagent-auth/sessions");
+    const aborted = new Error("aborted");
+    aborted.name = "AbortError";
+    throw aborted;
   };
   const result = await run([...LOGIN_ARGS, "--cache-root", cacheRoot], { fetchImpl });
   const payload = JSON.parse(result.stdout);
 
   assert.equal(result.code, 1);
   assert.equal(payload.error.code, "transport_error");
+  assert.equal(payload.error.transport, true);
+  assert.equal(payload.error.cause_code, "timeout");
+  assert.match(payload.error.message, /^Request timed out for POST https:\/\/mcp\.example\/api\/v1\/openagent-auth\/sessions\./u);
+});
+
+test("an unrelated local TypeError is internal_error, never transport_error", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-local-typeerror");
+  const fetchImpl = async (url, init) => {
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+      return jsonResponse(
+        {
+          session_id: "session-1",
+          session_secret: "secret-1",
+          login_url: "https://mcp.example/openagent-auth/sessions/session-1/start",
+          status: "PENDING",
+          poll_after_ms: 1,
+          expires_at: "2030-01-01T00:00:00Z",
+        },
+        { status: 201 }
+      );
+    }
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-1") && init?.method === "GET") {
+      return jsonResponse({ status: "PENDING", expires_at: "2030-01-01T00:00:00Z" });
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+  // A bug inside the CLI's own polling loop, not a network condition.
+  const sleepImpl = async () => {
+    throw new TypeError("Cannot read properties of undefined (reading 'x')");
+  };
+
+  const result = await run(
+    ["auth", "login", "--no-browser-open", "--base-url", "https://mcp.example", "--cache-root", cacheRoot],
+    { fetchImpl, sleepImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "internal_error");
+  assert.equal(payload.error.transport, undefined);
   assert.equal(payload.error.cause_code, undefined);
-  assert.match(payload.error.message, /timed out/u);
+  assert.match(payload.error.message, /Cannot read properties/u);
+});
+
+function mcpFixture({ serverUrl, onToolsList, onToolsCall }) {
+  return async (url, init) => {
+    assert.equal(String(url), serverUrl);
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") {
+      return jsonRpcResponse({ jsonrpc: "2.0", id: payload.id, result: {} }, { headers: { "mcp-session-id": "sess-h" } });
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonRpcResponse({});
+    }
+    if (payload.method === "tools/list" && onToolsList) {
+      return onToolsList(payload);
+    }
+    if (payload.method === "tools/call" && onToolsCall) {
+      return onToolsCall(payload);
+    }
+    throw new Error(`unexpected method: ${payload.method}`);
+  };
+}
+
+const ESC_CHAR = String.fromCharCode(27);
+const HOSTILE_REMOTE_TEXT =
+  `line one\r\ninjected${ESC_CHAR}[2J${ESC_CHAR}[H bearer abcdefghijklmnopqrstuvwxyz0123 ` +
+  `access_token=sk_live_ABCDEFGHIJKLMNOPQRST ${"z".repeat(20_000)}`;
+
+test("mcp tools keeps a hostile JSON-RPC error out of the summary and bounds it under remote_error", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-mcp-tools-hostile");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl, "tool-token");
+  const fetchImpl = mcpFixture({
+    serverUrl,
+    onToolsList: (payload) => jsonRpcResponse({
+      jsonrpc: "2.0",
+      id: payload.id,
+      error: { code: -32000, message: HOSTILE_REMOTE_TEXT, data: { refresh_token: "rt_SECRET_ABCDEFGH" } },
+    }),
+  });
+
+  const result = await run(["mcp", "tools", "--base-url", "https://mcp.example", "--cache-root", cacheRoot], { fetchImpl });
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "mcp_error");
+  assert.equal(payload.error.message, "Remote MCP error for tools/list");
+  assert.ok(payload.error.remote_error.message.length <= 500);
+  assert.equal(payload.error.remote_error.code, "-32000");
+  assert.doesNotMatch(payload.error.remote_error.message, CONTROL_CHARS);
+  for (const secret of ["sk_live_", "abcdefghijklmnopqrstuvwxyz0123", "rt_SECRET", "refresh_token"]) {
+    assert.doesNotMatch(result.stdout, new RegExp(secret));
+    assert.doesNotMatch(result.stderr, new RegExp(secret));
+  }
+  assert.doesNotMatch(result.stderr.trimEnd(), CONTROL_CHARS);
+  assert.ok(result.stderr.length < 300);
+});
+
+test("mcp call applies the same boundary to a tool-call error", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-mcp-call-hostile");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl, "tool-token");
+  const fetchImpl = mcpFixture({
+    serverUrl,
+    onToolsCall: (payload) => jsonRpcResponse({ jsonrpc: "2.0", id: payload.id, error: { code: -32601, message: HOSTILE_REMOTE_TEXT } }),
+  });
+
+  const result = await run(
+    ["mcp", "call", "get_call_run", "--args-json", '{"run_id":"run_1"}', "--base-url", "https://mcp.example", "--cache-root", cacheRoot],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "mcp_error");
+  assert.equal(payload.error.message, "Remote MCP error for tools/call");
+  assert.ok(payload.error.remote_error.message.length <= 500);
+  assert.doesNotMatch(result.stdout, /sk_live_|abcdefghijklmnopqrstuvwxyz0123/u);
+  assert.doesNotMatch(result.stderr, /sk_live_|abcdefghijklmnopqrstuvwxyz0123/u);
+  assert.doesNotMatch(result.stderr.trimEnd(), CONTROL_CHARS);
+});
+
+test("call start keeps a hostile clarifying question out of the plan_not_ready summary", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-call-start-hostile-question");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl, "tool-token");
+  const fetchImpl = mcpFixture({
+    serverUrl,
+    onToolsCall: (payload) => jsonRpcResponse({
+      jsonrpc: "2.0",
+      id: payload.id,
+      result: { structuredContent: { ready_to_run: false, clarifying_questions: [HOSTILE_REMOTE_TEXT] } },
+    }),
+  });
+
+  const result = await run(
+    ["call", "start", "--to-phone", "+15551234567", "--goal", "Confirm appointment", "--base-url", "https://mcp.example", "--cache-root", cacheRoot],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.stage, "plan_call");
+  assert.equal(payload.error.code, "plan_not_ready");
+  assert.match(payload.error.message, /^Call plan needs more information before it can run\./u);
+  assert.doesNotMatch(payload.error.message, /injected|zzzz/u);
+  assert.ok(payload.error.remote_error.message.length <= 500);
+  assert.match(payload.error.remote_error.message, /^line one\s+injected/u);
+  assert.doesNotMatch(payload.error.remote_error.message, CONTROL_CHARS);
+  assert.doesNotMatch(result.stdout, /sk_live_|abcdefghijklmnopqrstuvwxyz0123/u);
+  assert.doesNotMatch(result.stderr, /injected|sk_live_/u);
+});
+
+test("telemetry reports the same error code as the envelope for broker and transport failures", async () => {
+  const brokerRoot = makeTempRoot("calle-cli-telemetry-broker");
+  const brokerEvents = [];
+  await run(
+    [...LOGIN_ARGS, "--cache-root", brokerRoot],
+    {
+      fetchImpl: brokerFailure(502, { error: "oauth_register_failed", message: "x" }),
+      env: { CALLE_TELEMETRY: "1" },
+      telemetryFetchImpl: captureTelemetry(brokerEvents),
+    }
+  );
+  const brokerFailed = brokerEvents.find((event) => event.payload.event === "auth_login_local_failed");
+  assert.ok(brokerFailed, "auth_login_local_failed telemetry was emitted");
+  assert.equal(brokerFailed.payload.properties.error_code, "broker_unavailable");
+
+  const mcpRoot = makeTempRoot("calle-cli-telemetry-transport");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(mcpRoot, serverUrl, "tool-token");
+  const mcpEvents = [];
+  const dns = new TypeError("fetch failed");
+  dns.cause = { code: "ECONNREFUSED" };
+  const result = await run(
+    ["mcp", "tools", "--base-url", "https://mcp.example", "--cache-root", mcpRoot],
+    { fetchImpl: async () => { throw dns; }, env: { CALLE_TELEMETRY: "1" }, telemetryFetchImpl: captureTelemetry(mcpEvents) }
+  );
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.error.code, "transport_error");
+  assert.equal(payload.error.cause_code, "ECONNREFUSED");
+  const checked = mcpEvents.find((event) => event.payload.event === "mcp_tools_checked" && event.payload.properties.outcome === "failure");
+  assert.ok(checked, "mcp_tools_checked failure telemetry was emitted");
+  assert.equal(checked.payload.properties.error_code, "transport_error");
+});
+
+test("every error code the CLI can emit is documented, and nothing undocumented is emitted", async () => {
+  const { ERROR_CODES } = await import("../lib/cli.js");
+  const reference = fs.readFileSync(new URL("../docs/cli-reference.md", import.meta.url), "utf8");
+  const section = reference.split("## Error Envelopes")[1]?.split(/\n## /u)[0] ?? "";
+  const documented = new Set([...section.matchAll(/^\| `([a-z_]+)` \| \d /gmu)].map((m) => m[1]));
+  const emitted = new Set(Object.keys(ERROR_CODES));
+
+  assert.deepEqual([...documented].sort(), [...emitted].sort());
+  for (const [code, meta] of Object.entries(ERROR_CODES)) {
+    assert.match(section, new RegExp(`^\\| \`${code}\` \\| ${meta.exitCode} `, "mu"), `exit code documented for ${code}`);
+  }
 });
 
 test("auth login start-only replaces locally active pending cache when broker reports it expired", async () => {
@@ -1684,8 +1892,9 @@ test("call start reports plan clarification and skips run_call when planning is 
   assert.equal(payload.error.code, "plan_not_ready");
   assert.equal(
     payload.error.message,
-    "Call plan needs more information before it can run: What should the agent ask or say on the call?"
+    "Call plan needs more information before it can run. See error.remote_error.message for the question the service asked."
   );
+  assert.equal(payload.error.remote_error.message, "What should the agent ask or say on the call?");
 });
 
 test("call start rejects a null structured confirm token without calling run_call", async () => {

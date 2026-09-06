@@ -74,14 +74,18 @@ Stable fields:
 | --- | --- | --- |
 | `ok` | yes | `false` for every error envelope. |
 | `server_url` | yes | Configured MCP server URL, or `null` when configuration could not be resolved. |
-| `error.code` | yes | A code owned by the CLI. Branch on this. |
-| `error.message` | yes | Human-readable summary; the same text is written to stderr. |
-| `error.status_code` | HTTP errors | Upstream HTTP status. |
-| `error.remote_error` | when an upstream body was readable | `{ code?, message? }` extracted from the upstream response, sanitized and bounded. Informational only. |
-| `error.cause_code` | transport errors | Node.js error code such as `ENOTFOUND` or `ECONNREFUSED`, when known. |
-| `help_command` | argument errors only | A directly runnable `--help` command. |
+| `error.code` | yes | A code owned by the CLI, from the table below. Branch on this. |
+| `error.message` | yes | A summary **authored by the CLI**. Never contains upstream text. The same text is written to stderr. |
+| `error.status_code` | HTTP and MCP errors | Upstream HTTP status, or `null`. |
+| `error.transport` | `true` only when no response was received | The request failed at the network layer: DNS, connection, TLS, or timeout. Absent otherwise — an unrelated local error is never described as a network condition. |
+| `error.cause_code` | transport errors, when known | `timeout`, or the Node.js error code such as `ENOTFOUND` or `ECONNREFUSED`. |
+| `error.remote_error` | when the service said something readable | `{ code?, message? }` from the remote response — an HTTP body, a JSON-RPC error, or a clarifying question — after sanitization. **Untrusted, informational only.** |
+| `error.error_code`, `error.status` | `call` stage failures | Sanitized remote call-outcome fields (for example `EXECUTION_ACK_LOST`). |
+| `stage`, `call_started`, `retry_safe`, `recovery_id`, `next_command` | `call` stage failures | Which stage failed and whether it is safe to retry. When `retry_safe` is `false`, run the returned `next_command` (`calle call recover …`) instead of starting a new call. |
+| `help_command` | `invalid_arguments` only | A directly runnable `--help` command. |
 
-`error.code` values:
+`error.code` values — this table is the complete set, and the test suite fails
+if the CLI can emit a code that is not listed here:
 
 | Code | Exit | When |
 | --- | --- | --- |
@@ -89,14 +93,30 @@ Stable fields:
 | `auth_required` | 1 | No usable token, or the server rejected the token. Run `auth login`. |
 | `broker_unavailable` | 1 | The brokered-login service returned a 5xx. Not a local problem. |
 | `http_error` | 1 | Any other non-success HTTP status from a CLI-side request. |
-| `transport_error` | 1 | The request never received a response: DNS, connection, TLS, or timeout. |
-| `mcp_error` | 1 | An MCP-level failure, including stage failures from `call` commands, which add `stage`, `call_started`, `retry_safe`, and recovery fields. |
+| `transport_error` | 1 | The request never received a response: DNS, connection, TLS, or timeout. `transport: true`. |
+| `mcp_error` | 1 | The MCP server returned a JSON-RPC error. Its message is under `remote_error`. |
+| `plan_not_ready` | 1 | `call start`: the plan needs more information. The clarifying question is under `remote_error.message`. |
+| `plan_call_invalid_response` | 1 | `call start`: `plan_call` succeeded but returned no usable `plan_id` / `confirm_token`. |
+| `run_call_missing_run_id` | 1 | `call start` / `call run`: execution may have been accepted without a stable `run_id`; a `recovery_id` and `next_command` are returned. |
+| `recovery_not_found` | 1 | `call recover`: no local recovery record for that id. |
+| `recovery_storage_error` | 1 | `call recover`: the local recovery record could not be read or written. |
+| `plan_call_error` | 1 | The `plan_call` stage failed with a non-transport error. |
+| `plan_call_timeout` | 1 | The `plan_call` stage received no response in time. `transport: true`. |
+| `run_call_error` | 1 | The `run_call` stage failed with a non-transport error. |
+| `run_call_timeout` | 1 | The `run_call` stage received no response in time. `transport: true`. |
+| `get_call_run_error` | 1 | The `get_call_run` stage failed with a non-transport error. |
+| `get_call_run_timeout` | 1 | The `get_call_run` stage received no response in time. `transport: true`. |
+| `internal_error` | 1 | An unexpected local exception inside the CLI. Not a network condition. |
 
-`error.code` is never taken from an upstream response. Upstream error codes and
-messages appear only under `error.remote_error`, after sanitization: unknown
-fields are dropped unread, codes are limited to `[A-Za-z0-9_.:-]` and 64
-characters, messages are limited to 500 characters, and terminal control
-sequences are removed before anything reaches stdout or stderr.
+`error.code` is never taken from a remote response. Remote text — HTTP bodies,
+JSON-RPC error messages, clarifying questions, call-outcome fields — appears only
+under `error.remote_error` (and the sanitized `error_code` / `status` stage
+fields), after one shared sanitizer: only `code` and `message` are read, every
+other field is dropped unread, codes are limited to `[A-Za-z0-9_.:-]` and 64
+characters, messages are limited to 500 characters, credential-shaped
+substrings are redacted, and terminal control sequences are removed before
+anything reaches stdout or stderr. Telemetry reports the same `error.code` as
+the envelope.
 
 ## Finding Command Help
 
