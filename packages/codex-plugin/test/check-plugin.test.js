@@ -24,6 +24,13 @@ const VALID_PROGRESS_GUIDANCE =
   "Do not stay silent until a terminal status.\n\n" +
   "Poll every 10 seconds.\n";
 
+const VALID_RECOVERY_GUIDANCE =
+  'When `call_started: "unknown"` and `retry_safe: false`, preserve `recovery_id` and `next_command`.\n' +
+  "Use call recover --recovery-id with the original local recovery record.\n" +
+  "Do not create a new plan or repeat `call start` or `call run`.\n" +
+  "Do not loop `call recover`.\n" +
+  "Keep `recovery_id` and the recovery command out of user-visible replies and shared logs.\n";
+
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
@@ -66,7 +73,7 @@ function createValidFixture(root) {
 
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"),
-    `---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\n${VALID_AUTH_GUIDANCE}${VALID_ROUTING_GUIDANCE}${VALID_PROGRESS_GUIDANCE}`,
+    `---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\n${VALID_AUTH_GUIDANCE}${VALID_ROUTING_GUIDANCE}${VALID_PROGRESS_GUIDANCE}${VALID_RECOVERY_GUIDANCE}`,
   );
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "agents", "openai.yaml"),
@@ -74,7 +81,7 @@ function createValidFixture(root) {
   );
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "references", "commands.md"),
-    `# Commands\n\n${VALID_AUTH_GUIDANCE}${VALID_ROUTING_GUIDANCE}Use the \`calle\` CLI flow.\n\nPhone call is in progress! Progress:\n\nWait 10 seconds.\n`,
+    `# Commands\n\n${VALID_RECOVERY_GUIDANCE}${VALID_AUTH_GUIDANCE}${VALID_ROUTING_GUIDANCE}Use the \`calle\` CLI flow.\n\nPhone call is in progress! Progress:\n\nWait 10 seconds.\n`,
   );
 
   writeJson(path.join(repoRoot, ".agents", "plugins", "marketplace.json"), {
@@ -193,4 +200,26 @@ test("reports missing non-terminal call polling interval guidance", () => {
 
   const failures = checkCodexPlugin({ packageRoot, repoRoot });
   assert.ok(failures.some((failure) => failure.includes("periodic polling")));
+});
+
+test("reports missing recovery guidance in the skill or command reference", (t) => {
+  for (const fileName of ["SKILL.md", "references/commands.md"]) {
+    for (const snippet of [
+      "call recover --recovery-id",
+      "Do not create a new plan or repeat `call start` or `call run`.",
+      "Do not loop `call recover`.",
+      "Keep `recovery_id` and the recovery command out of user-visible replies and shared logs.",
+    ]) {
+      const root = makeTempRoot("calle-codex-plugin-missing-recovery");
+      t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+      const { packageRoot, repoRoot } = createValidFixture(root);
+      const filePath = path.join(packageRoot, "plugin/skills/calle", fileName);
+      const source = fs.readFileSync(filePath, "utf8");
+      assert.ok(source.includes(snippet));
+      fs.writeFileSync(filePath, source.replace(snippet, ""));
+
+      const failures = checkCodexPlugin({ packageRoot, repoRoot });
+      assert.ok(failures.some((failure) => failure.includes(fileName) && failure.includes(snippet)), `${fileName}: ${snippet}`);
+    }
+  }
 });

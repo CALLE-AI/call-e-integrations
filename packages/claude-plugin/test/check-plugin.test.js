@@ -34,6 +34,12 @@ const VALID_PROGRESS_GUIDANCE =
   "Wait 10 seconds.\n\n" +
   "[Status]\n\n" +
   "[Transcript]\n";
+const VALID_RECOVERY_GUIDANCE =
+  'When `call_started: "unknown"` and `retry_safe: false`, preserve `recovery_id` and `next_command`.\n' +
+  "Use call recover --recovery-id with the original local recovery record.\n" +
+  "Do not create a new plan or repeat `call start` or `call run`.\n" +
+  "Do not loop `call recover`.\n" +
+  "Keep `recovery_id` and the recovery command out of user-visible replies and shared logs.\n";
 const VALID_SKILL = `---
 name: calle
 description: Test CALL-E phone call skill.
@@ -41,7 +47,7 @@ description: Test CALL-E phone call skill.
 
 # CALL-E Phone Call
 
-${VALID_AUTH_GUIDANCE}${VALID_PROGRESS_GUIDANCE}
+${VALID_AUTH_GUIDANCE}${VALID_PROGRESS_GUIDANCE}${VALID_RECOVERY_GUIDANCE}
 `;
 
 function writeJson(filePath, value) {
@@ -259,4 +265,26 @@ test("reports missing reload command in install docs", () => {
 
   const failures = checkClaudePlugin({ packageRoot, repoRoot });
   assert.ok(failures.some((failure) => failure.includes("/reload-plugins")));
+});
+
+test("reports missing recovery guidance in the skill or command reference", (t) => {
+  for (const fileName of ["SKILL.md", "references/commands.md"]) {
+    for (const snippet of [
+      "call recover --recovery-id",
+      "Do not create a new plan or repeat `call start` or `call run`.",
+      "Do not loop `call recover`.",
+      "Keep `recovery_id` and the recovery command out of user-visible replies and shared logs.",
+    ]) {
+      const root = makeTempRoot("calle-claude-plugin-missing-recovery");
+      t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+      const { packageRoot, repoRoot } = createValidFixture(root);
+      const filePath = path.join(packageRoot, "plugin/skills/calle", fileName);
+      const source = fs.readFileSync(filePath, "utf8");
+      assert.ok(source.includes(snippet));
+      fs.writeFileSync(filePath, source.replace(snippet, ""));
+
+      const failures = checkClaudePlugin({ packageRoot, repoRoot });
+      assert.ok(failures.some((failure) => failure.includes(fileName) && failure.includes(snippet)), `${fileName}: ${snippet}`);
+    }
+  }
 });

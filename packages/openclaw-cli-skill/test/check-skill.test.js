@@ -10,6 +10,13 @@ import { checkOpenClawCliSkill } from "../scripts/check-skill.mjs";
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "../..");
 
+const VALID_RECOVERY_GUIDANCE =
+  'When `call_started: "unknown"` and `retry_safe: false`, preserve `recovery_id` and `next_command`.\n' +
+  "Use call recover --recovery-id with the original local recovery record.\n" +
+  "Do not create a new plan or repeat `call start` or `call run`.\n" +
+  "Do not loop `call recover`.\n" +
+  "Keep `recovery_id` and the recovery command out of user-visible replies and shared logs.\n";
+
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
@@ -50,6 +57,7 @@ function createValidFixture(root) {
       "---",
       "",
       "# CALL-E CLI",
+      VALID_RECOVERY_GUIDANCE,
       "",
       "Run auth login --start-only --no-browser-open and ask the user to use the authorization instructions returned by the CLI.",
       "Run auth login --no-browser-open to exchange a pending authorization.",
@@ -70,6 +78,7 @@ function createValidFixture(root) {
     path.join(packageRoot, "skills", "phone-call-calle", "references", "commands.md"),
     [
       "# Commands",
+      VALID_RECOVERY_GUIDANCE,
       "",
       "env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill node packages/cli/bin/calle.js",
       "env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill npx -y @call-e/cli",
@@ -133,4 +142,26 @@ test("reports plugin install commands in the command reference", () => {
 
   const failures = checkOpenClawCliSkill({ packageRoot, repoRoot });
   assert.ok(failures.some((failure) => failure.includes(bannedPluginInstallCommand)));
+});
+
+test("reports missing recovery guidance in the skill or command reference", (t) => {
+  for (const fileName of ["SKILL.md", "references/commands.md"]) {
+    for (const snippet of [
+      "call recover --recovery-id",
+      "Do not create a new plan or repeat `call start` or `call run`.",
+      "Do not loop `call recover`.",
+      "Keep `recovery_id` and the recovery command out of user-visible replies and shared logs.",
+    ]) {
+      const root = makeTempRoot("calle-openclaw-cli-skill-missing-recovery");
+      t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+      const { packageRoot, repoRoot } = createValidFixture(root);
+      const filePath = path.join(packageRoot, "skills/phone-call-calle", fileName);
+      const source = fs.readFileSync(filePath, "utf8");
+      assert.ok(source.includes(snippet));
+      fs.writeFileSync(filePath, source.replace(snippet, ""));
+
+      const failures = checkOpenClawCliSkill({ packageRoot, repoRoot });
+      assert.ok(failures.some((failure) => failure.includes(fileName) && failure.includes(snippet)), `${fileName}: ${snippet}`);
+    }
+  }
 });

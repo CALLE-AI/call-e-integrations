@@ -152,6 +152,19 @@ function checkMcpConfig({ packageRoot, failures }) {
 }
 
 function assertCliGuidance({ source, filePath, packageJson, failures }) {
+  const normalizedSource = source.replace(/\s+/gu, " ");
+  for (const snippet of [
+    'call_started: "unknown"',
+    "retry_safe: false",
+    "recovery_id",
+    "next_command",
+    "call recover --recovery-id",
+    "Do not create a new plan or repeat `call start` or `call run`.",
+    "Do not loop `call recover`.",
+    "Keep `recovery_id` and the recovery command out of user-visible replies and shared logs.",
+  ]) {
+    assert(normalizedSource.includes(snippet), failures, `${displayPath(filePath)} must include recovery guidance: ${snippet}`);
+  }
   assert(source.includes(`CALLE_SOURCE=${EXPECTED_CLI_SOURCE}`), failures, `${displayPath(filePath)} must include Cursor CLI source attribution.`);
   assert(
     source.includes(`CALLE_INTEGRATION=${EXPECTED_CLI_INTEGRATION}`),

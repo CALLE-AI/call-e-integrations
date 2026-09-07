@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { pendingCachePath, tokenCachePath, writePrivateJson } from "../../lib/cache.js";
+import { callRecoveryCachePath, pendingCachePath, tokenCachePath, writePrivateJson } from "../../lib/cache.js";
 import { CLI_VERSION } from "../../lib/config.js";
 
 const binPath = fileURLToPath(new URL("../../bin/calle.js", import.meta.url));
@@ -91,14 +91,16 @@ function writeJson(res, payload, { status = 200, headers = {} } = {}) {
   res.end(`${JSON.stringify(payload)}\n`);
 }
 
-async function startFakeServer({ token = accessToken, unauthorizedMcp = false } = {}) {
+async function startFakeServer({ token = accessToken, unauthorizedMcp = false, droppedRunResponses = 0 } = {}) {
   let baseUrl = "";
+  let runAttempts = 0;
   const state = {
     brokerCreates: [],
     brokerStatusCount: 0,
     brokerExchangeCount: 0,
     mcpRequests: [],
     toolCalls: [],
+    acceptedRuns: [],
     telemetryEvents: [],
     failures: [],
   };
@@ -220,10 +222,21 @@ async function startFakeServer({ token = accessToken, unauthorizedMcp = false } 
             return;
           }
           if (toolName === "run_call") {
+            let run = state.acceptedRuns.find((accepted) =>
+              accepted.plan_id === toolArgs.plan_id && accepted.confirm_token === toolArgs.confirm_token);
+            if (!run) {
+              run = { ...toolArgs, run_id: `run-${state.acceptedRuns.length + 1}` };
+              state.acceptedRuns.push(run);
+            }
+            runAttempts += 1;
+            if (runAttempts <= droppedRunResponses) {
+              res.destroy();
+              return;
+            }
             writeJson(res, {
               jsonrpc: "2.0",
               id: payload.id,
-              result: { structuredContent: { run_id: "run-1", status: "STARTED" } },
+              result: { structuredContent: { run_id: run.run_id, status: "STARTED" } },
             });
             return;
           }
@@ -628,6 +641,83 @@ test("starts a call without exposing plan confirmation data", async (t) => {
   ]);
   assert.deepEqual(fake.state.failures, []);
 });
+
+for (const command of ["start", "run"]) {
+  test(`recovers call ${command} after accepted HTTP responses are lost without creating a new plan`, async (t) => {
+    const fake = await startFakeServer({ droppedRunResponses: 2 });
+    const cacheParent = makeTempCacheRoot();
+    const cacheRoot = path.join(cacheParent, "recovery cache");
+    t.after(() => fake.close());
+    t.after(() => fs.rmSync(cacheParent, { recursive: true, force: true }));
+    writeToken(cacheRoot, fake.baseUrl);
+
+    const callArgs = command === "start"
+      ? ["--to-phone", "+15551234567", "--goal", "Confirm appointment"]
+      : ["--plan-id", "plan-1", "--confirm-token", "confirm-1"];
+    const first = await runCalle([
+      "call", command, ...callArgs,
+      "--timezone", "Asia/Shanghai",
+      "--base-url", fake.baseUrl,
+      "--cache-root", cacheRoot,
+    ]);
+    const firstPayload = parseJson(first.stdout);
+
+    assert.equal(first.code, 1);
+    assert.equal(firstPayload.stage, "run_call");
+    assert.equal(firstPayload.call_started, "unknown");
+    assert.equal(firstPayload.retry_safe, false);
+    assert.match(firstPayload.recovery_id, /^[A-Za-z0-9_-]{20,}$/u);
+    assert.match(firstPayload.next_command, new RegExp(`^calle call recover --recovery-id ${firstPayload.recovery_id} `));
+    assert.equal(fake.state.toolCalls.filter((call) => call.name === "run_call").length, 1);
+    assert.equal(fake.state.acceptedRuns.length, 1);
+    const recoveryPath = callRecoveryCachePath(cacheRoot, serverUrl(fake.baseUrl), firstPayload.recovery_id);
+    const recoveryRecord = fs.readFileSync(recoveryPath, "utf8");
+    if (process.platform !== "win32") {
+      assert.equal(fs.statSync(recoveryPath).mode & 0o777, 0o600);
+    }
+
+    const recoveryArgs = [
+      "call", "recover", "--recovery-id", firstPayload.recovery_id,
+      "--timezone", "Asia/Shanghai",
+      "--server-url", serverUrl(fake.baseUrl),
+      "--cache-root", cacheRoot,
+    ];
+    const quotedCacheRoot = `'${cacheRoot.replaceAll("'", "'\\''")}'`;
+    assert.equal(firstPayload.next_command, ["calle", ...recoveryArgs.slice(0, -1), quotedCacheRoot].join(" "));
+    const uncertain = await runCalle(recoveryArgs);
+    const uncertainPayload = parseJson(uncertain.stdout);
+    assert.equal(uncertain.code, 1);
+    assert.equal(uncertainPayload.stage, "run_call");
+    assert.equal(uncertainPayload.call_started, "unknown");
+    assert.equal(uncertainPayload.retry_safe, false);
+    assert.equal(uncertainPayload.recovery_id, firstPayload.recovery_id);
+    assert.equal(uncertainPayload.next_command, firstPayload.next_command);
+    assert.equal(fs.readFileSync(recoveryPath, "utf8"), recoveryRecord);
+    assert.equal(fake.state.acceptedRuns.length, 1);
+
+    const recovered = await runCalle(recoveryArgs);
+    const recoveredPayload = parseJson(recovered.stdout);
+    assert.equal(recovered.code, 0);
+    assert.equal(recoveredPayload.ok, true);
+    assert.equal(recoveredPayload.call_started, true);
+    assert.equal(recoveredPayload.run_id, fake.state.acceptedRuns[0].run_id);
+    assert.equal(recoveredPayload.status_query_succeeded, true);
+    assert.equal(fs.existsSync(recoveryPath), false);
+    assert.match(recoveredPayload.next_command, /calle call status --run-id run-1/);
+    assert.deepEqual(fake.state.toolCalls.map((call) => call.name), [
+      ...(command === "start" ? ["plan_call"] : []),
+      "run_call", "run_call", "run_call", "get_call_run",
+    ]);
+    for (const call of fake.state.toolCalls.filter((call) => call.name === "run_call")) {
+      assert.deepEqual(call.arguments, { plan_id: "plan-1", confirm_token: "confirm-1" });
+    }
+    assert.equal(fake.state.acceptedRuns.length, 1);
+    for (const result of [first, uncertain, recovered]) {
+      assertNoLeak(`${result.stdout}\n${result.stderr}`, ["plan-1", "confirm-1", accessToken]);
+    }
+    assert.deepEqual(fake.state.failures, []);
+  });
+}
 
 test("maps call status flags to get_call_run arguments", async (t) => {
   const fake = await startFakeServer();

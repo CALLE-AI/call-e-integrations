@@ -167,9 +167,24 @@ Use CLI fallback readiness commands in this order:
 4. After login completes, run `mcp tools`.
 5. Confirm that `plan_call`, `run_call`, and `get_call_run` are available.
 
+### Call recovery
+
+<!-- sync-with: packages/cli/docs/cli-reference.md#commands -->
+If CLI `call start` or `call run` returns `call_started: "unknown"` with
+`retry_safe: false`, the call may already be in progress.
+Do not create a new plan or repeat `call start` or `call run`.
+Use the CLI-generated top-level `next_command`, which runs
+`call recover --recovery-id <recovery_id>` using the private local record.
+Follow the [recovery steps](references/commands.md#call-recovery).
+
+If recovery is still uncertain, keep the local record and stop for manual
+review. Do not loop `call recover`.
+Keep `recovery_id` and the recovery command out of user-visible replies and shared logs.
+
 If a CLI command returns `auth_required`, switch to the CLI fallback readiness
-flow, complete login, and then retry the original operation after login
-completes.
+flow and complete login. Before retrying a call command, follow
+[Call recovery](#call-recovery) if the submission was uncertain, or use
+`call status` if a `run_id` is already known.
 
 Use `references/commands.md` for exact CLI command examples, supported options,
 and JSON handling rules.
