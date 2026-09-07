@@ -46,6 +46,22 @@ function assert(condition, failures, message) {
   }
 }
 
+function assertRecoveryGuidance({ source, filePath, failures }) {
+  const normalizedSource = source.replace(/\s+/gu, " ");
+  for (const snippet of [
+    'call_started: "unknown"',
+    "retry_safe: false",
+    "recovery_id",
+    "next_command",
+    "call recover --recovery-id",
+    "Do not create a new plan or repeat `call start` or `call run`.",
+    "Do not loop `call recover`.",
+    "Keep `recovery_id` and the recovery command out of user-visible replies and shared logs.",
+  ]) {
+    assert(normalizedSource.includes(snippet), failures, `${displayPath(filePath)} must include recovery guidance: ${snippet}`);
+  }
+}
+
 function extractFrontmatter(markdown) {
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/u.exec(markdown);
   return match ? match[1] : null;
@@ -86,6 +102,7 @@ function checkSkill({ packageRoot, failures }) {
   }
 
   const source = fs.readFileSync(skillFile, "utf8");
+  assertRecoveryGuidance({ source, filePath: skillFile, failures });
   const frontmatter = extractFrontmatter(source);
   assert(frontmatter, failures, `${displayPath(skillFile)} must start with YAML frontmatter.`);
   assert(source.includes("assistant_hint.message"), failures, `${displayPath(skillFile)} must document assistant_hint.message handling.`);
@@ -192,6 +209,7 @@ function checkReference({ packageRoot, failures }) {
   }
 
   const source = fs.readFileSync(referenceFile, "utf8");
+  assertRecoveryGuidance({ source, filePath: referenceFile, failures });
   const requiredSnippets = [
     "node packages/cli/bin/calle.js",
     "npx -y @call-e/cli",

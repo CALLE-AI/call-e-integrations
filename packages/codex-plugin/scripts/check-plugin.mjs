@@ -36,6 +36,22 @@ function assert(condition, failures, message) {
   }
 }
 
+function assertRecoveryGuidance({ source, filePath, failures }) {
+  const normalizedSource = source.replace(/\s+/gu, " ");
+  for (const snippet of [
+    'call_started: "unknown"',
+    "retry_safe: false",
+    "recovery_id",
+    "next_command",
+    "call recover --recovery-id",
+    "Do not create a new plan or repeat `call start` or `call run`.",
+    "Do not loop `call recover`.",
+    "Keep `recovery_id` and the recovery command out of user-visible replies and shared logs.",
+  ]) {
+    assert(normalizedSource.includes(snippet), failures, `${displayPath(filePath)} must include recovery guidance: ${snippet}`);
+  }
+}
+
 export function extractFrontmatter(markdown) {
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/u.exec(markdown);
   return match ? match[1] : null;
@@ -56,6 +72,7 @@ function checkSkill({ skillName, skillDir, failures }) {
   }
 
   const source = fs.readFileSync(skillFile, "utf8");
+  assertRecoveryGuidance({ source, filePath: skillFile, failures });
   const frontmatter = extractFrontmatter(source);
   assert(frontmatter, failures, `${displayPath(skillFile)} must start with YAML frontmatter.`);
   assert(
@@ -108,6 +125,7 @@ function checkSkill({ skillName, skillDir, failures }) {
 
   if (fs.existsSync(referenceFile)) {
     const referenceSource = fs.readFileSync(referenceFile, "utf8");
+    assertRecoveryGuidance({ source: referenceSource, filePath: referenceFile, failures });
     assert(
       referenceSource.includes("Phone call is in progress! Progress:"),
       failures,

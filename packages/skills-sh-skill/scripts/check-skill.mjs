@@ -19,6 +19,17 @@ const EXPECTED_SKILL_NAME = "calle";
 const EXPECTED_SOURCE = "CALLE_SOURCE=skills_sh";
 const EXPECTED_INTEGRATION = "CALLE_INTEGRATION=skills_sh_skill";
 
+const REQUIRED_RECOVERY_GUIDANCE = [
+  'call_started: "unknown"',
+  "retry_safe: false",
+  "recovery_id",
+  "next_command",
+  "call recover --recovery-id",
+  "Do not create a new plan or repeat `call start` or `call run`.",
+  "Do not loop `call recover`.",
+  "Keep `recovery_id` and the recovery command out of user-visible replies and shared logs.",
+];
+
 function readJson(filePath, failures) {
   if (!fs.existsSync(filePath)) {
     failures.push(`Missing ${displayPath(filePath)}`);
@@ -54,12 +65,13 @@ function frontmatterKeys(frontmatter) {
 }
 
 function assertRequiredSnippets({ source, filePath, snippets, failures }) {
+  const normalizedSource = source.replace(/\s+/gu, " ");
   for (const snippet of snippets) {
     if (!snippet) {
       continue;
     }
 
-    assert(source.includes(snippet), failures, `${displayPath(filePath)} must include ${snippet}.`);
+    assert(normalizedSource.includes(snippet), failures, `${displayPath(filePath)} must include ${snippet}.`);
   }
 }
 
@@ -116,6 +128,7 @@ function checkSkill({ repoRoot, packageJson, failures }) {
     filePath: skillFile,
     failures,
     snippets: [
+      ...REQUIRED_RECOVERY_GUIDANCE,
       EXPECTED_SOURCE,
       EXPECTED_INTEGRATION,
       expectedVersion,
@@ -164,6 +177,7 @@ function checkSkill({ repoRoot, packageJson, failures }) {
     filePath: referenceFile,
     failures,
     snippets: [
+      ...REQUIRED_RECOVERY_GUIDANCE,
       EXPECTED_SOURCE,
       EXPECTED_INTEGRATION,
       expectedVersion,
