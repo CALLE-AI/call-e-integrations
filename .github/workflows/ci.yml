@@ -34,5 +34,13 @@ jobs:
       - name: Run checks
         run: pnpm check
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          python-version: "3.12"
+
+      - name: Test Python OAuth example
+        run: uv run --isolated --project examples/mcp-oauth-client/python pytest examples/mcp-oauth-client/python
+
       - name: Validate package contents
         run: pnpm pack:dry-run

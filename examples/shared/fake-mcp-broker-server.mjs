@@ -75,6 +75,7 @@ function normalizeOptions(options = {}) {
     noResources: Boolean(options.noResources),
     unauthorizedMcp: Boolean(options.unauthorizedMcp),
     brokerPendingFirst: Boolean(options.brokerPendingFirst),
+    oauthIssuer: options.oauthIssuer || null,
   };
 }
 
@@ -512,6 +513,7 @@ export async function startFakeServer(options = {}) {
           grant_types_supported: ["authorization_code", "refresh_token"],
           code_challenge_methods_supported: ["S256"],
           token_endpoint_auth_methods_supported: ["none", "client_secret_post", "client_secret_basic"],
+          ...(opts.oauthIssuer ? { authorization_response_iss_parameter_supported: true } : {}),
         });
         return;
       }
@@ -546,6 +548,9 @@ export async function startFakeServer(options = {}) {
         const stateParam = requestUrl.searchParams.get("state");
         if (stateParam) {
           callbackUrl.searchParams.set("state", stateParam);
+        }
+        if (opts.oauthIssuer) {
+          callbackUrl.searchParams.set("iss", opts.oauthIssuer === "mismatch" ? `${baseUrl}/other-issuer` : baseUrl);
         }
         state.oauth_authorizes.push({
           client_id: requestUrl.searchParams.get("client_id"),
@@ -612,6 +617,7 @@ async function runCli() {
     noResources: process.env.FAKE_NO_RESOURCES === "1",
     unauthorizedMcp: process.env.FAKE_UNAUTHORIZED_MCP === "1",
     brokerPendingFirst: process.env.FAKE_BROKER_PENDING_FIRST === "1",
+    oauthIssuer: process.env.FAKE_OAUTH_ISSUER,
   });
   process.stdout.write(
     `${JSON.stringify({
