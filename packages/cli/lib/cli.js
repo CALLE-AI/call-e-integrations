@@ -26,6 +26,7 @@ import { ensurePendingLogin, loginWithBroker } from "./broker-client.js";
 import { HttpStatusError, TransportError } from "./http.js";
 import {
   REMOTE_MESSAGE_LIMIT,
+  publicRemoteError,
   safeRemoteCode,
   safeRemoteString,
   sanitizeRemoteError,
@@ -870,10 +871,12 @@ function errorPayload(error, config, helpCommand = null) {
 
   if (error instanceof McpHttpError) {
     const stageRemote = error instanceof CallStageError && error.remoteError ? error.remoteError : null;
-    // Display detail comes from the sanitized copy the core client attached, or from the
-    // stage's own sanitized remote fields. Never from `error.payload` directly.
-    const remoteError = error.remoteError
-      ?? (stageRemote?.message ? { message: stageRemote.message } : null);
+    // Every remote_error goes through publicRemoteError: at most { code, message }, each
+    // validated. Never `error.payload`, never stage fields. A stage error carries the call
+    // result's `error_code`/`message`; a plain MCP error carries the core client's copy.
+    const remoteError = error instanceof CallStageError
+      ? publicRemoteError(stageRemote ? { code: stageRemote.error_code ?? stageRemote.code, message: stageRemote.message } : null)
+      : publicRemoteError(error.remoteError);
     const causeCode = safeRemoteCode(error.causeCode);
     return {
       exitCode: classified.exitCode,
@@ -902,7 +905,7 @@ function errorPayload(error, config, helpCommand = null) {
   }
 
   if (error instanceof HttpStatusError) {
-    const remoteError = sanitizeRemoteError(error.responseText);
+    const remoteError = publicRemoteError(sanitizeRemoteError(error.responseText));
     const brokerUnavailable = classified.code === "broker_unavailable";
     // The summary is authored here, from the status code and our own URL — never from the
     // response, whose status text and body are both remote-controlled.
@@ -1003,8 +1006,10 @@ export function classifyError(error) {
     const candidate = typeof error.code === "string" && Object.hasOwn(ERROR_CODES, error.code)
       ? error.code
       : "mcp_error";
-    const transport = Boolean(error.transport || error.timedOut) || ERROR_CODES[candidate].transport;
-    return { code: candidate, exitCode: ERROR_CODES[candidate].exitCode, transport };
+    // `transport` is a property of the code, read from the table — never inferred from the
+    // error object — so the envelope can never claim a network condition for a code the
+    // contract defines as non-transport.
+    return { code: candidate, exitCode: ERROR_CODES[candidate].exitCode, transport: ERROR_CODES[candidate].transport };
   }
   if (error instanceof HttpStatusError) {
     const code = isBrokerRegistrationFailure(error) ? "broker_unavailable" : "http_error";
@@ -1205,23 +1210,27 @@ function callStageErrorFrom(error, {
     ? safeRemoteCallError(error.payload)
     : null;
   // The summary is ours. The server's wording, if any, rides along under remote_error.
+  const transport = error instanceof McpHttpError && error.transport === true;
   const message = timedOut
     ? `${stage} timed out before the CLI received a response.`
-    : (error instanceof McpHttpError && error.transport
+    : (transport
       ? `${stage} failed before a response was received.`
       : `${stage} failed.`);
+  // A rejected/reset transport at a stage is `transport_error` (with the stage fields kept),
+  // so the code and the `transport` flag can never disagree with the documented table.
+  const code = timedOut ? `${stage}_timeout` : (transport ? "transport_error" : `${stage}_error`);
   return new CallStageError(
     message,
     {
       stage,
-      code: timedOut ? `${stage}_timeout` : `${stage}_error`,
+      code,
       statusCode: error instanceof McpHttpError ? error.statusCode : null,
       callStarted: remoteError?.call_started ?? callStarted,
       retrySafe: remoteError?.retry_safe ?? retrySafe,
       recoveryId,
       nextCommand,
       remoteError,
-      transport: error instanceof McpHttpError ? error.transport : false,
+      transport,
       timedOut,
       ...(error?.cause !== undefined ? { cause: error.cause } : {}),
     }
@@ -1251,7 +1260,8 @@ async function callCallStage({
     });
     if (result?.isError === true) {
       const remoteError = safeRemoteCallError(result);
-      throw new CallStageError(remoteError.message || `${stage} returned an error.`, {
+      // Fixed local summary. The server's wording is available under error.remote_error.
+      throw new CallStageError(`${stage} returned an error.`, {
         stage,
         code: `${stage}_error`,
         callStarted: remoteError.call_started ?? callStarted,
@@ -1362,7 +1372,8 @@ async function runPlannedCall({ config, deps, planId, confirmToken, timezone = n
   const runId = extractRunId(runResult);
   if (!runId) {
     const remoteError = safeRemoteCallError(runResult);
-    throw new CallStageError(remoteError.message || "run_call did not return a run_id.", {
+    // Fixed local summary; the server's wording is under error.remote_error.
+    throw new CallStageError("run_call did not return a run_id.", {
       stage: "run_call",
       code: "run_call_missing_run_id",
       callStarted: remoteError.call_started ?? "unknown",

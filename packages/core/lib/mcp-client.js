@@ -103,8 +103,28 @@ async function requestJsonRpc(fetchImpl, url, { headers, payload, timeoutMs }) {
     });
   }
 
+  // Headers arrived; the body can still fail (timeout mid-stream, socket reset). Map that to
+  // the same typed transport error as a rejected fetch.
+  let text;
   try {
-    const text = await response.text();
+    text = await response.text();
+  } catch (error) {
+    clearTimeout(timeout);
+    if (error?.name === "AbortError") {
+      throw new McpHttpError(`MCP request timed out for ${payload.method}`, {
+        code: "transport_error",
+        transport: true,
+        timedOut: true,
+      });
+    }
+    throw new McpHttpError(`MCP response body could not be read for ${payload.method}`, {
+      code: "transport_error",
+      transport: true,
+      cause: error,
+    });
+  }
+
+  try {
     let body = null;
     try {
       body = parseResponseBody(text);

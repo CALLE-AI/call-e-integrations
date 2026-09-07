@@ -58,7 +58,7 @@ errors, writes one JSON object to stdout and exits non-zero:
   "server_url": "https://example.test/mcp/openagent_oauth",
   "error": {
     "code": "broker_unavailable",
-    "message": "Client error '502 Bad Gateway' for url '...' Failed to register an OAuth client. The CALL-E login service is unavailable. ...",
+    "message": "HTTP 502 from https://example.test/api/v1/openagent-auth/sessions. The CALL-E login service is unavailable. This is not a local configuration problem, so reinstalling the CLI will not help. Retry later, or use the Developer API with a dashboard API key, which does not depend on brokered login.",
     "status_code": 502,
     "remote_error": {
       "code": "oauth_register_failed",
@@ -67,6 +67,9 @@ errors, writes one JSON object to stdout and exits non-zero:
   }
 }
 ```
+
+`error.message` is composed entirely by the CLI — the status code, our own request
+URL, and a fixed hint. The service's wording appears only under `remote_error`.
 
 Stable fields:
 
@@ -79,7 +82,7 @@ Stable fields:
 | `error.status_code` | HTTP and MCP errors | Upstream HTTP status, or `null`. |
 | `error.transport` | `true` only when no response was received | The request failed at the network layer: DNS, connection, TLS, or timeout. Absent otherwise — an unrelated local error is never described as a network condition. |
 | `error.cause_code` | transport errors, when known | `timeout`, or the Node.js error code such as `ENOTFOUND` or `ECONNREFUSED`. |
-| `error.remote_error` | when the service said something readable | `{ code?, message? }` from the remote response — an HTTP body, a JSON-RPC error, or a clarifying question — after sanitization. **Untrusted, informational only.** |
+| `error.remote_error` | when the service said something readable | Exactly `{ code?, message? }` and never any other key, from the remote response — an HTTP body, a JSON-RPC error, a call-stage result, or a clarifying question — after sanitization. **Untrusted, informational only.** |
 | `error.error_code`, `error.status` | `call` stage failures | Sanitized remote call-outcome fields (for example `EXECUTION_ACK_LOST`). |
 | `stage`, `call_started`, `retry_safe`, `recovery_id`, `next_command` | `call` stage failures | Which stage failed and whether it is safe to retry. When `retry_safe` is `false`, run the returned `next_command` (`calle call recover …`) instead of starting a new call. |
 | `help_command` | `invalid_arguments` only | A directly runnable `--help` command. |
@@ -93,7 +96,7 @@ if the CLI can emit a code that is not listed here:
 | `auth_required` | 1 | No usable token, or the server rejected the token. Run `auth login`. |
 | `broker_unavailable` | 1 | The brokered-login service returned a 5xx. Not a local problem. |
 | `http_error` | 1 | Any other non-success HTTP status from a CLI-side request. |
-| `transport_error` | 1 | The request never received a response: DNS, connection, TLS, or timeout. `transport: true`. |
+| `transport_error` | 1 | The request never received a usable response: DNS, connection, TLS, a reset while reading the body, or a timeout outside a call stage. `transport: true`. Inside a `call` stage it also carries `stage`, `call_started`, and `retry_safe`. |
 | `mcp_error` | 1 | The MCP server returned a JSON-RPC error. Its message is under `remote_error`. |
 | `plan_not_ready` | 1 | `call start`: the plan needs more information. The clarifying question is under `remote_error.message`. |
 | `plan_call_invalid_response` | 1 | `call start`: `plan_call` succeeded but returned no usable `plan_id` / `confirm_token`. |
@@ -108,15 +111,18 @@ if the CLI can emit a code that is not listed here:
 | `get_call_run_timeout` | 1 | The `get_call_run` stage received no response in time. `transport: true`. |
 | `internal_error` | 1 | An unexpected local exception inside the CLI. Not a network condition. |
 
-`error.code` is never taken from a remote response. Remote text — HTTP bodies,
-JSON-RPC error messages, clarifying questions, call-outcome fields — appears only
-under `error.remote_error` (and the sanitized `error_code` / `status` stage
-fields), after one shared sanitizer: only `code` and `message` are read, every
-other field is dropped unread, codes are limited to `[A-Za-z0-9_.:-]` and 64
-characters, messages are limited to 500 characters, credential-shaped
-substrings are redacted, and terminal control sequences are removed before
-anything reaches stdout or stderr. Telemetry reports the same `error.code` as
-the envelope.
+`error.code` is never taken from a remote response, and `error.message` never
+contains remote text. Remote text — HTTP bodies, JSON-RPC error messages,
+clarifying questions, call-outcome fields — appears only under
+`error.remote_error` (and the sanitized `error_code` / `status` stage fields),
+after one shared sanitizer: only `code` and `message` are read, every other
+field is dropped unread; terminal control sequences are removed *before*
+credential detection so a control code cannot split a secret into two
+innocent-looking halves; credential-shaped substrings are redacted; codes must
+match `-?[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}` (numeric codes only as safe integers)
+or are dropped; messages are limited to 500 characters. Telemetry reports the
+same `error.code` as the envelope, and `transport` is a property of the code, so
+the two cannot disagree.
 
 ## Finding Command Help
 

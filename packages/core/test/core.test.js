@@ -607,7 +607,7 @@ test("sanitize helpers strip terminal controls, redact secrets, and bound length
   const cleaned = safeRemoteString(`a${ESC}[2J${ESC}]8;;http://x${BEL}link${ESC}]8;;${BEL}b\r\nc`);
   assert.equal(cleaned.includes(ESC), false);
   assert.doesNotMatch(cleaned, /[\r\n]/u);
-  assert.match(cleaned, /^a\s+link\s*b\s+c$/u);
+  assert.equal(cleaned, "alinkbc", "controls are removed, not spaced, so nothing can be split");
 
   // A bound on ordinary prose. (An unbroken 10,000-character run is redacted as an opaque
   // token instead, which is the intended behaviour and is asserted below.)
@@ -635,4 +635,124 @@ test("sanitize helpers strip terminal controls, redact secrets, and bound length
   assert.deepEqual(sanitizeRemoteError("<html>gateway</html>"), { message: "<html>gateway</html>" });
   assert.equal(sanitizeRemoteError(""), null);
   assert.equal(sanitizeRemoteError({ unrelated: true }), null);
+});
+
+test("a control sequence inserted inside a credential cannot split it past the redactor", async () => {
+  const { safeRemoteString } = await import("@call-e/core/sanitize");
+  const ESC = String.fromCharCode(27);
+  const BEL = String.fromCharCode(7);
+  const NUL = String.fromCharCode(0);
+  const inserts = [
+    `${ESC}[31m`,                       // CSI colour
+    `${ESC}[2J${ESC}[H`,                // CSI erase + home
+    `${ESC}]8;;http://x${BEL}`,         // OSC hyperlink
+    `${ESC}M`,                          // two-character ESC sequence
+    NUL,                                // C0
+    "\r\n",                             // CR LF
+    String.fromCharCode(0x9b),          // C1
+  ];
+  const secrets = [
+    { text: "Bearer abcdefghijklmnopqrstuvwxyz012345", halves: ["abcdefghijkl", "mnopqrstuvwxyz012345"] },
+    { text: "Basic YWxhZGRpbjpvcGVuc2VzYW1l", halves: ["YWxhZGRp", "bjpvcGVuc2VzYW1l"] },
+    { text: "access_token=abcd1234efgh5678", halves: ["abcd1234", "efgh5678"] },
+    { text: 'api_key: "QWERTYUIOP12345678"', halves: ["QWERTYUI", "OP12345678"] },
+    { text: "sk_live_ABCDEFGHIJKLMNOPQRSTUV", halves: ["ABCDEFGHIJ", "KLMNOPQRSTUV"] },
+    { text: "ghp_abcdefghijklmnopqrstuvwxyz0123456789", halves: ["abcdefghijklmnop", "qrstuvwxyz0123456789"] },
+    { text: "0123456789abcdef0123456789abcdef01234567", halves: ["0123456789abcdef", "0123456789abcdef01234567"] },
+  ];
+  for (const secret of secrets) {
+    for (const insert of inserts) {
+      // Insert the control sequence at several points, including inside the key name and
+      // right after the separator, not only in the middle of the value.
+      const points = [Math.floor(secret.text.length / 2), secret.text.indexOf("=") + 1, secret.text.indexOf(" ") + 1, 3];
+      for (const at of points) {
+        if (at <= 0) continue;
+        const hostile = `${secret.text.slice(0, at)}${insert}${secret.text.slice(at)}`;
+        const out = safeRemoteString(`context ${hostile} more`);
+        assert.equal(out.includes(ESC), false);
+        for (const half of secret.halves) {
+          assert.equal(out.includes(half), false, `fragment ${JSON.stringify(half)} survived in ${JSON.stringify(out)} for ${JSON.stringify(hostile)}`);
+        }
+      }
+    }
+  }
+});
+
+test("numeric remote codes are accepted only as safe integers", async () => {
+  const { safeRemoteCode, sanitizeRemoteError, publicRemoteError } = await import("@call-e/core/sanitize");
+  assert.equal(safeRemoteCode(-32000), "-32000");
+  assert.equal(safeRemoteCode(0), "0");
+  assert.equal(safeRemoteCode(1e100), undefined);
+  assert.equal(safeRemoteCode(1.5), undefined);
+  assert.equal(safeRemoteCode(Number.NaN), undefined);
+  assert.equal(safeRemoteCode(Number.MAX_SAFE_INTEGER + 2), undefined);
+  assert.equal(safeRemoteCode("-abc"), "-abc");
+  assert.equal(safeRemoteCode("1e+100"), undefined);
+  assert.deepEqual(sanitizeRemoteError({ error: { code: 1e100, message: "m" } }), { message: "m" });
+  assert.deepEqual(publicRemoteError({ code: -32601, message: "x", extra: "dropped" }), { code: "-32601", message: "x" });
+  assert.equal(publicRemoteError({ extra: "only" }), null);
+});
+
+function bodyFailingResponse(error, { status = 200, headers = {} } = {}) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    statusText: "OK",
+    headers: new Headers(headers),
+    async text() {
+      throw error;
+    },
+  };
+}
+
+test("a body read that aborts or resets after headers is a typed transport failure", async () => {
+  const { requestJson, TransportError } = await import("@call-e/core/http");
+  const aborted = new Error("aborted");
+  aborted.name = "AbortError";
+  await assert.rejects(
+    () => requestJson("GET", "https://example.test/slow", { fetchImpl: async () => bodyFailingResponse(aborted) }),
+    (error) => {
+      assert.ok(error instanceof TransportError);
+      assert.equal(error.timedOut, true);
+      assert.equal(error.code, "timeout");
+      return true;
+    },
+  );
+
+  const reset = new Error("socket hang up");
+  reset.code = "ECONNRESET";
+  await assert.rejects(
+    () => requestJson("GET", "https://example.test/reset", { fetchImpl: async () => bodyFailingResponse(reset) }),
+    (error) => {
+      assert.ok(error instanceof TransportError);
+      assert.equal(error.timedOut, false);
+      assert.equal(error.code, "ECONNRESET");
+      assert.match(error.message, /Response body could not be read for GET https:\/\/example\.test\/reset/u);
+      return true;
+    },
+  );
+
+  // Same through the MCP client, on the tools/call leg after a healthy initialize.
+  const config = mcpConfig(makeTempRoot("calle-core-mcp-body-reset"));
+  const fetchImpl = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") {
+      return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "mcp-session-b" } });
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonResponse({});
+    }
+    return bodyFailingResponse(reset);
+  };
+  await assert.rejects(
+    () => callMcpTool({ config, toolName: "plan_call", fetchImpl }),
+    (error) => {
+      assert.ok(error instanceof McpHttpError);
+      assert.equal(error.code, "transport_error");
+      assert.equal(error.transport, true);
+      assert.equal(error.timedOut, false);
+      assert.equal(error.causeCode, "ECONNRESET");
+      return true;
+    },
+  );
 });

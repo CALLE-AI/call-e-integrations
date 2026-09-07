@@ -1,5 +1,5 @@
 ---
-"@call-e/core": patch
+"@call-e/core": minor
 "@call-e/cli": patch
 ---
 
@@ -10,19 +10,22 @@ transport or upstream HTTP failure escaped to `main()` and printed a bare messag
 with nothing on stdout. Agent hosts are instructed to treat all command output as JSON, so a
 failed `auth login` left them with an empty stdout and no `error.code` to branch on.
 
-**core**
+**core** (minor: new public subpath and additive error API)
 
-- New `@call-e/core/sanitize`: `stripTerminalControls`, `redactSecrets`, `safeRemoteString`,
-  `safeRemoteCode`, `sanitizeRemoteError`. One implementation for every remote-supplied
-  string: terminal control sequences removed, credential-shaped substrings redacted, codes
-  constrained to `[A-Za-z0-9_.:-]{1,64}`, messages bounded to 500 characters, and only
-  `code` / `message` read from a body — every other field dropped unread.
-- `http.js` throws a typed `TransportError` when `fetch` rejects or times out, carrying
-  `url`, `method`, `timedOut`, and the cause's Node.js code. `HttpStatusError` now records
-  `url`.
+- New public subpath `@call-e/core/sanitize`: `stripTerminalControls`, `redactSecrets`,
+  `safeRemoteString`, `safeRemoteCode`, `publicRemoteError`, `sanitizeRemoteError`. One
+  implementation for every remote-supplied string. Control sequences are *removed* before
+  credential detection so a control code cannot split a secret; credential-shaped substrings
+  are redacted; codes must match `-?[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}` (numbers only as safe
+  integers); messages are bounded to 500 characters; `publicRemoteError` is the only shape
+  remote detail may take (`{ code?, message? }`).
+- `@call-e/core/http` adds `TransportError` (`url`, `method`, `timedOut`, `code`) and
+  `causeCodeOf`. `requestJson` throws it when `fetch` rejects, times out, or the response body
+  cannot be read. `HttpStatusError` now records `url`.
 - `McpHttpError.message` is always locally authored. The server's JSON-RPC error text is kept
-  raw in `payload` and, sanitized, in the new `remoteError` field. Timeouts and rejected
-  fetches are `code: "transport_error"` with `transport: true` / `timedOut`.
+  raw in `payload` and, sanitized, in the new `remoteError` field. New fields `transport`,
+  `timedOut`, `causeCode`. Timeouts, rejected fetches, and body-read failures are
+  `code: "transport_error"`.
 
 **cli**
 

@@ -10,4 +10,6 @@ export function stripTerminalControls(value: unknown): string;
 export function redactSecrets(value: unknown): string;
 export function safeRemoteString(value: unknown, maxLength?: number): string | undefined;
 export function safeRemoteCode(value: unknown): string | undefined;
+/** The only shape remote detail may take in a public envelope. */
+export function publicRemoteError(value: unknown): SanitizedRemoteError | null;
 export function sanitizeRemoteError(body: unknown): SanitizedRemoteError | null;

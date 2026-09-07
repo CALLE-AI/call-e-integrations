@@ -75,8 +75,20 @@ export async function requestJson(method, url, { headers = {}, json = undefined,
     });
   }
 
+  // Headers arrived; the body can still fail (timeout mid-stream, socket reset). That is a
+  // transport failure too, and must not escape as a raw AbortError.
+  let text;
   try {
-    const text = await response.text();
+    text = await response.text();
+  } catch (error) {
+    clearTimeout(timeout);
+    if (error?.name === "AbortError") {
+      throw new TransportError(`Request timed out for ${method} ${url}`, { url, method, timedOut: true });
+    }
+    throw new TransportError(`Response body could not be read for ${method} ${url}`, { url, method, cause: error });
+  }
+
+  try {
     if (!response.ok) {
       throw new HttpStatusError(`Client error '${response.status} ${response.statusText}' for url '${url}'`, {
         statusCode: response.status,

@@ -726,7 +726,7 @@ test("call start keeps a hostile clarifying question out of the plan_not_ready s
   assert.match(payload.error.message, /^Call plan needs more information before it can run\./u);
   assert.doesNotMatch(payload.error.message, /injected|zzzz/u);
   assert.ok(payload.error.remote_error.message.length <= 500);
-  assert.match(payload.error.remote_error.message, /^line one\s+injected/u);
+  assert.match(payload.error.remote_error.message, /^line oneinjected/u);
   assert.doesNotMatch(payload.error.remote_error.message, CONTROL_CHARS);
   assert.doesNotMatch(result.stdout, /sk_live_|abcdefghijklmnopqrstuvwxyz0123/u);
   assert.doesNotMatch(result.stderr, /injected|sk_live_/u);
@@ -775,6 +775,135 @@ test("every error code the CLI can emit is documented, and nothing undocumented 
   assert.deepEqual([...documented].sort(), [...emitted].sort());
   for (const [code, meta] of Object.entries(ERROR_CODES)) {
     assert.match(section, new RegExp(`^\\| \`${code}\` \\| ${meta.exitCode} `, "mu"), `exit code documented for ${code}`);
+  }
+});
+
+function bodyFailingResponse(error) {
+  return {
+    ok: true,
+    status: 200,
+    statusText: "OK",
+    headers: new Headers({ "mcp-session-id": "sess-body" }),
+    async text() {
+      throw error;
+    },
+  };
+}
+
+test("a body read that fails during a call stage is a typed transport outcome with stage context", async () => {
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const startArgs = ["call", "start", "--to-phone", "+15551234567", "--goal", "Confirm appointment", "--base-url", "https://mcp.example"];
+
+  const abortRoot = makeTempRoot("calle-cli-stage-body-abort");
+  writeToken(abortRoot, serverUrl, "tool-token");
+  const aborted = new Error("aborted");
+  aborted.name = "AbortError";
+  const abortResult = await run([...startArgs, "--cache-root", abortRoot], {
+    fetchImpl: mcpFixture({ serverUrl, onToolsCall: () => bodyFailingResponse(aborted) }),
+  });
+  const abortPayload = JSON.parse(abortResult.stdout);
+  assert.equal(abortResult.code, 1);
+  assert.equal(abortPayload.stage, "plan_call");
+  assert.equal(abortPayload.retry_safe, true);
+  assert.equal(abortPayload.error.code, "plan_call_timeout");
+  assert.equal(abortPayload.error.transport, true);
+  assert.equal(abortPayload.error.cause_code, "timeout");
+  assert.match(abortPayload.error.message, /^plan_call timed out before the CLI received a response\.$/u);
+
+  const resetRoot = makeTempRoot("calle-cli-stage-body-reset");
+  writeToken(resetRoot, serverUrl, "tool-token");
+  const reset = new Error("socket hang up");
+  reset.code = "ECONNRESET";
+  const resetResult = await run([...startArgs, "--cache-root", resetRoot], {
+    fetchImpl: mcpFixture({ serverUrl, onToolsCall: () => bodyFailingResponse(reset) }),
+  });
+  const resetPayload = JSON.parse(resetResult.stdout);
+  assert.equal(resetResult.code, 1);
+  assert.equal(resetPayload.stage, "plan_call");
+  assert.equal(resetPayload.call_started, false);
+  assert.equal(resetPayload.retry_safe, true);
+  assert.equal(resetPayload.error.code, "transport_error", "a rejected transport at a stage is transport_error, not <stage>_error");
+  assert.equal(resetPayload.error.transport, true);
+  assert.equal(resetPayload.error.cause_code, "ECONNRESET");
+  assert.match(resetPayload.error.message, /^plan_call failed before a response was received\.$/u);
+});
+
+test("a credential split by a control sequence inside a remote body is still fully redacted", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-split-credential");
+  const ESC = String.fromCharCode(27);
+  const body = {
+    error: "oauth_register_failed",
+    message:
+      `access_token=abcd${ESC}[31m1234efgh5678 and sk_live_ABCDEFGHIJ${ESC}[0mKLMNOPQRSTUV plus ` +
+      `Bearer abcdefghijkl${ESC}]8;;x${String.fromCharCode(7)}mnopqrstuvwxyz012345`,
+  };
+  const result = await run([...LOGIN_ARGS, "--cache-root", cacheRoot], { fetchImpl: brokerFailure(502, body) });
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(payload.error.code, "broker_unavailable");
+  for (const fragment of ["abcd1234", "1234efgh", "efgh5678", "ABCDEFGHIJ", "KLMNOPQRSTUV", "abcdefghijkl", "mnopqrstuvwxyz012345"]) {
+    assert.doesNotMatch(result.stdout, new RegExp(fragment), `fragment ${fragment} leaked to stdout`);
+    assert.doesNotMatch(result.stderr, new RegExp(fragment), `fragment ${fragment} leaked to stderr`);
+  }
+  assert.match(payload.error.remote_error.message, /\[redacted\]/u);
+  assert.doesNotMatch(payload.error.remote_error.message, CONTROL_CHARS);
+});
+
+test("every envelope agrees with the contract: transport flag, remote_error shape, local summary", async () => {
+  const { ERROR_CODES } = await import("../lib/cli.js");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const REMOTE_MARK = "REMOTE-TEXT-MARKER";
+  const dns = new TypeError("fetch failed");
+  dns.cause = { code: "ENOTFOUND" };
+  const aborted = new Error("aborted");
+  aborted.name = "AbortError";
+
+  const scenarios = [
+    { name: "invalid arguments", args: ["call", "plan", "--to"], deps: {} },
+    { name: "broker 5xx", args: [...LOGIN_ARGS], deps: { fetchImpl: brokerFailure(502, { error: "x", message: REMOTE_MARK }) } },
+    { name: "broker 4xx", args: [...LOGIN_ARGS], deps: { fetchImpl: brokerFailure(400, { error: "x", message: REMOTE_MARK }) } },
+    { name: "broker fetch rejected", args: [...LOGIN_ARGS], deps: { fetchImpl: async () => { throw dns; } } },
+    { name: "broker timeout", args: [...LOGIN_ARGS], deps: { fetchImpl: async () => { throw aborted; } } },
+    {
+      name: "mcp json-rpc error", args: ["mcp", "tools", "--base-url", "https://mcp.example"], token: true,
+      deps: { fetchImpl: mcpFixture({ serverUrl, onToolsList: (p) => jsonRpcResponse({ jsonrpc: "2.0", id: p.id, error: { code: -32000, message: REMOTE_MARK } }) }) },
+    },
+    { name: "mcp fetch rejected", args: ["mcp", "tools", "--base-url", "https://mcp.example"], token: true, deps: { fetchImpl: async () => { throw dns; } } },
+    {
+      name: "plan not ready", args: ["call", "start", "--to-phone", "+15551234567", "--goal", "g", "--base-url", "https://mcp.example"], token: true,
+      deps: { fetchImpl: mcpFixture({ serverUrl, onToolsCall: (p) => jsonRpcResponse({ jsonrpc: "2.0", id: p.id, result: { structuredContent: { ready_to_run: false, clarifying_questions: [REMOTE_MARK] } } }) }) },
+    },
+    {
+      name: "stage isError", args: ["call", "start", "--to-phone", "+15551234567", "--goal", "g", "--base-url", "https://mcp.example"], token: true,
+      deps: { fetchImpl: mcpFixture({ serverUrl, onToolsCall: (p) => jsonRpcResponse({ jsonrpc: "2.0", id: p.id, result: { isError: true, structuredContent: { error_code: "REMOTE_CODE", message: REMOTE_MARK } } }) }) },
+    },
+    {
+      name: "stage body reset", args: ["call", "start", "--to-phone", "+15551234567", "--goal", "g", "--base-url", "https://mcp.example"], token: true,
+      deps: { fetchImpl: mcpFixture({ serverUrl, onToolsCall: () => bodyFailingResponse(Object.assign(new Error("reset"), { code: "ECONNRESET" })) }) },
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    const cacheRoot = makeTempRoot("calle-cli-parity");
+    if (scenario.token) writeToken(cacheRoot, serverUrl, "tool-token");
+    const result = await run([...scenario.args, "--cache-root", cacheRoot], scenario.deps);
+    const payload = JSON.parse(result.stdout);
+    const label = `[${scenario.name}] code=${payload.error?.code}`;
+
+    assert.notEqual(result.code, 0, label);
+    assert.equal(payload.ok, false, label);
+    assert.ok(Object.hasOwn(ERROR_CODES, payload.error.code), `${label}: code is in the contract`);
+    assert.equal(result.code, ERROR_CODES[payload.error.code].exitCode, `${label}: exit code matches the contract`);
+    assert.equal(Boolean(payload.error.transport), ERROR_CODES[payload.error.code].transport, `${label}: transport flag matches the contract`);
+    assert.doesNotMatch(payload.error.message, new RegExp(REMOTE_MARK), `${label}: summary is locally authored`);
+    assert.doesNotMatch(result.stderr, new RegExp(REMOTE_MARK), `${label}: stderr is locally authored`);
+    if (payload.error.remote_error !== undefined) {
+      const keys = Object.keys(payload.error.remote_error);
+      assert.ok(keys.length > 0 && keys.every((k) => k === "code" || k === "message"), `${label}: remote_error is only {code, message}`);
+      if (payload.error.remote_error.code !== undefined) {
+        assert.match(payload.error.remote_error.code, /^-?[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/u, `${label}: remote code charset`);
+      }
+    }
   }
 });
 
@@ -2067,7 +2196,9 @@ test("call start preserves safe run_call error fields and an opaque recovery id"
   assert.equal(payload.error.code, "run_call_error");
   assert.equal(payload.error.error_code, "EXECUTION_ACK_LOST");
   assert.equal(payload.error.status, "UNKNOWN");
-  assert.equal(payload.error.message, "Execution acknowledgement was lost.");
+  assert.equal(payload.error.message, "run_call returned an error.");
+  assert.equal(payload.error.remote_error.message, "Execution acknowledgement was lost.");
+  assert.deepEqual(Object.keys(payload.error.remote_error).sort(), ["code", "message"]);
   assert.match(payload.recovery_id, /^[A-Za-z0-9_-]{20,}$/u);
   assert.match(payload.next_command, new RegExp(`calle call recover --recovery-id ${payload.recovery_id}`));
   assert.doesNotMatch(result.stdout, /plan-secret|confirm-secret|service-secret|do-not-print/);
@@ -2128,7 +2259,8 @@ test("call run preserves safe error fields when run_call omits run_id", async ()
   assert.equal(payload.error.code, "run_call_missing_run_id");
   assert.equal(payload.error.error_code, "DESTINATION_REJECTED");
   assert.equal(payload.error.status, "FAILED");
-  assert.equal(payload.error.message, "The destination was rejected.");
+  assert.equal(payload.error.message, "run_call did not return a run_id.");
+  assert.equal(payload.error.remote_error.message, "The destination was rejected.");
   assert.doesNotMatch(result.stdout, /plan-secret|confirm-secret|do-not-print/);
 });
 

@@ -3,9 +3,15 @@
  *
  * Anything that arrives from the network — an MCP JSON-RPC error, an upstream HTTP body, a
  * clarifying question inside a tool result — is untrusted. Before it can appear in a JSON
- * envelope, a log line, or a terminal, it passes through here: terminal control sequences are
- * removed, token-like material is redacted, and the length is bounded. Both the core library
- * and the CLI import these helpers so there is exactly one implementation to review.
+ * envelope, a log line, or a terminal, it passes through here.
+ *
+ * Order matters. Terminal control sequences are REMOVED first (not replaced with a space),
+ * so that `access_token=abcd<ESC>[31m1234` canonicalizes to `access_token=abcd1234` and is
+ * redacted as one credential rather than surviving as two innocent-looking halves. Secret
+ * detection runs on that canonical text; only then is the result bounded.
+ *
+ * Both the core library and the CLI import these helpers so there is exactly one
+ * implementation to review.
  */
 
 const ESC = String.fromCharCode(0x1b);
@@ -35,7 +41,9 @@ const TERMINAL_CONTROL_RE = new RegExp(
 export const REMOTE_MESSAGE_LIMIT = 500;
 export const REMOTE_CODE_LIMIT = 64;
 
-const REMOTE_CODE_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/u;
+// A machine code: optional leading minus (JSON-RPC codes are negative integers), then a
+// safe token. Anything else is dropped, never "cleaned" into something plausible.
+const REMOTE_CODE_RE = /^-?[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/u;
 
 const REDACTION = "[redacted]";
 
@@ -54,9 +62,9 @@ const SECRET_PATTERNS = [
   /\b[A-Za-z0-9_-]{40,}\b/gu,
 ];
 
-/** Replace terminal control sequences with a single space. Never throws. */
+/** Remove terminal control sequences and control characters entirely. Never throws. */
 export function stripTerminalControls(value) {
-  return String(value ?? "").replace(TERMINAL_CONTROL_RE, " ");
+  return String(value ?? "").replace(TERMINAL_CONTROL_RE, "");
 }
 
 /** Redact credential-shaped substrings. Never throws. */
@@ -71,15 +79,16 @@ export function redactSecrets(value) {
 }
 
 /**
- * A remote string made safe for display: controls stripped, secrets redacted, whitespace
- * trimmed, length bounded. Returns undefined for non-strings and empty results so callers can
- * omit the field rather than emit an empty one.
+ * A remote string made safe for display: controls removed (canonicalized), secrets redacted
+ * on the canonical text, whitespace trimmed, length bounded. Returns undefined for
+ * non-strings and empty results so callers can omit the field rather than emit an empty one.
  */
 export function safeRemoteString(value, maxLength = REMOTE_MESSAGE_LIMIT) {
   if (typeof value !== "string") {
     return undefined;
   }
-  const cleaned = redactSecrets(stripTerminalControls(value)).trim();
+  const canonical = stripTerminalControls(value);
+  const cleaned = redactSecrets(canonical).trim();
   if (!cleaned) {
     return undefined;
   }
@@ -87,10 +96,14 @@ export function safeRemoteString(value, maxLength = REMOTE_MESSAGE_LIMIT) {
 }
 
 /**
- * A remote machine code kept as an opaque token. Anything outside the safe character set is
- * dropped rather than "cleaned" into something that merely looks valid.
+ * A remote machine code kept as an opaque token. Strings are control-stripped and matched
+ * against the safe charset; numbers are accepted only as safe integers (so `-32000` is kept
+ * and `1e100`, `NaN`, or `1.5` are dropped). Anything else is dropped.
  */
 export function safeRemoteCode(value) {
+  if (typeof value === "number") {
+    return Number.isSafeInteger(value) ? String(value) : undefined;
+  }
   if (typeof value !== "string") {
     return undefined;
   }
@@ -99,8 +112,28 @@ export function safeRemoteCode(value) {
 }
 
 /**
+ * The only shape remote detail may take in a public envelope: at most `{ code, message }`,
+ * each individually validated. Every field in the input other than those two is ignored.
+ * Returns null when nothing survives, so callers omit the field.
+ */
+export function publicRemoteError(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const code = safeRemoteCode(value.code);
+  const message = safeRemoteString(value.message);
+  if (code === undefined && message === undefined) {
+    return null;
+  }
+  return {
+    ...(code !== undefined ? { code } : {}),
+    ...(message !== undefined ? { message } : {}),
+  };
+}
+
+/**
  * Reduce an arbitrary remote error body — a JSON-RPC error object, an HTTP body, a tool
- * result — to at most `{ code, message }`. Reads only `code` (or a string `error`) and
+ * result — to `publicRemoteError` shape. Reads only `code` (or a string `error`) and
  * `message`, at the top level or nested under `error`; everything else is dropped unread.
  */
 export function sanitizeRemoteError(body) {
@@ -113,27 +146,17 @@ export function sanitizeRemoteError(body) {
     try {
       value = JSON.parse(text);
     } catch {
-      const message = safeRemoteString(text);
-      return message ? { message } : null;
+      return publicRemoteError({ message: text });
     }
   }
 
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     // JSON scalar or array: keep a bounded excerpt of its serialisation, nothing else.
-    const message = safeRemoteString(typeof value === "string" ? value : JSON.stringify(value ?? ""));
-    return message ? { message } : null;
+    return publicRemoteError({ message: typeof value === "string" ? value : JSON.stringify(value ?? "") });
   }
 
   const nested = value.error && typeof value.error === "object" && !Array.isArray(value.error) ? value.error : {};
-  const codeValue = nested.code ?? value.code ?? (typeof value.error === "string" ? value.error : undefined);
-  const code = typeof codeValue === "number" ? String(codeValue) : safeRemoteCode(codeValue);
-  const message = safeRemoteString(nested.message ?? value.message);
-
-  if (code === undefined && message === undefined) {
-    return null;
-  }
-  return {
-    ...(code !== undefined ? { code } : {}),
-    ...(message !== undefined ? { message } : {}),
-  };
+  const code = nested.code ?? value.code ?? (typeof value.error === "string" ? value.error : undefined);
+  const message = nested.message ?? value.message;
+  return publicRemoteError({ code, message });
 }

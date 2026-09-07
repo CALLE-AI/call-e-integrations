@@ -20,6 +20,7 @@ Public subpaths:
 - `@call-e/core/http`
 - `@call-e/core/broker-client`
 - `@call-e/core/mcp-client`
+- `@call-e/core/sanitize`
 
 TypeScript declarations are included for the root export and every public
 subpath.
@@ -108,6 +109,51 @@ See the
 for the tool inputs, result handoffs, polling guidance, and complete safety
 contract. At runtime, `listMcpTools` remains authoritative for the server's
 current MCP schemas.
+
+## Errors and Remote Text
+
+Every string that arrives from the network is untrusted. The library keeps it out of
+`Error.message` and offers one sanitizer for displaying it.
+
+```js
+import { requestJson, HttpStatusError, TransportError, causeCodeOf } from "@call-e/core/http";
+import { callMcpTool, McpHttpError } from "@call-e/core/mcp-client";
+import { publicRemoteError, safeRemoteString } from "@call-e/core/sanitize";
+
+try {
+  await callMcpTool({ config, toolName: "plan_call" });
+} catch (error) {
+  if (error instanceof McpHttpError) {
+    error.message;      // locally authored, safe to print: "Remote MCP error for tools/call"
+    error.payload;      // raw server error, for programmatic use only
+    error.remoteError;  // { code?, message? } sanitized, safe to display
+    error.transport;    // true only when no usable response was received
+    error.timedOut;     // true for the client-side timeout
+    error.causeCode;    // "timeout", a Node.js system code such as "ENOTFOUND", or null
+  }
+}
+```
+
+| Type | Thrown by | Meaning |
+| --- | --- | --- |
+| `HttpStatusError` | `requestJson` | A non-success HTTP status. `statusCode`, `responseText`, `headers`, `url`. |
+| `TransportError` | `requestJson` | No usable response: `fetch` rejected, the body could not be read, or the timeout fired. `url`, `method`, `timedOut`, `code`. |
+| `McpHttpError` | MCP client | HTTP failure (`code: "http_error"`), JSON-RPC error (`"mcp_error"`), or transport failure (`"transport_error"`). |
+
+`@call-e/core/sanitize`:
+
+| Function | Purpose |
+| --- | --- |
+| `stripTerminalControls(value)` | Remove ANSI CSI/OSC/ESC sequences and C0/C1 control characters. |
+| `redactSecrets(value)` | Replace credential-shaped substrings (bearer tokens, `token=`-style pairs, known prefixes, long opaque runs) with `[redacted]`. |
+| `safeRemoteString(value, maxLength = 500)` | Controls removed first, then secrets redacted, then bounded. `undefined` for non-strings and empty results. |
+| `safeRemoteCode(value)` | A machine code matching `-?[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}`; numbers only as safe integers; otherwise `undefined`. |
+| `publicRemoteError(value)` | The only shape remote detail should take in a public payload: `{ code?, message? }` or `null`. |
+| `sanitizeRemoteError(body)` | Reduce a JSON-RPC error, HTTP body, or tool result to `publicRemoteError` shape, reading only `code` / `message`. |
+
+Controls are removed rather than replaced before secret detection, so
+`access_token=abcd<ESC>[31m1234` is redacted as one credential instead of surviving as two
+halves.
 
 ## Development
 
