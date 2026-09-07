@@ -907,6 +907,61 @@ test("every envelope agrees with the contract: transport flag, remote_error shap
   }
 });
 
+test("a hostile plan_call result that omits plan_id cannot leak through the invalid-response path", async () => {
+  // extractRequiredStructuredString throws with the entire tool result as `payload`. That
+  // result is server-controlled: its text content, its structuredContent, and any extra
+  // fields. None of it may reach the summary, stderr, or an unvalidated remote_error.
+  const cacheRoot = makeTempRoot("calle-cli-plan-invalid-hostile");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl, "tool-token");
+  const ESC = String.fromCharCode(27);
+  const hostileText =
+    `${ESC}[2J${ESC}[H` +
+    `{"confirm_token":"confirm-secret-DO-NOT-PRINT","access_token":"sk_live_ABCDEFGHIJKLMNOPQRST"}` +
+    `\r\nplan-secret ${"y".repeat(20_000)}`;
+  const fetchImpl = mcpFixture({
+    serverUrl,
+    onToolsCall: (payload) => jsonRpcResponse({
+      jsonrpc: "2.0",
+      id: payload.id,
+      result: {
+        content: [{ type: "text", text: hostileText }],
+        // ready_to_run is true but plan_id is absent, so the CLI must reject the plan.
+        structuredContent: {
+          ready_to_run: true,
+          confirm_token: "confirm-secret-DO-NOT-PRINT",
+          message: `remote message ${ESC}[31m tok_SECRET_VALUE_1234567890`,
+          refresh_token: "rt_SECRET_ABCDEFGHIJ",
+        },
+      },
+    }),
+  });
+
+  const result = await run(
+    ["call", "start", "--to-phone", "+15551234567", "--goal", "Confirm appointment", "--base-url", "https://mcp.example", "--cache-root", cacheRoot],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.stage, "plan_call");
+  assert.equal(payload.call_started, false);
+  assert.equal(payload.retry_safe, true);
+  assert.equal(payload.error.code, "plan_call_invalid_response");
+  assert.equal(payload.error.message, "plan_call did not return plan_id");
+  assert.equal(payload.error.transport, undefined);
+  assert.ok(result.stdout.length < 2000, "no amplification of the 20 KB body");
+  for (const secret of ["confirm-secret", "DO-NOT-PRINT", "sk_live_", "plan-secret", "tok_SECRET", "rt_SECRET", "refresh_token", "yyyyyyyy"]) {
+    assert.doesNotMatch(result.stdout, new RegExp(secret), `${secret} leaked to stdout`);
+    assert.doesNotMatch(result.stderr, new RegExp(secret), `${secret} leaked to stderr`);
+  }
+  assert.doesNotMatch(result.stderr.trimEnd(), CONTROL_CHARS);
+  if (payload.error.remote_error !== undefined) {
+    assert.ok(Object.keys(payload.error.remote_error).every((k) => k === "code" || k === "message"));
+    assert.doesNotMatch(JSON.stringify(payload.error.remote_error), CONTROL_CHARS);
+  }
+});
+
 test("auth login start-only replaces locally active pending cache when broker reports it expired", async () => {
   const cacheRoot = makeTempRoot("calle-cli-login-start-only-expired-broker");
   const serverUrl = "https://mcp.example/mcp/openagent_oauth";
