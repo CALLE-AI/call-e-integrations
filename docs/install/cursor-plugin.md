@@ -70,13 +70,13 @@ get_call_run
 
 ## Optional CLI Preflight
 
-The plugin should prefer Cursor MCP tools. If the skill falls back to CLI
-commands, it uses the repository-local CLI when available, then a global
-`calle`, then the npm fallback:
+The plugin should prefer Cursor MCP tools. For CLI fallback, follow
+[CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
+and set `CALLE_CLI_ENTRY` to the verified absolute entry path before running:
 
 ```bash
-npx -y @call-e/cli auth status
-npx -y @call-e/cli mcp tools
+node "$CALLE_CLI_ENTRY" auth status
+node "$CALLE_CLI_ENTRY" mcp tools
 ```
 
 CLI commands run by the Cursor skill include this CALL-E attribution:

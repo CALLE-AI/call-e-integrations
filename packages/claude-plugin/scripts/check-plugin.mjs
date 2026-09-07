@@ -99,6 +99,19 @@ function checkNoMcp({ packageRoot, failures }) {
 function assertCliGuidance({ source, filePath, failures }) {
   const normalizedSource = source.replace(/\s+/gu, " ");
   for (const snippet of [
+    "Do not run bare `calle` or use `npx` to select the CLI.",
+    "Stop before authentication if either check fails.",
+    "Reuse the verified entry point for every command.",
+    'node "$CALLE_CLI_ENTRY"',
+    ...(path.basename(filePath) === "commands.md" ? [
+      "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must be `./bin/calle.js`",
+      "to an absolute path",
+      "without credentials or call arguments",
+      "auth login --help",
+      "call plan --help",
+      "call run --help",
+      "call recover --help",
+    ] : ["references/commands.md#verify-the-cli-entry-point"]),
     'call_started: "unknown"',
     "retry_safe: false",
     "recovery_id",
@@ -108,16 +121,19 @@ function assertCliGuidance({ source, filePath, failures }) {
     "Do not loop `call recover`.",
     "Keep `recovery_id` and the recovery command out of user-visible replies and shared logs.",
   ]) {
-    assert(normalizedSource.includes(snippet), failures, `${displayPath(filePath)} must include recovery guidance: ${snippet}`);
+    assert(normalizedSource.includes(snippet), failures, `${displayPath(filePath)} must include CLI guidance: ${snippet}`);
   }
+  assert(
+    !/(?:^|[\s`])(?:calle[ \t]+(?:auth|mcp|call|--[\w-]+)\b|npx[ \t]+[^\r\n`]*@call-e\/cli\b)/u.test(source),
+    failures,
+    `${displayPath(filePath)} must not invoke bare calle or npx to select the CLI.`,
+  );
   assert(source.includes(`CALLE_SOURCE=${EXPECTED_CLI_SOURCE}`), failures, `${displayPath(filePath)} must include Claude CLI source attribution.`);
   assert(
     source.includes(`CALLE_INTEGRATION=${EXPECTED_CLI_INTEGRATION}`),
     failures,
     `${displayPath(filePath)} must include Claude CLI integration attribution.`,
   );
-  assert(source.includes("node packages/cli/bin/calle.js"), failures, `${displayPath(filePath)} must document the repository-local CLI command.`);
-  assert(source.includes("npx -y @call-e/cli"), failures, `${displayPath(filePath)} must document the npx CLI fallback.`);
   assert(source.includes("auth status"), failures, `${displayPath(filePath)} must document auth status checks.`);
   assert(source.includes("Run blocking `auth login`"), failures, `${displayPath(filePath)} must document blocking authorization login.`);
   assert(
@@ -257,8 +273,8 @@ function checkDocs({ packageRoot, repoRoot, failures }) {
     assert(!source.includes("claude plugin marketplace add"), failures, "Claude install doc must not use unavailable shell marketplace commands.");
     assert(!source.includes("claude plugin install"), failures, "Claude install doc must not use unavailable shell plugin install commands.");
     assert(!source.includes("--sparse"), failures, "Claude install doc must not use CLI-only --sparse options with slash commands.");
-    assert(source.includes("calle auth login"), failures, "Claude install doc must document CLI authorization.");
-    assert(source.includes("npx -y @call-e/cli"), failures, "Claude install doc must document the npx CLI fallback.");
+    assert(source.includes('node "$CALLE_CLI_ENTRY" auth login'), failures, "Claude install doc must document authorization through the verified CLI entry point.");
+    assert(source.includes("cli-reference.md#selecting-the-cli-entry-point"), failures, "Claude install doc must link to CLI entry point verification.");
   }
 }
 

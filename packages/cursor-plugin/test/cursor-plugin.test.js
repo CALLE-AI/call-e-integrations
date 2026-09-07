@@ -21,6 +21,19 @@ const VALID_CALL_GUIDANCE =
   "Do not expose OAuth tokens, bearer tokens, authorization codes, callback URLs, refresh tokens, or access tokens.\n\n" +
   "Do not configure CALL-E run_call for auto-run.\n\n" +
   "wait 60 seconds before the first `get_call_run`.\n\n";
+const VALID_CLI_SELECTION_GUIDANCE = [
+  "Do not run bare `calle` or use `npx` to select the CLI.",
+  "Stop before authentication if either check fails.",
+  "Reuse the verified entry point for every command.",
+  "[Entry-point checks](references/commands.md#verify-the-cli-entry-point)",
+  "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must be `./bin/calle.js`.",
+  "Resolve to an absolute path and run help without credentials or call arguments.",
+  'node "$CALLE_CLI_ENTRY" auth login --help',
+  'node "$CALLE_CLI_ENTRY" call plan --help',
+  'node "$CALLE_CLI_ENTRY" call run --help',
+  'node "$CALLE_CLI_ENTRY" call recover --help',
+].join("\n") + "\n";
+
 const VALID_RECOVERY_GUIDANCE =
   'When `call_started: "unknown"` and `retry_safe: false`, preserve `recovery_id` and `next_command`.\n' +
   "Use call recover --recovery-id with the original local recovery record.\n" +
@@ -30,14 +43,12 @@ const VALID_RECOVERY_GUIDANCE =
 function validCliGuidance(version = VERSION) {
   return (
     "CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=" + version + "\n\n" +
-    "node packages/cli/bin/calle.js\n\n" +
-    "npx -y @call-e/cli\n\n" +
     "auth status\n\n" +
     "mcp tools\n\n" +
     "call plan\n\n" +
     "call run\n\n" +
     "call status\n\n" +
-    VALID_RECOVERY_GUIDANCE
+    VALID_CLI_SELECTION_GUIDANCE + VALID_RECOVERY_GUIDANCE
   );
 }
 function validSkill(version = VERSION) {
@@ -248,9 +259,13 @@ test("reports missing docs warning against auto-run", () => {
   assert.ok(failures.some((failure) => failure.includes("auto-run")));
 });
 
-test("reports missing recovery guidance in the skill or command reference", (t) => {
+test("reports missing CLI guidance in the skill or command reference", (t) => {
   for (const fileName of ["SKILL.md", "references/commands.md"]) {
     for (const snippet of [
+      "Stop before authentication if either check fails.",
+      ...(fileName === "references/commands.md"
+        ? ["`bin.calle` must be `./bin/calle.js`"]
+        : ["references/commands.md#verify-the-cli-entry-point"]),
       "call recover --recovery-id",
       "Do not create a new plan or repeat `call start` or `call run`.",
       "Do not loop `call recover`.",
@@ -266,6 +281,22 @@ test("reports missing recovery guidance in the skill or command reference", (t) 
 
       const failures = checkCursorPlugin({ packageRoot, repoRoot });
       assert.ok(failures.some((failure) => failure.includes(fileName) && failure.includes(snippet)), `${fileName}: ${snippet}`);
+    }
+  }
+});
+
+test("rejects bare calle and npx commands in the skill or command reference", (t) => {
+  for (const fileName of ["SKILL.md", "references/commands.md"]) {
+    for (const command of ["calle auth status", "npx -y @call-e/cli auth status"]) {
+      const root = makeTempRoot("calle-cursor-plugin-unsafe-cli");
+      t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+      const { packageRoot, repoRoot } = createValidFixture(root);
+      assert.deepEqual(checkCursorPlugin({ packageRoot, repoRoot }), []);
+      const filePath = path.join(packageRoot, "plugin/skills/calle", fileName);
+      fs.appendFileSync(filePath, `\n\`\`\`bash\nenv CALLE_SOURCE=test ${command}\n\`\`\`\n`);
+
+      const failures = checkCursorPlugin({ packageRoot, repoRoot });
+      assert.ok(failures.some((failure) => failure.includes(fileName) && failure.includes("must not invoke bare calle or npx")));
     }
   }
 });

@@ -49,9 +49,11 @@ npx -y skills add ./skills/calle --list
 
 ## CLI Selection
 
-The skill uses the repository-local CLI when available, then a global `calle`
-command when available. It does not execute remote npm packages from inside the
-skill.
+The skill uses a verified absolute entry point from a trusted checkout or
+installed `@call-e/cli`. Prepare it using
+[CLI entry point selection](../cli/docs/cli-reference.md#selecting-the-cli-entry-point)
+before invoking the skill. The skill does not execute remote npm packages and
+stops when no trusted installed entry point is available.
 
 ## Safety
 

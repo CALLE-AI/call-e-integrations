@@ -38,24 +38,28 @@ available without restarting:
 
 ## Authorize
 
-The plugin checks authentication when `/calle:calle` is invoked. To
-pre-authorize before using the skill, run:
+The plugin checks authentication when `/calle:calle` is invoked.
+
+Follow [CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
+to select a trusted checkout or installed `@call-e/cli`, verify its package and
+MCP command help, and set `CALLE_CLI_ENTRY` to its absolute `bin/calle.js` path.
+
+To pre-authorize before using the skill, run:
 
 ```bash
-npx -y @call-e/cli auth login
+node "$CALLE_CLI_ENTRY" auth login
 ```
 
 The command opens the CALL-E browser authorization flow, waits for completion,
 then stores the token in the private local CLI cache. To verify setup:
 
 ```bash
-npx -y @call-e/cli auth status
-npx -y @call-e/cli mcp tools
+node "$CALLE_CLI_ENTRY" auth status
+node "$CALLE_CLI_ENTRY" mcp tools
 ```
 
-The plugin uses the repository-local CLI when available, then a global `calle`,
-then the npm fallback above. CLI commands run by the skill include this
-CALL-E attribution:
+The plugin reuses the verified entry point for every CLI command. Commands run
+by the skill include this CALL-E attribution:
 
 ```text
 CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.2

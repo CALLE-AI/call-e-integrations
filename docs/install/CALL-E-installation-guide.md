@@ -25,17 +25,18 @@ is available.
 
 ## Step 2 Ensure The CLI Is Available
 
-The skill uses the local `calle` CLI. If `calle` is not already available,
-install it:
+Follow [CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
+to select a trusted checkout or installed `@call-e/cli`, verify its package and
+MCP command help, and set `CALLE_CLI_ENTRY` to its absolute `bin/calle.js` path.
 
-```bash
-npm install -g @call-e/cli
-```
+Install into a dedicated directory if needed, following the same guide. Finish
+this setup before invoking the skill; the skill does not download remote npm
+packages.
 
 Verify the command:
 
 ```bash
-env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 calle --help
+env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 node "$CALLE_CLI_ENTRY" --help
 ```
 
 ## Step 3 Authenticate
@@ -43,27 +44,27 @@ env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_V
 Run the login command and let the user complete browser authorization:
 
 ```bash
-env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 calle auth login
+env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 node "$CALLE_CLI_ENTRY" auth login
 ```
 
 For agents that need to show the authorization link without opening a browser
 inside the agent environment, run:
 
 ```bash
-env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 calle auth login --start-only --no-browser-open
+env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 node "$CALLE_CLI_ENTRY" auth login --start-only --no-browser-open
 ```
 
 After the user confirms authorization is complete, finish the pending login:
 
 ```bash
-env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 calle auth login --no-browser-open
+env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 node "$CALLE_CLI_ENTRY" auth login --no-browser-open
 ```
 
 ## Step 4 Verify
 
 ```bash
-env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 calle auth status
-env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 calle mcp tools
+env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 node "$CALLE_CLI_ENTRY" auth status
+env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 node "$CALLE_CLI_ENTRY" mcp tools
 ```
 
 Confirm that the tool list includes:

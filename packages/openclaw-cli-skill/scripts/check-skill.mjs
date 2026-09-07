@@ -46,9 +46,22 @@ function assert(condition, failures, message) {
   }
 }
 
-function assertRecoveryGuidance({ source, filePath, failures }) {
+function assertCliGuidance({ source, filePath, failures }) {
   const normalizedSource = source.replace(/\s+/gu, " ");
   for (const snippet of [
+    "Do not run bare `calle` or use `npx` to select the CLI.",
+    "Stop before authentication if either check fails.",
+    "Reuse the verified entry point for every command.",
+    'node "$CALLE_CLI_ENTRY"',
+    ...(path.basename(filePath) === "commands.md" ? [
+      "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must be `./bin/calle.js`",
+      "to an absolute path",
+      "without credentials or call arguments",
+      "auth login --help",
+      "call plan --help",
+      "call run --help",
+      "call recover --help",
+    ] : ["references/commands.md#verify-the-cli-entry-point"]),
     'call_started: "unknown"',
     "retry_safe: false",
     "recovery_id",
@@ -58,8 +71,13 @@ function assertRecoveryGuidance({ source, filePath, failures }) {
     "Do not loop `call recover`.",
     "Keep `recovery_id` and the recovery command out of user-visible replies and shared logs.",
   ]) {
-    assert(normalizedSource.includes(snippet), failures, `${displayPath(filePath)} must include recovery guidance: ${snippet}`);
+    assert(normalizedSource.includes(snippet), failures, `${displayPath(filePath)} must include CLI guidance: ${snippet}`);
   }
+  assert(
+    !/(?:^|[\s`])(?:calle[ \t]+(?:auth|mcp|call|--[\w-]+)\b|npx[ \t]+[^\r\n`]*@call-e\/cli\b)/u.test(source),
+    failures,
+    `${displayPath(filePath)} must not invoke bare calle or npx to select the CLI.`,
+  );
 }
 
 function extractFrontmatter(markdown) {
@@ -102,7 +120,7 @@ function checkSkill({ packageRoot, failures }) {
   }
 
   const source = fs.readFileSync(skillFile, "utf8");
-  assertRecoveryGuidance({ source, filePath: skillFile, failures });
+  assertCliGuidance({ source, filePath: skillFile, failures });
   const frontmatter = extractFrontmatter(source);
   assert(frontmatter, failures, `${displayPath(skillFile)} must start with YAML frontmatter.`);
   assert(source.includes("assistant_hint.message"), failures, `${displayPath(skillFile)} must document assistant_hint.message handling.`);
@@ -189,8 +207,7 @@ function checkSkill({ packageRoot, failures }) {
       const openclaw = metadata.openclaw;
       assert(openclaw && typeof openclaw === "object", failures, `${displayPath(skillFile)} metadata.openclaw must be an object.`);
       assert(openclaw.requires?.bins?.includes("node"), failures, `${displayPath(skillFile)} metadata.openclaw.requires.bins must include node.`);
-      assert(openclaw.requires?.anyBins?.includes("calle"), failures, `${displayPath(skillFile)} metadata.openclaw.requires.anyBins must include calle.`);
-      assert(openclaw.requires?.anyBins?.includes("npx"), failures, `${displayPath(skillFile)} metadata.openclaw.requires.anyBins must include npx.`);
+      assert(!Object.hasOwn(openclaw.requires ?? {}, "anyBins"), failures, `${displayPath(skillFile)} metadata.openclaw.requires must not select a CLI through anyBins.`);
       assert(
         Array.isArray(openclaw.install) && openclaw.install.some((entry) => entry?.kind === "node" && entry?.package === "@call-e/cli"),
         failures,
@@ -209,10 +226,8 @@ function checkReference({ packageRoot, failures }) {
   }
 
   const source = fs.readFileSync(referenceFile, "utf8");
-  assertRecoveryGuidance({ source, filePath: referenceFile, failures });
+  assertCliGuidance({ source, filePath: referenceFile, failures });
   const requiredSnippets = [
-    "node packages/cli/bin/calle.js",
-    "npx -y @call-e/cli",
     "CALLE_SOURCE=openclaw",
     "CALLE_INTEGRATION=openclaw_cli_skill",
     "auth_required",

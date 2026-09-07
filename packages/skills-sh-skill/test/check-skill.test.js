@@ -10,6 +10,19 @@ import { checkSkillsShSkill } from "../scripts/check-skill.mjs";
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "../..");
 
+const VALID_CLI_SELECTION_GUIDANCE = [
+  "Do not run bare `calle` or use `npx` to select the CLI.",
+  "Stop before authentication if either check fails.",
+  "Reuse the verified entry point for every command.",
+  "[Entry-point checks](references/commands.md#verify-the-cli-entry-point)",
+  "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must be `./bin/calle.js`.",
+  "Resolve to an absolute path and run help without credentials or call arguments.",
+  'node "$CALLE_CLI_ENTRY" auth login --help',
+  'node "$CALLE_CLI_ENTRY" call plan --help',
+  'node "$CALLE_CLI_ENTRY" call run --help',
+  'node "$CALLE_CLI_ENTRY" call recover --help',
+].join("\n") + "\n";
+
 const VALID_RECOVERY_GUIDANCE =
   'When `call_started: "unknown"` and `retry_safe: false`, preserve `recovery_id` and `next_command`.\n' +
   "Use call recover --recovery-id with the original local recovery record.\n" +
@@ -56,6 +69,7 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
       "---",
       "",
       "# calle",
+      VALID_CLI_SELECTION_GUIDANCE,
       VALID_RECOVERY_GUIDANCE,
       "",
       "Run auth login --start-only --no-browser-open and ask the user to use the authorization instructions returned by the CLI.",
@@ -90,9 +104,10 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
     path.join(repoRoot, "skills", "calle", "references", "commands.md"),
     [
       "# Commands",
+      VALID_CLI_SELECTION_GUIDANCE,
       VALID_RECOVERY_GUIDANCE,
       "",
-      `env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=${integrationVersion} node packages/cli/bin/calle.js`,
+      `env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=${integrationVersion} node "$CALLE_CLI_ENTRY"`,
       "Run auth login --start-only --no-browser-open and ask the user to use the authorization instructions returned by the CLI.",
       "Run auth login --no-browser-open to exchange a pending authorization.",
       "Great, authorization is complete",
@@ -249,9 +264,13 @@ test("reports a missing stable public install guide", () => {
   assert.ok(failures.some((failure) => failure.includes("Missing stable install guide")));
 });
 
-test("reports missing recovery guidance in the skill or command reference", (t) => {
+test("reports missing CLI guidance in the skill or command reference", (t) => {
   for (const fileName of ["SKILL.md", "references/commands.md"]) {
     for (const snippet of [
+      "Stop before authentication if either check fails.",
+      ...(fileName === "references/commands.md"
+        ? ["`bin.calle` must be `./bin/calle.js`"]
+        : ["references/commands.md#verify-the-cli-entry-point"]),
       "call recover --recovery-id",
       "Do not create a new plan or repeat `call start` or `call run`.",
       "Do not loop `call recover`.",
@@ -267,6 +286,22 @@ test("reports missing recovery guidance in the skill or command reference", (t) 
 
       const failures = checkSkillsShSkill({ packageRoot, repoRoot });
       assert.ok(failures.some((failure) => failure.includes(fileName) && failure.includes(snippet)), `${fileName}: ${snippet}`);
+    }
+  }
+});
+
+test("rejects bare calle and npx commands in the skill or command reference", (t) => {
+  for (const fileName of ["SKILL.md", "references/commands.md"]) {
+    for (const command of ["calle auth status", "npx -y @call-e/cli auth status"]) {
+      const root = makeTempRoot("calle-skills-sh-skill-unsafe-cli");
+      t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+      const { packageRoot, repoRoot } = createValidFixture(root);
+      assert.deepEqual(checkSkillsShSkill({ packageRoot, repoRoot }), []);
+      const filePath = path.join(repoRoot, "skills/calle", fileName);
+      fs.appendFileSync(filePath, `\n\`\`\`bash\nenv CALLE_SOURCE=test ${command}\n\`\`\`\n`);
+
+      const failures = checkSkillsShSkill({ packageRoot, repoRoot });
+      assert.ok(failures.some((failure) => failure.includes(fileName) && failure.includes("must not invoke bare calle or npx")));
     }
   }
 });

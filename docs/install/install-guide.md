@@ -119,18 +119,18 @@ choose `Prompt`, then paste the ClawHub install prompt into Hermes Agent.
 
 ### CLI
 
-Install the shared `calle` command:
+Follow [CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
+to select a trusted checkout or installed `@call-e/cli`, verify its package and
+MCP command help, and set `CALLE_CLI_ENTRY` to its absolute `bin/calle.js` path.
 
-```bash
-npm install -g @call-e/cli
-```
+That guide includes installation into a dedicated directory when needed.
 
 Then authenticate and verify:
 
 ```bash
-calle auth login
-calle auth status
-calle mcp tools
+node "$CALLE_CLI_ENTRY" auth login
+node "$CALLE_CLI_ENTRY" auth status
+node "$CALLE_CLI_ENTRY" mcp tools
 ```
 
 <!-- sync-with: cli.md#plan-a-call -->
@@ -139,15 +139,9 @@ Discover nested commands and inspect their exact parameters with hierarchical
 help:
 
 ```bash
-calle --help
-calle call --help
-calle call plan --help
-```
-
-One-off usage without a global install:
-
-```bash
-npx -y @call-e/cli --help
+node "$CALLE_CLI_ENTRY" --help
+node "$CALLE_CLI_ENTRY" call --help
+node "$CALLE_CLI_ENTRY" call plan --help
 ```
 
 ### MCP-Only Clients
@@ -169,22 +163,23 @@ get_call_run
 
 ## Authentication And Verification
 
-CLI-based integrations can pre-authorize with:
+CLI-based integrations use the verified `CALLE_CLI_ENTRY` selected in the
+[CLI setup](#cli) above. Pre-authorize with:
 
 ```bash
-npx -y @call-e/cli auth login
+node "$CALLE_CLI_ENTRY" auth login
 ```
 
 Then verify:
 
 ```bash
-npx -y @call-e/cli auth status
-npx -y @call-e/cli mcp tools
+node "$CALLE_CLI_ENTRY" auth status
+node "$CALLE_CLI_ENTRY" mcp tools
 ```
 
-The Codex, Claude Code, Cursor plugin, OpenClaw, and skills.sh skills use the
-repository-local CLI when available, then a global `calle`, then the
-npm fallback.
+The Codex, Claude Code, Cursor plugin, OpenClaw, and skills.sh skills reuse the
+verified absolute entry point. The skills.sh skill requires an already
+installed CLI and does not download remote npm packages.
 
 ## Safety
 

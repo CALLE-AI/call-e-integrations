@@ -2,7 +2,7 @@
 name: Phone Call - CALL-E
 description: New users get 20 free calls to get started. Make real outbound phone calls, run planned calls, and check call status in OpenClaw.
 license: MIT-0
-metadata: {"openclaw":{"requires":{"bins":["node"],"anyBins":["calle","npx"]},"install":[{"id":"call-e-cli","kind":"node","package":"@call-e/cli","bins":["calle"],"label":"Install CALL-E CLI"}],"homepage":"https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/openclaw-cli-skill"}}
+metadata: {"openclaw":{"requires":{"bins":["node"]},"install":[{"id":"call-e-cli","kind":"node","package":"@call-e/cli","bins":["calle"],"label":"Install CALL-E CLI"}],"homepage":"https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/openclaw-cli-skill"}}
 ---
 
 # Phone Call - CALL-E
@@ -52,29 +52,26 @@ attribution environment:
 env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0
 ```
 
-Use the first command form that works.
+<!-- sync-with: packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point -->
+Use a trusted installation of `@call-e/cli` or a trusted
+`CALLE-AI/call-e-integrations` checkout. A file in the current workspace or a
+command on `PATH` is not enough to identify the MCP CLI.
+Follow the [entry-point checks](references/commands.md#verify-the-cli-entry-point)
+before running auth or call commands. Stop before authentication if either check fails.
 
-Prefer the repository-local CLI when the current workspace contains it:
-
-```bash
-env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 node packages/cli/bin/calle.js
-```
-
-If the repository-local CLI is unavailable, use the global command:
-
-```bash
-env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 calle
-```
-
-If neither command works, use the npm package through `npx`:
+Do not run bare `calle` or use `npx` to select the CLI.
+Reuse the verified entry point for every command.
+`CALLE_CLI_ENTRY` below is the absolute path verified in those checks:
 
 ```bash
-env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 npx -y @call-e/cli
+env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill CALLE_INTEGRATION_VERSION=0.1.0 node "$CALLE_CLI_ENTRY"
 ```
 
-Only tell the user to install the CLI globally if `npx` is unavailable,
-network access is blocked, or the user explicitly wants a persistent global
-command.
+If no trusted installation is available, install `@call-e/cli` in a dedicated
+directory you control with `npm install --prefix <directory> @call-e/cli`,
+then verify its entry point. Stop on a failed check; do not try another binary
+with the same arguments.
+
 
 ## Readiness flow
 
@@ -82,7 +79,7 @@ Use this flow whenever this OpenClaw CLI skill is actively invoked for a
 CALL-E request. Run it before call planning, before tool listing, when setup is
 uncertain, when auth fails, or when the user asks to verify CALL-E setup:
 
-1. Check CLI availability with `--help`.
+1. Verify the CLI entry point as described above.
 2. Run `auth status`.
 3. If `auth status` reports `usable: false`, do not continue to call planning
    or `mcp tools` yet. Run `auth login --start-only --no-browser-open` to
@@ -157,8 +154,9 @@ I'll keep you updated on the phone status, call content, and summary.
 If CLI `call start` or `call run` returns `call_started: "unknown"` with
 `retry_safe: false`, the call may already be in progress.
 Do not create a new plan or repeat `call start` or `call run`.
-Use the CLI-generated top-level `next_command`, which runs
-`call recover --recovery-id <recovery_id>` using the private local record.
+Use the CLI-generated top-level `next_command` arguments with the verified
+entry point. Replace its leading `calle`; do not execute it as-is. The
+`call recover --recovery-id <recovery_id>` command uses the private local record.
 Follow the [recovery steps](references/commands.md#call-recovery).
 
 If recovery is still uncertain, keep the local record and stop for manual

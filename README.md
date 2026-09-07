@@ -463,12 +463,14 @@ The `calle` CLI sends best-effort usage telemetry to help diagnose installation,
 
 **What is never collected:** phone numbers, call goals, OAuth tokens, broker login URLs, transcripts, or contact data.
 
-**Opt out** with any of:
+**Opt out** with any of the following commands. First follow
+[CLI entry point selection](packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
+to verify the package and set `CALLE_CLI_ENTRY`:
 
 ```bash
-DO_NOT_TRACK=1 calle auth status
-CALLE_TELEMETRY=0 calle auth status
-calle auth status --no-telemetry
+DO_NOT_TRACK=1 node "$CALLE_CLI_ENTRY" auth status
+CALLE_TELEMETRY=0 node "$CALLE_CLI_ENTRY" auth status
+node "$CALLE_CLI_ENTRY" auth status --no-telemetry
 ```
 
 Broker and MCP requests still create service-side security, audit, and operational logs required to run calls.

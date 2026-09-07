@@ -34,11 +34,11 @@ function writeToken(cacheRoot, baseUrl, token = accessToken) {
   });
 }
 
-function runCalle(args, { env = {} } = {}) {
+function runCalle(args, { entry = binPath, env = {} } = {}) {
   return new Promise((resolve) => {
     execFile(
       process.execPath,
-      [binPath, ...args],
+      [entry, ...args],
       {
         cwd: packageRoot,
         env: {
@@ -643,13 +643,38 @@ test("starts a call without exposing plan confirmation data", async (t) => {
 });
 
 for (const command of ["start", "run"]) {
-  test(`recovers call ${command} after accepted HTTP responses are lost without creating a new plan`, async (t) => {
+  test(`recovers call ${command} through a verified entry despite PATH shadowing and lost HTTP responses`, async (t) => {
     const fake = await startFakeServer({ droppedRunResponses: 2 });
     const cacheParent = makeTempCacheRoot();
     const cacheRoot = path.join(cacheParent, "recovery cache");
     t.after(() => fake.close());
     t.after(() => fs.rmSync(cacheParent, { recursive: true, force: true }));
+    const fakeBin = path.join(cacheParent, "fake-bin");
+    const interceptedArgs = path.join(cacheParent, "intercepted-args.jsonl");
+    fs.mkdirSync(fakeBin);
+    fs.writeFileSync(path.join(fakeBin, "calle"), [
+      "#!/usr/bin/env node",
+      `require("node:fs").appendFileSync(${JSON.stringify(interceptedArgs)}, JSON.stringify(process.argv.slice(2)) + "\\n");`,
+    ].join("\n"), { mode: 0o755 });
+
+    const manifest = JSON.parse(fs.readFileSync(path.join(packageRoot, "package.json"), "utf8"));
+    assert.equal(manifest.name, "@call-e/cli");
+    assert.equal(manifest.bin.calle, "./bin/calle.js");
+    const entry = fs.realpathSync(path.resolve(packageRoot, manifest.bin.calle));
+    assert.equal(entry, fs.realpathSync(binPath));
+    const cliOptions = { entry, env: { PATH: [fakeBin, process.env.PATH].join(path.delimiter) } };
+    const help = await runCalle(["--help"], cliOptions);
+    assert.equal(help.code, 0);
+    for (const commandName of ["auth login", "mcp tools", "call run", "call recover"]) {
+      assert.ok(help.stdout.includes(commandName));
+    }
+
     writeToken(cacheRoot, fake.baseUrl);
+    const auth = await runCalle([
+      "auth", "status", "--base-url", fake.baseUrl, "--cache-root", cacheRoot, "--no-telemetry",
+    ], cliOptions);
+    assert.equal(auth.code, 0);
+    assert.equal(parseJson(auth.stdout).usable, true);
 
     const callArgs = command === "start"
       ? ["--to-phone", "+15551234567", "--goal", "Confirm appointment"]
@@ -659,7 +684,7 @@ for (const command of ["start", "run"]) {
       "--timezone", "Asia/Shanghai",
       "--base-url", fake.baseUrl,
       "--cache-root", cacheRoot,
-    ]);
+    ], cliOptions);
     const firstPayload = parseJson(first.stdout);
 
     assert.equal(first.code, 1);
@@ -684,7 +709,7 @@ for (const command of ["start", "run"]) {
     ];
     const quotedCacheRoot = `'${cacheRoot.replaceAll("'", "'\\''")}'`;
     assert.equal(firstPayload.next_command, ["calle", ...recoveryArgs.slice(0, -1), quotedCacheRoot].join(" "));
-    const uncertain = await runCalle(recoveryArgs);
+    const uncertain = await runCalle(recoveryArgs, cliOptions);
     const uncertainPayload = parseJson(uncertain.stdout);
     assert.equal(uncertain.code, 1);
     assert.equal(uncertainPayload.stage, "run_call");
@@ -695,7 +720,7 @@ for (const command of ["start", "run"]) {
     assert.equal(fs.readFileSync(recoveryPath, "utf8"), recoveryRecord);
     assert.equal(fake.state.acceptedRuns.length, 1);
 
-    const recovered = await runCalle(recoveryArgs);
+    const recovered = await runCalle(recoveryArgs, cliOptions);
     const recoveredPayload = parseJson(recovered.stdout);
     assert.equal(recovered.code, 0);
     assert.equal(recoveredPayload.ok, true);
@@ -712,9 +737,10 @@ for (const command of ["start", "run"]) {
       assert.deepEqual(call.arguments, { plan_id: "plan-1", confirm_token: "confirm-1" });
     }
     assert.equal(fake.state.acceptedRuns.length, 1);
-    for (const result of [first, uncertain, recovered]) {
+    for (const result of [auth, first, uncertain, recovered]) {
       assertNoLeak(`${result.stdout}\n${result.stderr}`, ["plan-1", "confirm-1", accessToken]);
     }
+    assert.equal(fs.existsSync(interceptedArgs), false, "PATH calle must receive no arguments");
     assert.deepEqual(fake.state.failures, []);
   });
 }

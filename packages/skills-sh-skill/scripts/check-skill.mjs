@@ -75,6 +75,34 @@ function assertRequiredSnippets({ source, filePath, snippets, failures }) {
   }
 }
 
+function assertCliSelectionGuidance({ source, filePath, failures }) {
+  assertRequiredSnippets({
+    source,
+    filePath,
+    failures,
+    snippets: [
+      "Do not run bare `calle` or use `npx` to select the CLI.",
+      "Stop before authentication if either check fails.",
+      "Reuse the verified entry point for every command.",
+      'node "$CALLE_CLI_ENTRY"',
+      ...(path.basename(filePath) === "commands.md" ? [
+        "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must be `./bin/calle.js`",
+        "to an absolute path",
+        "without credentials or call arguments",
+        "auth login --help",
+        "call plan --help",
+        "call run --help",
+        "call recover --help",
+      ] : ["references/commands.md#verify-the-cli-entry-point"]),
+    ],
+  });
+  assert(
+    !/(?:^|[\s`])(?:calle[ \t]+(?:auth|mcp|call|--[\w-]+)\b|npx[ \t]+[^\r\n`]*@call-e\/cli\b)/u.test(source),
+    failures,
+    `${displayPath(filePath)} must not invoke bare calle or npx to select the CLI.`,
+  );
+}
+
 function integrationVersionSnippet(packageJson) {
   return typeof packageJson?.version === "string" && packageJson.version.length > 0
     ? `CALLE_INTEGRATION_VERSION=${packageJson.version}`
@@ -120,7 +148,7 @@ function checkSkill({ repoRoot, packageJson, failures }) {
   const frontmatter = extractFrontmatter(source);
   assert(frontmatter, failures, `${displayPath(skillFile)} must start with YAML frontmatter.`);
   assert(!source.includes("[TODO:"), failures, `${displayPath(skillFile)} must not contain template TODO markers.`);
-  assert(!source.includes("npx -y @call-e/cli@"), failures, `${displayPath(skillFile)} must not run remote npm packages from the skill.`);
+  assertCliSelectionGuidance({ source, filePath: skillFile, failures });
   assert(!source.includes("confirm_token"), failures, `${displayPath(skillFile)} must not expose or instruct handling of execution confirmation tokens.`);
 
   assertRequiredSnippets({
@@ -170,7 +198,7 @@ function checkSkill({ repoRoot, packageJson, failures }) {
   }
 
   const referenceSource = fs.readFileSync(referenceFile, "utf8");
-  assert(!referenceSource.includes("npx -y @call-e/cli@"), failures, `${displayPath(referenceFile)} must not run remote npm packages from the skill.`);
+  assertCliSelectionGuidance({ source: referenceSource, filePath: referenceFile, failures });
   assert(!referenceSource.includes("confirm_token"), failures, `${displayPath(referenceFile)} must not expose or instruct handling of execution confirmation tokens.`);
   assertRequiredSnippets({
     source: referenceSource,

@@ -12,8 +12,6 @@ const REPO_ROOT = path.resolve(PACKAGE_ROOT, "../..");
 const VERSION = "0.0.0";
 const VALID_AUTH_GUIDANCE =
   "CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.0.0\n\n" +
-  "node packages/cli/bin/calle.js\n\n" +
-  "npx -y @call-e/cli\n\n" +
   "auth status\n\n" +
   "mcp tools\n\n" +
   "call plan\n\n" +
@@ -34,6 +32,19 @@ const VALID_PROGRESS_GUIDANCE =
   "Wait 10 seconds.\n\n" +
   "[Status]\n\n" +
   "[Transcript]\n";
+const VALID_CLI_SELECTION_GUIDANCE = [
+  "Do not run bare `calle` or use `npx` to select the CLI.",
+  "Stop before authentication if either check fails.",
+  "Reuse the verified entry point for every command.",
+  "[Entry-point checks](references/commands.md#verify-the-cli-entry-point)",
+  "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must be `./bin/calle.js`.",
+  "Resolve to an absolute path and run help without credentials or call arguments.",
+  'node "$CALLE_CLI_ENTRY" auth login --help',
+  'node "$CALLE_CLI_ENTRY" call plan --help',
+  'node "$CALLE_CLI_ENTRY" call run --help',
+  'node "$CALLE_CLI_ENTRY" call recover --help',
+].join("\n") + "\n";
+
 const VALID_RECOVERY_GUIDANCE =
   'When `call_started: "unknown"` and `retry_safe: false`, preserve `recovery_id` and `next_command`.\n' +
   "Use call recover --recovery-id with the original local recovery record.\n" +
@@ -47,7 +58,7 @@ description: Test CALL-E phone call skill.
 
 # CALL-E Phone Call
 
-${VALID_AUTH_GUIDANCE}${VALID_PROGRESS_GUIDANCE}${VALID_RECOVERY_GUIDANCE}
+${VALID_AUTH_GUIDANCE}${VALID_PROGRESS_GUIDANCE}${VALID_CLI_SELECTION_GUIDANCE}${VALID_RECOVERY_GUIDANCE}
 `;
 
 function writeJson(filePath, value) {
@@ -95,7 +106,7 @@ function createValidFixture(root) {
   writeFile(path.join(packageRoot, "plugin", "README.md"), "# Claude plugin\n\n/calle:calle\n\ncalle auth login\n");
   writeFile(
     path.join(repoRoot, "docs", "install", "claude-plugin.md"),
-    "# Install\n\n/plugin marketplace add https://example.test/repo.git#@call-e/claude-plugin@latest\n/plugin install calle@call-e-claude\n/reload-plugins\n/calle:calle\ncalle auth login\nnpx -y @call-e/cli\n",
+    "# Install\n\n/plugin marketplace add https://example.test/repo.git#@call-e/claude-plugin@latest\n/plugin install calle@call-e-claude\n/reload-plugins\n/calle:calle\nnode \"$CALLE_CLI_ENTRY\" auth login\ncli-reference.md#selecting-the-cli-entry-point\n",
   );
 
   writeJson(path.join(repoRoot, ".claude-plugin", "marketplace.json"), {
@@ -236,7 +247,7 @@ test("reports shell plugin install commands in docs", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-claude-plugin-shell-install-docs"));
   writeFile(
     path.join(repoRoot, "docs", "install", "claude-plugin.md"),
-    "# Install\n\nclaude plugin marketplace add https://example.test/repo.git#@call-e/claude-plugin@latest\nclaude plugin install calle@call-e-claude\n/reload-plugins\ncalle auth login\nnpx -y @call-e/cli\n",
+    "# Install\n\nclaude plugin marketplace add https://example.test/repo.git#@call-e/claude-plugin@latest\nclaude plugin install calle@call-e-claude\n/reload-plugins\nnode \"$CALLE_CLI_ENTRY\" auth login\ncli-reference.md#selecting-the-cli-entry-point\n",
   );
 
   const failures = checkClaudePlugin({ packageRoot, repoRoot });
@@ -249,7 +260,7 @@ test("reports sparse options in slash install docs", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-claude-plugin-sparse-slash-docs"));
   writeFile(
     path.join(repoRoot, "docs", "install", "claude-plugin.md"),
-    "# Install\n\n/plugin marketplace add https://example.test/repo.git#@call-e/claude-plugin@latest --sparse .claude-plugin packages/claude-plugin/plugin\n/plugin install calle@call-e-claude\n/reload-plugins\ncalle auth login\nnpx -y @call-e/cli\n",
+    "# Install\n\n/plugin marketplace add https://example.test/repo.git#@call-e/claude-plugin@latest --sparse .claude-plugin packages/claude-plugin/plugin\n/plugin install calle@call-e-claude\n/reload-plugins\nnode \"$CALLE_CLI_ENTRY\" auth login\ncli-reference.md#selecting-the-cli-entry-point\n",
   );
 
   const failures = checkClaudePlugin({ packageRoot, repoRoot });
@@ -260,16 +271,20 @@ test("reports missing reload command in install docs", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-claude-plugin-missing-reload-docs"));
   writeFile(
     path.join(repoRoot, "docs", "install", "claude-plugin.md"),
-    "# Install\n\n/plugin marketplace add https://example.test/repo.git#@call-e/claude-plugin@latest\n/plugin install calle@call-e-claude\n/calle:calle\ncalle auth login\nnpx -y @call-e/cli\n",
+    "# Install\n\n/plugin marketplace add https://example.test/repo.git#@call-e/claude-plugin@latest\n/plugin install calle@call-e-claude\n/calle:calle\nnode \"$CALLE_CLI_ENTRY\" auth login\ncli-reference.md#selecting-the-cli-entry-point\n",
   );
 
   const failures = checkClaudePlugin({ packageRoot, repoRoot });
   assert.ok(failures.some((failure) => failure.includes("/reload-plugins")));
 });
 
-test("reports missing recovery guidance in the skill or command reference", (t) => {
+test("reports missing CLI guidance in the skill or command reference", (t) => {
   for (const fileName of ["SKILL.md", "references/commands.md"]) {
     for (const snippet of [
+      "Stop before authentication if either check fails.",
+      ...(fileName === "references/commands.md"
+        ? ["`bin.calle` must be `./bin/calle.js`"]
+        : ["references/commands.md#verify-the-cli-entry-point"]),
       "call recover --recovery-id",
       "Do not create a new plan or repeat `call start` or `call run`.",
       "Do not loop `call recover`.",
@@ -285,6 +300,22 @@ test("reports missing recovery guidance in the skill or command reference", (t) 
 
       const failures = checkClaudePlugin({ packageRoot, repoRoot });
       assert.ok(failures.some((failure) => failure.includes(fileName) && failure.includes(snippet)), `${fileName}: ${snippet}`);
+    }
+  }
+});
+
+test("rejects bare calle and npx commands in the skill or command reference", (t) => {
+  for (const fileName of ["SKILL.md", "references/commands.md"]) {
+    for (const command of ["calle auth status", "npx -y @call-e/cli auth status"]) {
+      const root = makeTempRoot("calle-claude-plugin-unsafe-cli");
+      t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+      const { packageRoot, repoRoot } = createValidFixture(root);
+      assert.deepEqual(checkClaudePlugin({ packageRoot, repoRoot }), []);
+      const filePath = path.join(packageRoot, "plugin/skills/calle", fileName);
+      fs.appendFileSync(filePath, `\n\`\`\`bash\nenv CALLE_SOURCE=test ${command}\n\`\`\`\n`);
+
+      const failures = checkClaudePlugin({ packageRoot, repoRoot });
+      assert.ok(failures.some((failure) => failure.includes(fileName) && failure.includes("must not invoke bare calle or npx")));
     }
   }
 });

@@ -14,21 +14,22 @@ For install and authentication steps, see
 
 <!-- sync-with: docs/install/cli.md#plan-a-call -->
 
-Authenticate, inspect the exact parameters for the command you want to use,
-then plan the call:
+First follow [CLI entry point selection](./docs/cli-reference.md#selecting-the-cli-entry-point)
+to verify the installed package and set `CALLE_CLI_ENTRY` to its absolute
+`bin/calle.js` path. Then authenticate, inspect the parameters, and plan the call:
 
 ```bash
-calle auth login
-calle call plan --help
-calle call plan --to-phone +15551234567 --goal "Confirm the appointment"
+node "$CALLE_CLI_ENTRY" auth login
+node "$CALLE_CLI_ENTRY" call plan --help
+node "$CALLE_CLI_ENTRY" call plan --to-phone +15551234567 --goal "Confirm the appointment"
 ```
 
 Help is available at every command level:
 
 ```bash
-calle --help
-calle call --help
-calle call plan --help
+node "$CALLE_CLI_ENTRY" --help
+node "$CALLE_CLI_ENTRY" call --help
+node "$CALLE_CLI_ENTRY" call plan --help
 ```
 
 ## Commands
@@ -36,21 +37,21 @@ calle call plan --help
 <!-- sync-with: docs/cli-reference.md#commands -->
 
 ```bash
-calle --version
-calle auth login
-calle auth login --start-only --no-browser-open
-calle auth status
-calle auth logout
-calle mcp config
-calle mcp tools
-calle mcp call plan_call --args-json '{"to_phones":["+15551234567"],"goal":"Confirm the appointment"}'
-calle call plan --help
-calle call plan --to-phone +15551234567 --goal "Confirm the appointment"
-calle call start --to-phone +15551234567 --goal "Confirm the appointment"
-calle call run --plan-id <plan_id> --confirm-token <confirm_token>
-calle call recover --recovery-id <recovery_id>
-calle call status --run-id <run_id>
-calle regions list
+node "$CALLE_CLI_ENTRY" --version
+node "$CALLE_CLI_ENTRY" auth login
+node "$CALLE_CLI_ENTRY" auth login --start-only --no-browser-open
+node "$CALLE_CLI_ENTRY" auth status
+node "$CALLE_CLI_ENTRY" auth logout
+node "$CALLE_CLI_ENTRY" mcp config
+node "$CALLE_CLI_ENTRY" mcp tools
+node "$CALLE_CLI_ENTRY" mcp call plan_call --args-json '{"to_phones":["+15551234567"],"goal":"Confirm the appointment"}'
+node "$CALLE_CLI_ENTRY" call plan --help
+node "$CALLE_CLI_ENTRY" call plan --to-phone +15551234567 --goal "Confirm the appointment"
+node "$CALLE_CLI_ENTRY" call start --to-phone +15551234567 --goal "Confirm the appointment"
+node "$CALLE_CLI_ENTRY" call run --plan-id "<plan_id>" --confirm-token "<confirm_token>"
+node "$CALLE_CLI_ENTRY" call recover --recovery-id "<recovery_id>"
+node "$CALLE_CLI_ENTRY" call status --run-id "<run_id>"
+node "$CALLE_CLI_ENTRY" regions list
 ```
 
 Defaults:
@@ -73,7 +74,7 @@ need to show the authorization link before continuing.
 `calle mcp config` prints a JSON MCP client config:
 
 ```bash
-calle mcp config --base-url https://seleven-mcp-sg.airudder.com
+node "$CALLE_CLI_ENTRY" mcp config --base-url https://seleven-mcp-sg.airudder.com
 ```
 
 Example output:
@@ -100,10 +101,11 @@ confirmation data.
 
 If execution may have been accepted but no `run_id` was received, the CLI
 returns `retry_safe: false` with an opaque `recovery_id` and a `next_command`.
-Run that command instead of repeating `call start`; it securely reuses the
-original confirmation context without printing it. If only the initial status
+Use its arguments with the verified entry point instead of repeating
+`call start`; it reuses the original confirmation context without printing it.
+If only the initial status
 query fails, the command still returns the accepted `run_id` and a `call status`
-`next_command`.
+`next_command`. Use the same entry point for that status command.
 
 Successful command stdout is JSON except help and version output. Some
 top-level or local failures may print plain stderr. Access tokens are read from
@@ -132,8 +134,8 @@ Disable CLI telemetry with `DO_NOT_TRACK=1`, `CALLE_TELEMETRY=0`, or
 `--no-telemetry`:
 
 ```bash
-CALLE_TELEMETRY=0 calle auth status
-calle mcp tools --no-telemetry
+CALLE_TELEMETRY=0 node "$CALLE_CLI_ENTRY" auth status
+node "$CALLE_CLI_ENTRY" mcp tools --no-telemetry
 ```
 
 Broker and MCP requests still create service-side security, audit, and business

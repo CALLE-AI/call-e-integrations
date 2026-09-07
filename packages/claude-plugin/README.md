@@ -38,8 +38,9 @@ pnpm --filter @call-e/claude-plugin pack:dry-run
 
 For local development from a clone, add this repository as a Claude Code
 marketplace, install `calle@call-e-claude`, run `/reload-plugins`, then invoke
-`/calle:calle`. The skill prefers the repository-local CLI, then a global
-`calle`, then `npx -y @call-e/cli`.
+`/calle:calle`. The skill uses a verified absolute `@call-e/cli` entry point;
+follow [CLI entry point selection](../cli/docs/cli-reference.md#selecting-the-cli-entry-point)
+to verify the package and set `CALLE_CLI_ENTRY`.
 
 ## Attribution
 

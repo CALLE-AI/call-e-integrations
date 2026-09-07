@@ -154,6 +154,19 @@ function checkMcpConfig({ packageRoot, failures }) {
 function assertCliGuidance({ source, filePath, packageJson, failures }) {
   const normalizedSource = source.replace(/\s+/gu, " ");
   for (const snippet of [
+    "Do not run bare `calle` or use `npx` to select the CLI.",
+    "Stop before authentication if either check fails.",
+    "Reuse the verified entry point for every command.",
+    'node "$CALLE_CLI_ENTRY"',
+    ...(path.basename(filePath) === "commands.md" ? [
+      "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must be `./bin/calle.js`",
+      "to an absolute path",
+      "without credentials or call arguments",
+      "auth login --help",
+      "call plan --help",
+      "call run --help",
+      "call recover --help",
+    ] : ["references/commands.md#verify-the-cli-entry-point"]),
     'call_started: "unknown"',
     "retry_safe: false",
     "recovery_id",
@@ -163,8 +176,13 @@ function assertCliGuidance({ source, filePath, packageJson, failures }) {
     "Do not loop `call recover`.",
     "Keep `recovery_id` and the recovery command out of user-visible replies and shared logs.",
   ]) {
-    assert(normalizedSource.includes(snippet), failures, `${displayPath(filePath)} must include recovery guidance: ${snippet}`);
+    assert(normalizedSource.includes(snippet), failures, `${displayPath(filePath)} must include CLI guidance: ${snippet}`);
   }
+  assert(
+    !/(?:^|[\s`])(?:calle[ \t]+(?:auth|mcp|call|--[\w-]+)\b|npx[ \t]+[^\r\n`]*@call-e\/cli\b)/u.test(source),
+    failures,
+    `${displayPath(filePath)} must not invoke bare calle or npx to select the CLI.`,
+  );
   assert(source.includes(`CALLE_SOURCE=${EXPECTED_CLI_SOURCE}`), failures, `${displayPath(filePath)} must include Cursor CLI source attribution.`);
   assert(
     source.includes(`CALLE_INTEGRATION=${EXPECTED_CLI_INTEGRATION}`),
@@ -176,8 +194,6 @@ function assertCliGuidance({ source, filePath, packageJson, failures }) {
     failures,
     `${displayPath(filePath)} must include Cursor CLI integration version ${packageJson.version}.`,
   );
-  assert(source.includes("node packages/cli/bin/calle.js"), failures, `${displayPath(filePath)} must document the repository-local CLI command.`);
-  assert(source.includes("npx -y @call-e/cli"), failures, `${displayPath(filePath)} must document the npx CLI fallback.`);
   assert(source.includes("auth status"), failures, `${displayPath(filePath)} must document auth status checks.`);
   assert(source.includes("mcp tools"), failures, `${displayPath(filePath)} must document CLI tool discovery.`);
   assert(source.includes("call plan"), failures, `${displayPath(filePath)} must document call planning through the CLI.`);

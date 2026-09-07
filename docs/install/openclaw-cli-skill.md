@@ -9,17 +9,14 @@ gateway restart from this repository.
 
 ## CLI Availability
 
-The skill uses the repository-local CLI when available, then a global `calle`
-command when available, then falls back to:
-
-```bash
-npx -y @call-e/cli
-```
+Follow [CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
+to select a trusted checkout or installed `@call-e/cli`, verify its package and
+MCP command help, and set `CALLE_CLI_ENTRY` to its absolute `bin/calle.js` path.
 
 To authenticate before using the skill:
 
 ```bash
-npx -y @call-e/cli auth login
+node "$CALLE_CLI_ENTRY" auth login
 ```
 
 ## Local Development

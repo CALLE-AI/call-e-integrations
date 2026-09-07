@@ -37,19 +37,18 @@ npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/
 
 ## CLI Availability
 
-The skill uses the repository-local CLI when available, then a global `calle`
-command when available. The skill does not execute remote npm packages from
-inside the agent workflow. Install or verify the official CLI yourself before
-using the skill when no local `calle` command is available:
+Follow [CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
+to select a trusted checkout or installed `@call-e/cli`, verify its package and
+MCP command help, and set `CALLE_CLI_ENTRY` to its absolute `bin/calle.js` path.
 
-```bash
-npx -y @call-e/cli
-```
+Prepare this installed entry point before invoking the skill. The skill does
+not execute remote npm packages; it stops when no trusted installed CLI is
+available.
 
 To authenticate before using the skill:
 
 ```bash
-npx -y @call-e/cli auth login
+node "$CALLE_CLI_ENTRY" auth login
 ```
 
 ## Verify The Package
