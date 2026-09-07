@@ -196,7 +196,7 @@ pip install calle-ai
 **Set your API key:**
 
 ```bash
-export CALLE_API_KEY="calle_live_key"
+export CALLE_API_KEY="iams_live_example"
 ```
 
 Get your API key from the [CALL-E dashboard](https://dashboard.heycall-e.com/account/api-keys).
@@ -258,7 +258,7 @@ The CALL-E Developer API provides direct HTTP access for any trusted backend, wo
 **Set credentials:**
 
 ```bash
-export CALLE_API_KEY="calle_live_key"
+export CALLE_API_KEY="iams_live_example"
 export CALLE_BASE_URL="https://api.heycall-e.com"
 ```
 
