@@ -17,7 +17,7 @@ EXAMPLE = Path(__file__).resolve().parent
 FAKE_SERVER = ROOT / "shared" / "fake-mcp-broker-server.mjs"
 
 
-def start_fake_server(*, no_resources=False, unauthorized_mcp=False, oauth_issuer=None):
+def start_fake_server(*, no_resources=False, unauthorized_mcp=False, oauth_issuer=None, oauth_redirects=False):
     env = os.environ.copy()
     if no_resources:
         env["FAKE_NO_RESOURCES"] = "1"
@@ -25,6 +25,8 @@ def start_fake_server(*, no_resources=False, unauthorized_mcp=False, oauth_issue
         env["FAKE_UNAUTHORIZED_MCP"] = "1"
     if oauth_issuer:
         env["FAKE_OAUTH_ISSUER"] = oauth_issuer
+    if oauth_redirects:
+        env["FAKE_OAUTH_REDIRECTS"] = "1"
     process = subprocess.Popen(
         ["node", str(FAKE_SERVER)],
         stdout=subprocess.PIPE,
@@ -222,5 +224,32 @@ def test_oauth_client_validates_callback_issuer(auto_authorize, issuer):
             assert "oauth_client_error" in result.stderr
             assert state["oauth_tokens"] == []
             assert not any(request["has_bearer_token"] for request in state["mcp_requests"])
+    finally:
+        stop_fake_server(process)
+
+
+def test_oauth_client_follows_registration_and_token_redirects():
+    process, fake = start_fake_server(oauth_redirects=True)
+    try:
+        result = run_client({
+            "MCP_SERVER_URL": fake["server_url"],
+            "MCP_REDIRECT_URI": "http://127.0.0.1:8090/callback",
+            "MCP_OAUTH_AUTO_AUTHORIZE": "1",
+            "MCP_TOOL_NAME": "plan_call",
+            "MCP_TOOL_ARGS_JSON": '{"user_input":"Plan a short test call. Do not start it."}',
+        })
+        assert result.returncode == 0, result.stderr
+        state = read_state(fake["state_url"])
+        assert [request["path"] for request in state["oauth_redirects"]] == ["/register", "/token"]
+        assert len(state["oauth_registers"]) == len(state["oauth_tokens"]) == 1
+        assert state["oauth_registers"][0]["body_preserved"]
+        assert state["oauth_registers"][0]["redirect_uris"] == ["http://127.0.0.1:8090/callback"]
+        assert state["oauth_tokens"][0]["body_preserved"]
+        assert state["oauth_tokens"][0]["grant_type"] == "authorization_code"
+        assert state["oauth_tokens"][0]["has_code"]
+        assert state["oauth_tokens"][0]["pkce_verified"]
+        assert [call["name"] for call in state["tool_calls"]] == ["plan_call"]
+        assert '"event":"resources/read"' in result.stdout
+        assert_no_secrets(result.stdout + result.stderr)
     finally:
         stop_fake_server(process)

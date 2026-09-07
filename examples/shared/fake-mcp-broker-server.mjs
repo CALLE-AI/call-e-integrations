@@ -1,4 +1,5 @@
 import http from "node:http";
+import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 
 const ACCESS_TOKEN = "fake-access-token";
@@ -76,6 +77,7 @@ function normalizeOptions(options = {}) {
     unauthorizedMcp: Boolean(options.unauthorizedMcp),
     brokerPendingFirst: Boolean(options.brokerPendingFirst),
     oauthIssuer: options.oauthIssuer || null,
+    oauthRedirects: Boolean(options.oauthRedirects),
   };
 }
 
@@ -83,6 +85,7 @@ export async function startFakeServer(options = {}) {
   const opts = normalizeOptions(options);
   let baseUrl = "";
   let brokerStatusCount = 0;
+  let codeChallenge = null;
   const state = {
     broker_creates: [],
     broker_status_count: 0,
@@ -90,6 +93,7 @@ export async function startFakeServer(options = {}) {
     oauth_registers: [],
     oauth_authorizes: [],
     oauth_tokens: [],
+    oauth_redirects: [],
     mcp_requests: [],
     tool_calls: [],
     get_call_run_counts: {},
@@ -99,12 +103,14 @@ export async function startFakeServer(options = {}) {
 
   function resetState() {
     brokerStatusCount = 0;
+    codeChallenge = null;
     state.broker_creates = [];
     state.broker_status_count = 0;
     state.broker_exchange_count = 0;
     state.oauth_registers = [];
     state.oauth_authorizes = [];
     state.oauth_tokens = [];
+    state.oauth_redirects = [];
     state.mcp_requests = [];
     state.tool_calls = [];
     state.get_call_run_counts = {};
@@ -504,6 +510,10 @@ export async function startFakeServer(options = {}) {
       }
 
       if (req.method === "GET" && pathname === "/.well-known/oauth-authorization-server") {
+        if (opts.oauthRedirects) {
+          jsonResponse(res, { error: "metadata unavailable" }, { status: 404 });
+          return;
+        }
         jsonResponse(res, {
           issuer: baseUrl,
           authorization_endpoint: `${baseUrl}/authorize`,
@@ -518,12 +528,26 @@ export async function startFakeServer(options = {}) {
         return;
       }
 
-      if (req.method === "POST" && pathname === "/register") {
-        const body = await readJson(req);
+      if (opts.oauthRedirects && req.method === "POST" && ["/register", "/token"].includes(pathname)) {
+        state.oauth_redirects.push({
+          path: pathname,
+          body_hash: createHash("sha256").update(await readBody(req)).digest("hex"),
+        });
+        res.writeHead(307, { location: `${baseUrl}/mcp-auth${pathname}` });
+        res.end();
+        return;
+      }
+
+      if (req.method === "POST" && (pathname === "/register" || (opts.oauthRedirects && pathname === "/mcp-auth/register"))) {
+        const raw = await readBody(req);
+        const body = raw ? JSON.parse(raw) : {};
         state.oauth_registers.push({
           redirect_uris: body.redirect_uris,
           scope: body.scope,
           client_name: body.client_name,
+          ...(opts.oauthRedirects ? {
+            body_preserved: createHash("sha256").update(raw).digest("hex") === state.oauth_redirects.find((request) => request.path === "/register")?.body_hash,
+          } : {}),
         });
         jsonResponse(
           res,
@@ -552,6 +576,7 @@ export async function startFakeServer(options = {}) {
         if (opts.oauthIssuer) {
           callbackUrl.searchParams.set("iss", opts.oauthIssuer === "mismatch" ? `${baseUrl}/other-issuer` : baseUrl);
         }
+        codeChallenge = requestUrl.searchParams.get("code_challenge");
         state.oauth_authorizes.push({
           client_id: requestUrl.searchParams.get("client_id"),
           scope: requestUrl.searchParams.get("scope"),
@@ -563,13 +588,18 @@ export async function startFakeServer(options = {}) {
         return;
       }
 
-      if (req.method === "POST" && pathname === "/token") {
-        const form = readForm(await readBody(req));
+      if (req.method === "POST" && (pathname === "/token" || (opts.oauthRedirects && pathname === "/mcp-auth/token"))) {
+        const raw = await readBody(req);
+        const form = readForm(raw);
         state.oauth_tokens.push({
           grant_type: form.grant_type,
           client_id: form.client_id || null,
           has_code: Boolean(form.code),
           has_code_verifier: Boolean(form.code_verifier),
+          ...(opts.oauthRedirects ? {
+            body_preserved: createHash("sha256").update(raw).digest("hex") === state.oauth_redirects.find((request) => request.path === "/token")?.body_hash,
+            pkce_verified: createHash("sha256").update(form.code_verifier || "").digest("base64url") === codeChallenge,
+          } : {}),
         });
         jsonResponse(res, {
           access_token: ACCESS_TOKEN,
@@ -618,6 +648,7 @@ async function runCli() {
     unauthorizedMcp: process.env.FAKE_UNAUTHORIZED_MCP === "1",
     brokerPendingFirst: process.env.FAKE_BROKER_PENDING_FIRST === "1",
     oauthIssuer: process.env.FAKE_OAUTH_ISSUER,
+    oauthRedirects: process.env.FAKE_OAUTH_REDIRECTS === "1",
   });
   process.stdout.write(
     `${JSON.stringify({

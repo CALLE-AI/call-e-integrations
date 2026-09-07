@@ -199,7 +199,7 @@ async def run_client() -> None:
     )
 
     async with httpx2.AsyncClient(
-        auth=oauth, timeout=30.0, event_hooks={"response": [capture_session_id]}
+        auth=oauth, timeout=30.0, follow_redirects=True, event_hooks={"response": [capture_session_id]}
     ) as http_client:
         async with streamable_http_client(config["server_url"], http_client=http_client) as (read, write):
             async with ClientSession(read, write) as session:
