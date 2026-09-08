@@ -701,6 +701,41 @@ test("auth login forwards upstream integration context from environment", async 
   assert.deepEqual(mcpMethods, ["initialize", "notifications/initialized", "tools/list"]);
 });
 
+test("attribution options override environment values without changing the environment", async (t) => {
+  const cacheRoot = makeTempRoot("calle-cli-attribution-options");
+  t.after(() => fs.rmSync(cacheRoot, { recursive: true, force: true }));
+  const env = { CALLE_SOURCE: "old", CALLE_INTEGRATION: "legacy", CALLE_INTEGRATION_VERSION: "0.1.0" };
+  const events = [];
+  const result = await run([
+    "auth", "status", "--cache-root", cacheRoot,
+    "--source", "codex", "--integration=codex_plugin", "--integration-version", "1.2.3-beta.1+test",
+  ], { env: { ...env, CALLE_TELEMETRY: "1" }, telemetryFetchImpl: captureTelemetry(events) });
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.deepEqual(events[0].payload.context.integration_context, {
+    source: "codex", integration: "codex_plugin", version: "1.2.3-beta.1+test",
+  });
+  assert.equal(resolveRuntimeConfig({ source: "codex" }, env).integrationHeader, "codex/legacy/0.1.0");
+  assert.deepEqual(env, { CALLE_SOURCE: "old", CALLE_INTEGRATION: "legacy", CALLE_INTEGRATION_VERSION: "0.1.0" });
+  assert.equal(resolveRuntimeConfig({}, {}).integrationHeader, defaultIntegrationHeader);
+  assert.equal(resolveRuntimeConfig({ source: "codex" }, {}).integrationHeader, "codex/unknown/unknown");
+
+  for (const flag of ["--source", "--integration", "--integration-version"]) {
+    for (const value of ["", "bad/value", "bad value", "bad\r\nheader"]) {
+      const invalid = await run(["auth", "status", flag, value], {
+        fetchImpl: () => assert.fail("invalid attribution must not reach the server"),
+      });
+      assert.equal(invalid.code, 2);
+      const payload = JSON.parse(invalid.stdout);
+      assert.equal(payload.error.code, "invalid_arguments");
+      assert.ok(payload.error.message.includes(`${flag} expects`), payload.error.message);
+    }
+    const missing = await run(["auth", "status", flag]);
+    assert.equal(missing.code, 2);
+    assert.ok(JSON.parse(missing.stdout).error.message.includes(`Missing value for ${flag}`));
+  }
+});
+
 test("auth login resumes a pending login without creating a new session", async () => {
   const cacheRoot = makeTempRoot("calle-cli-pending");
   const serverUrl = "https://mcp.example/mcp/openagent_oauth";

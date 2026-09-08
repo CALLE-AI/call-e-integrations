@@ -202,12 +202,28 @@ with boolean `retry_safe` and boolean-or-`"unknown"` `call_started` guidance.
 
 ## Common Options
 
+Use `--source`, `--integration`, and `--integration-version` in the request's
+`argv` array to override integration attribution for one invocation. Each option
+overrides its matching `CALLE_SOURCE`, `CALLE_INTEGRATION`, or
+`CALLE_INTEGRATION_VERSION` environment variable, including values set by the
+launcher. Existing environment-based integrations continue to work.
+
+Use letters, numbers, dots, underscores, plus signs, or hyphens in these values.
+Empty or invalid option values return `invalid_arguments` before requests are
+sent. With no attribution supplied, the CLI uses `cli/cli/<CLI version>`.
+When only part of the context is supplied, missing fields become `unknown`.
+Include the same options in each invocation, including follow-up `*_argv`
+requests; the CLI does not change the parent environment.
+
 These options are accepted by all commands. Runtime configuration is resolved
 before command dispatch; some commands only use the subset relevant to their
 network requests or output.
 
 | Option | Value | Default | Applies to | Required | Repeatable | Purpose | Example |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `--source` | Attribution segment | `CALLE_SOURCE` or `cli` | All commands | No | No | Set the calling agent's source. | `calle auth status --source codex` |
+| `--integration` | Attribution segment | `CALLE_INTEGRATION` or `cli` | All commands | No | No | Set the integration name. | `calle auth status --integration codex_plugin` |
+| `--integration-version` | Attribution segment | `CALLE_INTEGRATION_VERSION` or CLI version | All commands | No | No | Set the calling integration's version. | `calle auth status --integration-version 1.0.0` |
 | `--help`, `-h` | Boolean | `false` | Every command level | No | No | Print help for the current root, group, or subcommand and exit. | `calle call plan --help` |
 | `--version`, `-V` | Boolean | `false` | Every command level | No | No | Print the installed CLI version and exit. | `calle --version` |
 | `--base-url` | URL | `https://seleven-mcp-sg.airudder.com` | All commands | No | No | Base CALL-E service URL used to derive broker, auth, MCP, and telemetry URLs unless those are set separately. | `calle mcp tools --base-url https://example.test` |

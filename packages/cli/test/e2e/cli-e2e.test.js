@@ -644,7 +644,8 @@ test("starts a call without exposing plan confirmation data", async (t) => {
 
 for (const command of ["start", "run"]) {
   test(`recovers call ${command} through a verified entry despite PATH shadowing and lost HTTP responses`, async (t) => {
-    const fake = await startFakeServer({ droppedRunResponses: 2 });
+    const attribution = ["--source", "test_agent", "--integration", "test_plugin", "--integration-version", "1.0.0"];
+    const fake = await startFakeServer({ droppedRunResponses: 2, integrationHeader: "test_agent/test_plugin/1.0.0" });
     const cacheParent = makeTempCacheRoot();
     const cacheRoot = path.join(cacheParent, "recovery cache");
     t.after(() => fake.close());
@@ -665,13 +666,14 @@ for (const command of ["start", "run"]) {
     const cliOptions = { entry, env: { PATH: [fakeBin, process.env.PATH].join(path.delimiter) } };
     const help = await runCalle(["--help"], cliOptions);
     assert.equal(help.code, 0);
-    for (const commandName of ["auth login", "mcp tools", "call run", "call recover"]) {
+    for (const commandName of ["auth login", "mcp tools", "call run", "call recover", "--source", "--integration", "--integration-version"]) {
       assert.ok(help.stdout.includes(commandName));
     }
 
     writeToken(cacheRoot, fake.baseUrl);
     const auth = await runCalle([
       "auth", "status", "--base-url", fake.baseUrl, "--cache-root", cacheRoot, "--no-telemetry",
+      ...attribution,
     ], cliOptions);
     assert.equal(auth.code, 0);
     assert.equal(parseJson(auth.stdout).usable, true);
@@ -684,6 +686,7 @@ for (const command of ["start", "run"]) {
       "--timezone", "Asia/Shanghai",
       "--base-url", fake.baseUrl,
       "--cache-root", cacheRoot,
+      ...attribution,
     ], cliOptions);
     const firstPayload = parseJson(first.stdout);
 
@@ -710,7 +713,7 @@ for (const command of ["start", "run"]) {
     const quotedCacheRoot = `'${cacheRoot.replaceAll("'", "'\\''")}'`;
     assert.equal(firstPayload.next_command, ["calle", ...recoveryArgs.slice(0, -1), quotedCacheRoot].join(" "));
     assert.deepEqual(firstPayload.next_argv, recoveryArgs);
-    const uncertain = await runCalle(firstPayload.next_argv, cliOptions);
+    const uncertain = await runCalle([...firstPayload.next_argv, ...attribution], cliOptions);
     const uncertainPayload = parseJson(uncertain.stdout);
     assert.equal(uncertain.code, 1);
     assert.equal(uncertainPayload.stage, "run_call");
@@ -722,7 +725,7 @@ for (const command of ["start", "run"]) {
     assert.equal(fake.state.acceptedRuns.length, 1);
 
     assert.deepEqual(uncertainPayload.next_argv, recoveryArgs);
-    const recovered = await runCalle(uncertainPayload.next_argv, cliOptions);
+    const recovered = await runCalle([...uncertainPayload.next_argv, ...attribution], cliOptions);
     const recoveredPayload = parseJson(recovered.stdout);
     assert.equal(recovered.code, 0);
     assert.equal(recoveredPayload.ok, true);

@@ -221,6 +221,9 @@ const COMMAND_GROUPS = {
 };
 
 const COMMON_OPTION_NAMES = new Set([
+  "source",
+  "integration",
+  "integration-version",
   "base-url",
   "broker-base-url",
   "server-url",
@@ -262,6 +265,9 @@ const KNOWN_OPTION_NAMES = new Set([
 ]);
 
 const COMMON_HELP = `Global options (accepted by every command):
+  --source <name>              Override CALLE_SOURCE attribution
+  --integration <name>         Override CALLE_INTEGRATION attribution
+  --integration-version <ver>  Override CALLE_INTEGRATION_VERSION attribution
   --base-url <url>             Default: ${DEFAULT_BASE_URL}
   --broker-base-url <url>      Default: --base-url
   --server-url <url>           Default: <base-url>/mcp/<channel>
