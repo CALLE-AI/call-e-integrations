@@ -24,8 +24,21 @@ const VALID_PROGRESS_GUIDANCE =
   "Do not stay silent until a terminal status.\n\n" +
   "Poll every 10 seconds.\n";
 
+const VALID_CLI_SELECTION_GUIDANCE = [
+  "Do not run bare `calle` or use `npx` to select the CLI.",
+  "Stop before authentication if either check fails.",
+  "Reuse the verified entry point for every command.",
+  "[Entry-point checks](references/commands.md#verify-the-cli-entry-point)",
+  "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must name `bin/calle.js`.",
+  "Resolve to an absolute path and run help without credentials or call arguments.",
+  'The bundled scripts/run-agent-command.mjs checks auth login --help.',
+  'The bundled scripts/run-agent-command.mjs checks call plan --help.',
+  'The bundled scripts/run-agent-command.mjs checks call run --help.',
+  'The bundled scripts/run-agent-command.mjs checks call recover --help.',
+].join("\n") + "\n";
+
 const VALID_RECOVERY_GUIDANCE =
-  'When `call_started: "unknown"` and `retry_safe: false`, preserve `recovery_id` and `next_command`.\n' +
+  'When `call_started: "unknown"` and `retry_safe: false`, preserve `recovery_id` and `next_argv`.\n' +
   "Use call recover --recovery-id with the original local recovery record.\n" +
   "Do not create a new plan or repeat `call start` or `call run`.\n" +
   "Do not loop `call recover`.\n" +
@@ -73,7 +86,7 @@ function createValidFixture(root) {
 
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md"),
-    `---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\n${VALID_AUTH_GUIDANCE}${VALID_ROUTING_GUIDANCE}${VALID_PROGRESS_GUIDANCE}${VALID_RECOVERY_GUIDANCE}`,
+    `---\nname: calle\ndescription: Test skill.\n---\n\n# calle\n\n${VALID_AUTH_GUIDANCE}${VALID_ROUTING_GUIDANCE}${VALID_PROGRESS_GUIDANCE}${VALID_CLI_SELECTION_GUIDANCE}${VALID_RECOVERY_GUIDANCE}`,
   );
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "agents", "openai.yaml"),
@@ -81,7 +94,7 @@ function createValidFixture(root) {
   );
   writeFile(
     path.join(packageRoot, "plugin", "skills", "calle", "references", "commands.md"),
-    `# Commands\n\n${VALID_RECOVERY_GUIDANCE}${VALID_AUTH_GUIDANCE}${VALID_ROUTING_GUIDANCE}Use the \`calle\` CLI flow.\n\nPhone call is in progress! Progress:\n\nWait 10 seconds.\n`,
+    `# Commands\n\n${VALID_CLI_SELECTION_GUIDANCE}${VALID_RECOVERY_GUIDANCE}${VALID_AUTH_GUIDANCE}${VALID_ROUTING_GUIDANCE}Use the \`calle\` CLI flow.\n\nPhone call is in progress! Progress:\n\nWait 10 seconds.\n`,
   );
 
   writeJson(path.join(repoRoot, ".agents", "plugins", "marketplace.json"), {
@@ -202,9 +215,13 @@ test("reports missing non-terminal call polling interval guidance", () => {
   assert.ok(failures.some((failure) => failure.includes("periodic polling")));
 });
 
-test("reports missing recovery guidance in the skill or command reference", (t) => {
+test("reports missing CLI guidance in the skill or command reference", (t) => {
   for (const fileName of ["SKILL.md", "references/commands.md"]) {
     for (const snippet of [
+      "Stop before authentication if either check fails.",
+      ...(fileName === "references/commands.md"
+        ? ["`bin.calle` must name `bin/calle.js`"]
+        : ["references/commands.md#verify-the-cli-entry-point"]),
       "call recover --recovery-id",
       "Do not create a new plan or repeat `call start` or `call run`.",
       "Do not loop `call recover`.",
@@ -220,6 +237,22 @@ test("reports missing recovery guidance in the skill or command reference", (t) 
 
       const failures = checkCodexPlugin({ packageRoot, repoRoot });
       assert.ok(failures.some((failure) => failure.includes(fileName) && failure.includes(snippet)), `${fileName}: ${snippet}`);
+    }
+  }
+});
+
+test("rejects bare calle and npx commands in the skill or command reference", (t) => {
+  for (const fileName of ["SKILL.md", "references/commands.md"]) {
+    for (const command of ["calle auth status", "npx -y @call-e/cli auth status"]) {
+      const root = makeTempRoot("calle-codex-plugin-unsafe-cli");
+      t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+      const { packageRoot, repoRoot } = createValidFixture(root);
+      assert.deepEqual(checkCodexPlugin({ packageRoot, repoRoot }), []);
+      const filePath = path.join(packageRoot, "plugin/skills/calle", fileName);
+      fs.appendFileSync(filePath, `\n\`\`\`bash\nenv CALLE_SOURCE=test ${command}\n\`\`\`\n`);
+
+      const failures = checkCodexPlugin({ packageRoot, repoRoot });
+      assert.ok(failures.some((failure) => failure.includes(fileName) && failure.includes("must not invoke bare calle or npx")));
     }
   }
 });

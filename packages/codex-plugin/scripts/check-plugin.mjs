@@ -36,20 +36,38 @@ function assert(condition, failures, message) {
   }
 }
 
-function assertRecoveryGuidance({ source, filePath, failures }) {
+function assertCliGuidance({ source, filePath, failures }) {
   const normalizedSource = source.replace(/\s+/gu, " ");
   for (const snippet of [
+    "Do not run bare `calle` or use `npx` to select the CLI.",
+    "Stop before authentication if either check fails.",
+    "Reuse the verified entry point for every command.",
+    'scripts/run-agent-command.mjs',
+    ...(path.basename(filePath) === "commands.md" ? [
+      "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must name `bin/calle.js`",
+      "to an absolute path",
+      "without credentials or call arguments",
+      "auth login --help",
+      "call plan --help",
+      "call run --help",
+      "call recover --help",
+    ] : ["references/commands.md#verify-the-cli-entry-point"]),
     'call_started: "unknown"',
     "retry_safe: false",
     "recovery_id",
-    "next_command",
+    "next_argv",
     "call recover --recovery-id",
     "Do not create a new plan or repeat `call start` or `call run`.",
     "Do not loop `call recover`.",
     "Keep `recovery_id` and the recovery command out of user-visible replies and shared logs.",
   ]) {
-    assert(normalizedSource.includes(snippet), failures, `${displayPath(filePath)} must include recovery guidance: ${snippet}`);
+    assert(normalizedSource.includes(snippet), failures, `${displayPath(filePath)} must include CLI guidance: ${snippet}`);
   }
+  assert(
+    !/(?:^|[\s`])(?:calle[ \t]+(?:auth|mcp|call|--[\w-]+)\b|npx[ \t]+[^\r\n`]*@call-e\/cli\b)/u.test(source),
+    failures,
+    `${displayPath(filePath)} must not invoke bare calle or npx to select the CLI.`,
+  );
 }
 
 export function extractFrontmatter(markdown) {
@@ -72,7 +90,7 @@ function checkSkill({ skillName, skillDir, failures }) {
   }
 
   const source = fs.readFileSync(skillFile, "utf8");
-  assertRecoveryGuidance({ source, filePath: skillFile, failures });
+  assertCliGuidance({ source, filePath: skillFile, failures });
   const frontmatter = extractFrontmatter(source);
   assert(frontmatter, failures, `${displayPath(skillFile)} must start with YAML frontmatter.`);
   assert(
@@ -125,7 +143,7 @@ function checkSkill({ skillName, skillDir, failures }) {
 
   if (fs.existsSync(referenceFile)) {
     const referenceSource = fs.readFileSync(referenceFile, "utf8");
-    assertRecoveryGuidance({ source: referenceSource, filePath: referenceFile, failures });
+    assertCliGuidance({ source: referenceSource, filePath: referenceFile, failures });
     assert(
       referenceSource.includes("Phone call is in progress! Progress:"),
       failures,

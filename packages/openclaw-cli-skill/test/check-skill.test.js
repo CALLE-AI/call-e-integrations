@@ -10,8 +10,21 @@ import { checkOpenClawCliSkill } from "../scripts/check-skill.mjs";
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "../..");
 
+const VALID_CLI_SELECTION_GUIDANCE = [
+  "Do not run bare `calle` or use `npx` to select the CLI.",
+  "Stop before authentication if either check fails.",
+  "Reuse the verified entry point for every command.",
+  "[Entry-point checks](references/commands.md#verify-the-cli-entry-point)",
+  "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must name `bin/calle.js`.",
+  "Resolve to an absolute path and run help without credentials or call arguments.",
+  'The bundled scripts/run-agent-command.mjs checks auth login --help.',
+  'The bundled scripts/run-agent-command.mjs checks call plan --help.',
+  'The bundled scripts/run-agent-command.mjs checks call run --help.',
+  'The bundled scripts/run-agent-command.mjs checks call recover --help.',
+].join("\n") + "\n";
+
 const VALID_RECOVERY_GUIDANCE =
-  'When `call_started: "unknown"` and `retry_safe: false`, preserve `recovery_id` and `next_command`.\n' +
+  'When `call_started: "unknown"` and `retry_safe: false`, preserve `recovery_id` and `next_argv`.\n' +
   "Use call recover --recovery-id with the original local recovery record.\n" +
   "Do not create a new plan or repeat `call start` or `call run`.\n" +
   "Do not loop `call recover`.\n" +
@@ -53,10 +66,11 @@ function createValidFixture(root) {
       "---",
       "name: Phone Call - CALL-E",
       "description: Test CALL-E CLI skill.",
-      'metadata: {"openclaw":{"requires":{"bins":["node"],"anyBins":["calle","npx"]},"install":[{"kind":"node","package":"@call-e/cli","bins":["calle"]}]}}',
+      'metadata: {"openclaw":{"requires":{"bins":["node"]},"install":[{"kind":"node","package":"@call-e/cli","bins":["calle"]}]}}',
       "---",
       "",
       "# CALL-E CLI",
+      VALID_CLI_SELECTION_GUIDANCE,
       VALID_RECOVERY_GUIDANCE,
       "",
       "Run auth login --start-only --no-browser-open and ask the user to use the authorization instructions returned by the CLI.",
@@ -69,7 +83,7 @@ function createValidFixture(root) {
       "Never paraphrase call results.",
       "For non-terminal statuses, the entire reply must be exactly this shape.",
       "Poll every 10 seconds and Do not stay silent until a terminal status.",
-      "Run with CALLE_INTEGRATION=openclaw_cli_skill.",
+      JSON.stringify({ integration: { source: "openclaw", name: "openclaw_cli_skill", version: "0.1.0" } }, null, 2),
       "",
     ].join("\n"),
   );
@@ -78,10 +92,10 @@ function createValidFixture(root) {
     path.join(packageRoot, "skills", "phone-call-calle", "references", "commands.md"),
     [
       "# Commands",
+      VALID_CLI_SELECTION_GUIDANCE,
       VALID_RECOVERY_GUIDANCE,
       "",
-      "env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill node packages/cli/bin/calle.js",
-      "env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill npx -y @call-e/cli",
+      JSON.stringify({ integration: { source: "openclaw", name: "openclaw_cli_skill", version: "0.1.0" } }, null, 2),
       "Run auth login --start-only --no-browser-open and ask the user to use the authorization instructions returned by the CLI.",
       "Run auth login --no-browser-open to exchange a pending authorization.",
       "Great, authorization is complete",
@@ -144,9 +158,13 @@ test("reports plugin install commands in the command reference", () => {
   assert.ok(failures.some((failure) => failure.includes(bannedPluginInstallCommand)));
 });
 
-test("reports missing recovery guidance in the skill or command reference", (t) => {
+test("reports missing CLI guidance in the skill or command reference", (t) => {
   for (const fileName of ["SKILL.md", "references/commands.md"]) {
     for (const snippet of [
+      "Stop before authentication if either check fails.",
+      ...(fileName === "references/commands.md"
+        ? ["`bin.calle` must name `bin/calle.js`"]
+        : ["references/commands.md#verify-the-cli-entry-point"]),
       "call recover --recovery-id",
       "Do not create a new plan or repeat `call start` or `call run`.",
       "Do not loop `call recover`.",
@@ -162,6 +180,22 @@ test("reports missing recovery guidance in the skill or command reference", (t) 
 
       const failures = checkOpenClawCliSkill({ packageRoot, repoRoot });
       assert.ok(failures.some((failure) => failure.includes(fileName) && failure.includes(snippet)), `${fileName}: ${snippet}`);
+    }
+  }
+});
+
+test("rejects bare calle and npx commands in the skill or command reference", (t) => {
+  for (const fileName of ["SKILL.md", "references/commands.md"]) {
+    for (const command of ["calle auth status", "npx -y @call-e/cli auth status"]) {
+      const root = makeTempRoot("calle-openclaw-cli-skill-unsafe-cli");
+      t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+      const { packageRoot, repoRoot } = createValidFixture(root);
+      assert.deepEqual(checkOpenClawCliSkill({ packageRoot, repoRoot }), []);
+      const filePath = path.join(packageRoot, "skills/phone-call-calle", fileName);
+      fs.appendFileSync(filePath, `\n\`\`\`bash\nenv CALLE_SOURCE=test ${command}\n\`\`\`\n`);
+
+      const failures = checkOpenClawCliSkill({ packageRoot, repoRoot });
+      assert.ok(failures.some((failure) => failure.includes(fileName) && failure.includes("must not invoke bare calle or npx")));
     }
   }
 });

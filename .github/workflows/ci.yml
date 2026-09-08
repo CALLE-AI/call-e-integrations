@@ -44,3 +44,30 @@ jobs:
 
       - name: Validate package contents
         run: pnpm pack:dry-run
+
+  windows-cli:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 10.18.3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test CLI and documented Windows commands
+        run: pnpm --filter @call-e/cli test
+
+      - name: Check integration versions
+        run: pnpm check:versions

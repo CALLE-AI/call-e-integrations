@@ -127,40 +127,26 @@ transcript.
 
 ## CLI fallback
 
-All CLI commands run from this Cursor plugin must include the CALL-E integration
-attribution environment:
+<!-- sync-with: packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point -->
+Run every CLI command through the bundled `scripts/run-agent-command.mjs`.
+Follow the [entry-point checks](references/commands.md#verify-the-cli-entry-point)
+and write command arguments as JSON data, never shell text.
+Stop before authentication if either check fails.
+Do not run bare `calle` or use `npx` to select the CLI.
+Reuse the verified entry point for every command.
 
-```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1
+Include this attribution in every request:
+
+```json
+{"integration": {"source": "cursor", "name": "cursor_plugin", "version": "0.1.1"}}
 ```
 
-Use the first command form that works.
-
-Prefer the repository-local CLI when the current workspace contains it:
-
-```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 node packages/cli/bin/calle.js
-```
-
-If the repository-local CLI is unavailable, use the global command:
-
-```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 calle
-```
-
-If neither command works, use the npm package through `npx`:
-
-```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 npx -y @call-e/cli
-```
-
-Only tell the user to install the CLI globally if `npx` is unavailable,
-network access is blocked, or the user explicitly wants a persistent global
-command.
+If the package is missing, use `npm install --prefix <directory> @call-e/cli`
+in a dedicated directory you control, then select that installation.
 
 Use CLI fallback readiness commands in this order:
 
-1. Check CLI availability with `--help`.
+1. Verify the CLI entry point as described above.
 2. Run `auth status`.
 3. If `auth status` reports `usable: false`, run blocking `auth login` and
    keep that command running until it exits.
@@ -173,8 +159,9 @@ Use CLI fallback readiness commands in this order:
 If CLI `call start` or `call run` returns `call_started: "unknown"` with
 `retry_safe: false`, the call may already be in progress.
 Do not create a new plan or repeat `call start` or `call run`.
-Use the CLI-generated top-level `next_command`, which runs
-`call recover --recovery-id <recovery_id>` using the private local record.
+Use the CLI-generated top-level `next_argv` array as the next request's `argv`.
+Keep the same package and integration. Do not parse or execute `next_command`.
+The `call recover --recovery-id <recovery_id>` arguments use the private local record.
 Follow the [recovery steps](references/commands.md#call-recovery).
 
 If recovery is still uncertain, keep the local record and stop for manual

@@ -119,18 +119,25 @@ choose `Prompt`, then paste the ClawHub install prompt into Hermes Agent.
 
 ### CLI
 
-Install the shared `calle` command:
+Follow [CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
+to select the trusted MCP package and prepare the launcher and `request.json`.
+The JSON arrays below are values for that request's `argv`; execute them one
+at a time with `node run-agent-command.mjs request.json`.
 
-```bash
-npm install -g @call-e/cli
-```
+That guide includes installation into a dedicated directory when needed.
 
 Then authenticate and verify:
 
-```bash
-calle auth login
-calle auth status
-calle mcp tools
+```json
+["auth", "login"]
+```
+
+```json
+["auth", "status"]
+```
+
+```json
+["mcp", "tools"]
 ```
 
 <!-- sync-with: cli.md#plan-a-call -->
@@ -138,16 +145,16 @@ calle mcp tools
 Discover nested commands and inspect their exact parameters with hierarchical
 help:
 
-```bash
-calle --help
-calle call --help
-calle call plan --help
+```json
+["--help"]
 ```
 
-One-off usage without a global install:
+```json
+["call", "--help"]
+```
 
-```bash
-npx -y @call-e/cli --help
+```json
+["call", "plan", "--help"]
 ```
 
 ### MCP-Only Clients
@@ -169,22 +176,26 @@ get_call_run
 
 ## Authentication And Verification
 
-CLI-based integrations can pre-authorize with:
+CLI-based integrations use the launcher prepared in [CLI setup](#cli) above.
+Use this array as the request's `argv` to pre-authorize:
 
-```bash
-npx -y @call-e/cli auth login
+```json
+["auth", "login"]
 ```
 
 Then verify:
 
-```bash
-npx -y @call-e/cli auth status
-npx -y @call-e/cli mcp tools
+```json
+["auth", "status"]
 ```
 
-The Codex, Claude Code, Cursor plugin, OpenClaw, and skills.sh skills use the
-repository-local CLI when available, then a global `calle`, then the
-npm fallback.
+```json
+["mcp", "tools"]
+```
+
+The Codex, Claude Code, Cursor plugin, OpenClaw, and skills.sh skills reuse the
+verified absolute entry point. The skills.sh skill requires an already
+installed CLI and does not download remote npm packages.
 
 ## Safety
 

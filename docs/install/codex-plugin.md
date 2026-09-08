@@ -12,14 +12,15 @@ Check your version with:
 codex --version
 ```
 
-You do not need to install the shared CLI globally before installing the plugin.
-The plugin uses the repository-local CLI when available, then a global `calle`
-command when available, then falls back to `npx -y @call-e/cli`.
+Follow [CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
+to select the trusted MCP package and prepare the launcher and `request.json`.
+The JSON arrays below are values for that request's `argv`; execute them one
+at a time with `node run-agent-command.mjs request.json`.
 
 To authenticate before installing or using the plugin:
 
-```bash
-npx -y @call-e/cli auth login
+```json
+["auth", "login"]
 ```
 
 ## Install
