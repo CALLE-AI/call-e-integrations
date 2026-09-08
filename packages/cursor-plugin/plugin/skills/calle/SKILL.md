@@ -138,7 +138,7 @@ Reuse the verified entry point for every command.
 Include this attribution in every request:
 
 ```json
-{"integration": {"source": "cursor", "name": "cursor_plugin", "version": "0.1.1"}}
+{"integration": {"source": "cursor", "name": "cursor_plugin", "version": "0.1.2"}}
 ```
 
 If the package is missing, use `npm install --prefix <directory> @call-e/cli`

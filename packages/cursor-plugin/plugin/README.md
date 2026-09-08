@@ -25,5 +25,5 @@ If Cursor MCP tools are unavailable, the skill can fall back to the shared
 `calle` CLI. CLI commands run with:
 
 ```json
-{"integration": {"source": "cursor", "name": "cursor_plugin", "version": "0.1.1"}}
+{"integration": {"source": "cursor", "name": "cursor_plugin", "version": "0.1.2"}}
 ```
