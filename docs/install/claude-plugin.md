@@ -41,28 +41,32 @@ available without restarting:
 The plugin checks authentication when `/calle:calle` is invoked.
 
 Follow [CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
-to select a trusted checkout or installed `@call-e/cli`, verify its package and
-MCP command help, and set `CALLE_CLI_ENTRY` to its absolute `bin/calle.js` path.
+to select the trusted MCP package and prepare the launcher and `request.json`.
+The JSON arrays below are values for that request's `argv`; execute them one
+at a time with `node run-agent-command.mjs request.json`.
 
 To pre-authorize before using the skill, run:
 
-```bash
-node "$CALLE_CLI_ENTRY" auth login
+```json
+["auth", "login"]
 ```
 
 The command opens the CALL-E browser authorization flow, waits for completion,
 then stores the token in the private local CLI cache. To verify setup:
 
-```bash
-node "$CALLE_CLI_ENTRY" auth status
-node "$CALLE_CLI_ENTRY" mcp tools
+```json
+["auth", "status"]
+```
+
+```json
+["mcp", "tools"]
 ```
 
 The plugin reuses the verified entry point for every CLI command. Commands run
 by the skill include this CALL-E attribution:
 
-```text
---source claude --integration claude_code_plugin --integration-version 0.2.2
+```json
+{"integration": {"source": "claude", "name": "claude_code_plugin", "version": "0.2.2"}}
 ```
 
 ## Use

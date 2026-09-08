@@ -76,9 +76,8 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
       }
 
       const source = fs.readFileSync(integrationPath, "utf8");
-      const staleMatches = source.match(/--integration-version (\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/g) || [];
-      for (const match of staleMatches) {
-        const version = match.replace("--integration-version ", "");
+      const staleMatches = [...source.matchAll(/"integration":\s*\{[^}]*"version":\s*"([^"]+)"/g)];
+      for (const [match, version] of staleMatches) {
         if (version !== packageVersion) {
           failures.push(
             `${entry.name}: ${path.relative(packageDir, integrationPath)} ${match} does not match package.json version (${packageVersion}).`
@@ -95,9 +94,8 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
       }
 
       const source = fs.readFileSync(integrationPath, "utf8");
-      const staleMatches = source.match(/--integration-version (\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/g) || [];
-      for (const match of staleMatches) {
-        const version = match.replace("--integration-version ", "");
+      const staleMatches = [...source.matchAll(/"integration":\s*\{[^}]*"version":\s*"([^"]+)"/g)];
+      for (const [match, version] of staleMatches) {
         if (version !== packageVersion) {
           failures.push(
             `${entry.name}: ${path.relative(packageDir, integrationPath)} ${match} does not match package.json version (${packageVersion}).`

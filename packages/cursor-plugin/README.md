@@ -68,8 +68,8 @@ package's local validation flow.
 When the Cursor skill falls back to CLI commands, it uses this integration
 attribution:
 
-```text
---source cursor --integration cursor_plugin --integration-version 0.1.1
+```json
+{"integration": {"source": "cursor", "name": "cursor_plugin", "version": "0.1.1"}}
 ```
 
 The version segment must stay in sync with this package version.

@@ -15,43 +15,98 @@ For install and authentication steps, see
 <!-- sync-with: docs/install/cli.md#plan-a-call -->
 
 First follow [CLI entry point selection](./docs/cli-reference.md#selecting-the-cli-entry-point)
-to verify the installed package and set `CALLE_CLI_ENTRY` to its absolute
-`bin/calle.js` path. Then authenticate, inspect the parameters, and plan the call:
+to prepare the launcher and `request.json`. Use each array below as the request's
+`argv`, then run `node run-agent-command.mjs request.json` to authenticate,
+inspect parameters, or plan a call:
 
-```bash
-node "$CALLE_CLI_ENTRY" auth login
-node "$CALLE_CLI_ENTRY" call plan --help
-node "$CALLE_CLI_ENTRY" call plan --to-phone +15551234567 --goal "Confirm the appointment"
+```json
+["auth", "login"]
+```
+
+```json
+["call", "plan", "--help"]
+```
+
+```json
+["call", "plan", "--to-phone", "+15551234567", "--goal", "Confirm the appointment"]
 ```
 
 Help is available at every command level:
 
-```bash
-node "$CALLE_CLI_ENTRY" --help
-node "$CALLE_CLI_ENTRY" call --help
-node "$CALLE_CLI_ENTRY" call plan --help
+```json
+["--help"]
+```
+
+```json
+["call", "--help"]
+```
+
+```json
+["call", "plan", "--help"]
 ```
 
 ## Commands
 
 <!-- sync-with: docs/cli-reference.md#commands -->
 
-```bash
-node "$CALLE_CLI_ENTRY" --version
-node "$CALLE_CLI_ENTRY" auth login
-node "$CALLE_CLI_ENTRY" auth login --start-only --no-browser-open
-node "$CALLE_CLI_ENTRY" auth status
-node "$CALLE_CLI_ENTRY" auth logout
-node "$CALLE_CLI_ENTRY" mcp config
-node "$CALLE_CLI_ENTRY" mcp tools
-node "$CALLE_CLI_ENTRY" mcp call plan_call --args-json '{"to_phones":["+15551234567"],"goal":"Confirm the appointment"}'
-node "$CALLE_CLI_ENTRY" call plan --help
-node "$CALLE_CLI_ENTRY" call plan --to-phone +15551234567 --goal "Confirm the appointment"
-node "$CALLE_CLI_ENTRY" call start --to-phone +15551234567 --goal "Confirm the appointment"
-node "$CALLE_CLI_ENTRY" call run --plan-id "<plan_id>" --confirm-token "<confirm_token>"
-node "$CALLE_CLI_ENTRY" call recover --recovery-id "<recovery_id>"
-node "$CALLE_CLI_ENTRY" call status --run-id "<run_id>"
-node "$CALLE_CLI_ENTRY" regions list
+```json
+["--version"]
+```
+
+```json
+["auth", "login"]
+```
+
+```json
+["auth", "login", "--start-only", "--no-browser-open"]
+```
+
+```json
+["auth", "status"]
+```
+
+```json
+["auth", "logout"]
+```
+
+```json
+["mcp", "config"]
+```
+
+```json
+["mcp", "tools"]
+```
+
+```json
+["mcp", "call", "plan_call", "--args-json", "{\"to_phones\":[\"+15551234567\"],\"goal\":\"Confirm the appointment\"}"]
+```
+
+```json
+["call", "plan", "--help"]
+```
+
+```json
+["call", "plan", "--to-phone", "+15551234567", "--goal", "Confirm the appointment"]
+```
+
+```json
+["call", "start", "--to-phone", "+15551234567", "--goal", "Confirm the appointment"]
+```
+
+```json
+["call", "run", "--plan-id", "<plan_id>", "--confirm-token", "<confirm_token>"]
+```
+
+```json
+["call", "recover", "--recovery-id", "<recovery_id>"]
+```
+
+```json
+["call", "status", "--run-id", "<run_id>"]
+```
+
+```json
+["regions", "list"]
 ```
 
 Defaults:
@@ -73,8 +128,8 @@ need to show the authorization link before continuing.
 
 `calle mcp config` prints a JSON MCP client config:
 
-```bash
-node "$CALLE_CLI_ENTRY" mcp config --base-url https://seleven-mcp-sg.airudder.com
+```json
+["mcp", "config", "--base-url", "https://seleven-mcp-sg.airudder.com"]
 ```
 
 Example output:
@@ -100,12 +155,12 @@ planning and execution inside one CLI invocation and does not print execution
 confirmation data.
 
 If execution may have been accepted but no `run_id` was received, the CLI
-returns `retry_safe: false` with an opaque `recovery_id` and a `next_command`.
-Use its arguments with the verified entry point instead of repeating
-`call start`; it reuses the original confirmation context without printing it.
+returns `retry_safe: false` with an opaque `recovery_id` and `next_argv`.
+Use that array as the next request's `argv` instead of repeating `call start`;
+it reuses the original confirmation context without printing it.
 If only the initial status
 query fails, the command still returns the accepted `run_id` and a `call status`
-`next_command`. Use the same entry point for that status command.
+`next_argv` array. Use the same launcher for that status request.
 
 Successful command stdout is JSON except help and version output. Some
 top-level or local failures may print plain stderr. Access tokens are read from
@@ -133,9 +188,12 @@ data.
 Disable CLI telemetry with `DO_NOT_TRACK=1`, `CALLE_TELEMETRY=0`, or
 `--no-telemetry`:
 
-```bash
-CALLE_TELEMETRY=0 node "$CALLE_CLI_ENTRY" auth status
-node "$CALLE_CLI_ENTRY" mcp tools --no-telemetry
+```json
+["auth", "status", "--no-telemetry"]
+```
+
+```json
+["mcp", "tools", "--no-telemetry"]
 ```
 
 Broker and MCP requests still create service-side security, audit, and business

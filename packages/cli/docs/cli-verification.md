@@ -20,6 +20,19 @@ broker/MCP HTTP server, so it verifies process boundaries, stdout/stderr,
 exit codes, cache files, HTTP headers, and MCP JSON-RPC payloads without
 contacting the live Seleven deployment.
 
+The mixed-install acceptance test uses npm to install the pinned legacy SDK
+and CLI packages, so E2E tests require registry access or a populated npm cache.
+It exercises the candidate CLI in that installation, checks rejection of
+wrong packages/help, and verifies shell metacharacters and lost-call recovery.
+
+Documentation requests run through each bundled launcher in Bash on Unix and
+in PowerShell 7, Windows PowerShell, and cmd on Windows. To run the same checks
+in PowerShell on Unix, set `CALLE_TEST_SHELL=pwsh` and, if needed,
+`CALLE_TEST_PWSH` to the installed PowerShell executable.
+
+After editing the canonical launcher, run
+`node scripts/sync-agent-launchers.mjs`; `pnpm check` detects stale skill copies.
+
 For full workspace coverage:
 
 ```bash
@@ -105,7 +118,7 @@ Expected results:
 - By default only `COMPLETED` is treated as a passing terminal status. Other terminal statuses such as `NO_ANSWER`, `BUSY`, `DECLINED`, `FAILED`, `CANCELED`, `CANCELLED`, `VOICEMAIL`, and `EXPIRED` end polling but fail live verification unless included in `CALLE_CLI_LIVE_ACCEPT_STATUSES`.
 - No access token is printed to stdout.
 
-If `mcp tools` returns `ok: false` with `error.code: "auth_required"`, run the returned `login_command` and retry.
+If `mcp tools` returns `ok: false` with `error.code: "auth_required"`, use the returned `login_argv` with the [agent launcher](./cli-reference.md#selecting-the-cli-entry-point), then retry.
 
 Live cleanup behavior:
 
@@ -118,36 +131,32 @@ Live cleanup behavior:
 
 These commands can place a real phone call. Use only controlled test numbers.
 
+Prepare the launcher and private JSON request as described in
+[CLI entry point selection](./cli-reference.md#selecting-the-cli-entry-point).
+Use these arrays as `request.argv`, preserving returned IDs and tokens as data.
+
 Plan a call:
 
-```bash
-node packages/cli/bin/calle.js call plan \
-  --base-url https://seleven-mcp-sg.airudder.com \
-  --to-phone '+15551234567' \
-  --goal 'Verify the calle CLI live call flow.'
+```json
+["call", "plan", "--base-url", "https://seleven-mcp-sg.airudder.com", "--to-phone", "+15551234567", "--goal", "Verify the calle CLI live call flow."]
 ```
 
 Run the planned call:
 
-```bash
-node packages/cli/bin/calle.js call run \
-  --base-url https://seleven-mcp-sg.airudder.com \
-  --plan-id '<plan_id>' \
-  --confirm-token '<confirm_token>'
+```json
+["call", "run", "--base-url", "https://seleven-mcp-sg.airudder.com", "--plan-id", "<plan_id>", "--confirm-token", "<confirm_token>"]
 ```
 
 Poll status:
 
-```bash
-node packages/cli/bin/calle.js call status \
-  --base-url https://seleven-mcp-sg.airudder.com \
-  --run-id '<run_id>'
+```json
+["call", "status", "--base-url", "https://seleven-mcp-sg.airudder.com", "--run-id", "<run_id>"]
 ```
 
 Expected results:
 
 - `call plan` returns JSON with `ok: true` and a `plan_call` result.
-- `call run` returns JSON with `ok: true`, `run_id`, `run_result`, `status_result`, and `next_command`.
+- `call run` returns JSON with `ok: true`, `run_id`, `run_result`, `status_result`, and `next_argv`.
 - `call status` returns JSON with `ok: true` and a `get_call_run` result.
 
 ## Compatibility notes

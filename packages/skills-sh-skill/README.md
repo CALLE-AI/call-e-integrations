@@ -19,7 +19,7 @@ It remains in the monorepo for three reasons:
 - provide a `pnpm --filter @call-e/skills-sh-skill check` target for validating
   the public `skills/calle` source;
 - own the skills.sh integration version used in
-  `--integration-version <version>` attribution strings;
+  the request's `integration.version` field;
 - keep CI guardrails around skills.sh install docs, CLI safety guidance,
   root-level skill metadata, and duplicate-source drift.
 

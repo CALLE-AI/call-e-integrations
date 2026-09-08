@@ -49,7 +49,7 @@ For local development from a clone, restart Codex from this repository, open
 ## Telemetry / Usage Data
 
 When Codex runs the bundled CALL-E skill, the skill invokes the shared `calle`
-CLI with attribution options so local telemetry and
+CLI with source attribution environment variables so local telemetry and
 service-side call data can be grouped as `codex/codex_plugin/<version>`.
 
 CLI telemetry is best-effort and is used to diagnose installation,

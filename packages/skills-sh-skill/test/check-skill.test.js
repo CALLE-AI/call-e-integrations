@@ -15,16 +15,16 @@ const VALID_CLI_SELECTION_GUIDANCE = [
   "Stop before authentication if either check fails.",
   "Reuse the verified entry point for every command.",
   "[Entry-point checks](references/commands.md#verify-the-cli-entry-point)",
-  "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must be `./bin/calle.js`.",
+  "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must name `bin/calle.js`.",
   "Resolve to an absolute path and run help without credentials or call arguments.",
-  'node "$CALLE_CLI_ENTRY" auth login --help',
-  'node "$CALLE_CLI_ENTRY" call plan --help',
-  'node "$CALLE_CLI_ENTRY" call run --help',
-  'node "$CALLE_CLI_ENTRY" call recover --help',
+  'The bundled scripts/run-agent-command.mjs checks auth login --help.',
+  'The bundled scripts/run-agent-command.mjs checks call plan --help.',
+  'The bundled scripts/run-agent-command.mjs checks call run --help.',
+  'The bundled scripts/run-agent-command.mjs checks call recover --help.',
 ].join("\n") + "\n";
 
 const VALID_RECOVERY_GUIDANCE =
-  'When `call_started: "unknown"` and `retry_safe: false`, preserve `recovery_id` and `next_command`.\n' +
+  'When `call_started: "unknown"` and `retry_safe: false`, preserve `recovery_id` and `next_argv`.\n' +
   "Use call recover --recovery-id with the original local recovery record.\n" +
   "Do not create a new plan or repeat `call start` or `call run`.\n" +
   "Do not loop `call recover`.\n" +
@@ -84,7 +84,7 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
       "Never paraphrase call results.",
       "For non-terminal statuses, the entire reply must be exactly this shape.",
       "Poll every 10 seconds.",
-      `Run with --source skills_sh --integration skills_sh_skill --integration-version ${integrationVersion}.`,
+      JSON.stringify({ integration: { source: "skills_sh", name: "skills_sh_skill", version: integrationVersion } }, null, 2),
       "",
     ].join("\n"),
   );
@@ -107,7 +107,7 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
       VALID_CLI_SELECTION_GUIDANCE,
       VALID_RECOVERY_GUIDANCE,
       "",
-      `node "$CALLE_CLI_ENTRY" auth status --source skills_sh --integration skills_sh_skill --integration-version ${integrationVersion}`,
+      JSON.stringify({ integration: { source: "skills_sh", name: "skills_sh_skill", version: integrationVersion } }, null, 2),
       "Run auth login --start-only --no-browser-open and ask the user to use the authorization instructions returned by the CLI.",
       "Run auth login --no-browser-open to exchange a pending authorization.",
       "Great, authorization is complete",
@@ -218,10 +218,10 @@ test("reports stale integration attribution", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-skills-sh-skill-stale-attribution"));
   const referenceFile = path.join(repoRoot, "skills", "calle", "references", "commands.md");
   const source = fs.readFileSync(referenceFile, "utf8");
-  fs.writeFileSync(referenceFile, source.replaceAll("--source skills_sh", "--source openclaw"));
+  fs.writeFileSync(referenceFile, source.replaceAll("\"source\": \"skills_sh\"", "\"source\": \"openclaw\""));
 
   const failures = checkSkillsShSkill({ packageRoot, repoRoot });
-  assert.ok(failures.some((failure) => failure.includes("--source skills_sh")));
+  assert.ok(failures.some((failure) => failure.includes("\"source\": \"skills_sh\"")));
 });
 
 test("reports stale integration version", () => {
@@ -231,7 +231,7 @@ test("reports stale integration version", () => {
   );
 
   const failures = checkSkillsShSkill({ packageRoot, repoRoot });
-  assert.ok(failures.some((failure) => failure.includes("--integration-version 9.8.7")));
+  assert.ok(failures.some((failure) => failure.includes("\"version\": \"9.8.7\"")));
 });
 
 test("reports a duplicate package-local skill copy", () => {
@@ -269,7 +269,7 @@ test("reports missing CLI guidance in the skill or command reference", (t) => {
     for (const snippet of [
       "Stop before authentication if either check fails.",
       ...(fileName === "references/commands.md"
-        ? ["`bin.calle` must be `./bin/calle.js`"]
+        ? ["`bin.calle` must name `bin/calle.js`"]
         : ["references/commands.md#verify-the-cli-entry-point"]),
       "call recover --recovery-id",
       "Do not create a new plan or repeat `call start` or `call run`.",

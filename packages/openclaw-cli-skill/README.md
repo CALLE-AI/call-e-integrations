@@ -37,7 +37,7 @@ pnpm --filter @call-e/openclaw-cli-skill pack:dry-run
 
 The skill uses a verified absolute `@call-e/cli` entry point. Follow
 [CLI entry point selection](../cli/docs/cli-reference.md#selecting-the-cli-entry-point)
-to verify the package and set `CALLE_CLI_ENTRY` before running CLI commands.
+to prepare the bundled launcher and a JSON request before running CLI commands.
 
 ## Safety
 

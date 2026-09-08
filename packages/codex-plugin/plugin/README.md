@@ -46,12 +46,12 @@ Keep those paths exactly as shown so the marketplace entry can resolve
 
 The plugin uses a verified absolute `@call-e/cli` entry point. Follow
 [CLI entry point selection](../../cli/docs/cli-reference.md#selecting-the-cli-entry-point)
-to verify the package and set `CALLE_CLI_ENTRY` before running CLI commands.
+to prepare the bundled launcher and a JSON request before running CLI commands.
 
 To authenticate before using the plugin:
 
-```bash
-node "$CALLE_CLI_ENTRY" auth login
+```json
+["auth", "login"]
 ```
 
 When `$calle` is invoked, the skill checks authorization first. If login is

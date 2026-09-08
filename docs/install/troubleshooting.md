@@ -51,12 +51,18 @@ After switching to a non-sandboxed mode, retry the CALL-E login or setup check.
 
 Outside the restricted sandbox, follow
 [CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
-and set `CALLE_CLI_ENTRY` before running:
+and prepare the launcher and `request.json`. Use each array below as `argv`:
 
-```bash
-node "$CALLE_CLI_ENTRY" auth login
-node "$CALLE_CLI_ENTRY" auth status --json
-node "$CALLE_CLI_ENTRY" mcp tools
+```json
+["auth", "login"]
+```
+
+```json
+["auth", "status", "--json"]
+```
+
+```json
+["mcp", "tools"]
 ```
 
 Confirm that authentication is usable and that the tool list includes:
@@ -193,18 +199,15 @@ place a call, so it is safe to retry after adjusting the timeout.
 
 Check the defaults reported by the installed CLI:
 
-```bash
-node "$CALLE_CLI_ENTRY" call plan --help
+```json
+["call", "plan", "--help"]
 ```
 
 If the command used an explicit timeout shorter than planning needs, remove the
 flag to use the current planning default or retry with a longer value:
 
-```bash
-node "$CALLE_CLI_ENTRY" call plan \
-  --to-phone +15551234567 \
-  --goal "Confirm the appointment" \
-  --timeout-seconds 300
+```json
+["call", "plan", "--to-phone", "+15551234567", "--goal", "Confirm the appointment", "--timeout-seconds", "300"]
 ```
 
 If help reports only the 15-second shared default for planning, update the CLI

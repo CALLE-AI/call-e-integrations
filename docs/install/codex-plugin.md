@@ -13,13 +13,14 @@ codex --version
 ```
 
 Follow [CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
-to select a trusted checkout or installed `@call-e/cli`, verify its package and
-MCP command help, and set `CALLE_CLI_ENTRY` to its absolute `bin/calle.js` path.
+to select the trusted MCP package and prepare the launcher and `request.json`.
+The JSON arrays below are values for that request's `argv`; execute them one
+at a time with `node run-agent-command.mjs request.json`.
 
 To authenticate before installing or using the plugin:
 
-```bash
-node "$CALLE_CLI_ENTRY" auth login
+```json
+["auth", "login"]
 ```
 
 ## Install

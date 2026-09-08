@@ -106,40 +106,40 @@ const replacements = [
 const codexIntegrationReplacements = [
   {
     label: "Codex plugin integration attribution version",
-    pattern: /--integration-version \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
-    value: `--integration-version ${readPackageVersion("packages/codex-plugin")}`,
+    pattern: /("integration":\s*\{[^}]*"version":\s*")[^"]+("\s*\})/g,
+    value: (_match, before, after) => before + readPackageVersion("packages/codex-plugin") + after,
   },
 ];
 
 const openclawCliSkillIntegrationReplacements = [
   {
     label: "OpenClaw CLI skill integration attribution version",
-    pattern: /--integration-version \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
-    value: `--integration-version ${readPackageVersion("packages/openclaw-cli-skill")}`,
+    pattern: /("integration":\s*\{[^}]*"version":\s*")[^"]+("\s*\})/g,
+    value: (_match, before, after) => before + readPackageVersion("packages/openclaw-cli-skill") + after,
   },
 ];
 
 const skillsShSkillIntegrationReplacements = [
   {
     label: "skills.sh skill integration attribution version",
-    pattern: /--integration-version \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
-    value: `--integration-version ${readPackageVersion("packages/skills-sh-skill")}`,
+    pattern: /("integration":\s*\{[^}]*"version":\s*")[^"]+("\s*\})/g,
+    value: (_match, before, after) => before + readPackageVersion("packages/skills-sh-skill") + after,
   },
 ];
 
 const claudeCliIntegrationReplacements = [
   {
     label: "Claude Code plugin CLI integration attribution version",
-    pattern: /--integration-version \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
-    value: `--integration-version ${readPackageVersion("packages/claude-plugin")}`,
+    pattern: /("integration":\s*\{[^}]*"version":\s*")[^"]+("\s*\})/g,
+    value: (_match, before, after) => before + readPackageVersion("packages/claude-plugin") + after,
   },
 ];
 
 const cursorCliIntegrationReplacements = [
   {
     label: "Cursor plugin CLI integration attribution version",
-    pattern: /--integration-version \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
-    value: `--integration-version ${readPackageVersion("packages/cursor-plugin")}`,
+    pattern: /("integration":\s*\{[^}]*"version":\s*")[^"]+("\s*\})/g,
+    value: (_match, before, after) => before + readPackageVersion("packages/cursor-plugin") + after,
   },
 ];
 

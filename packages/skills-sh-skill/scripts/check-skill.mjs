@@ -16,14 +16,14 @@ const DEFAULT_REPO_ROOT = path.resolve(DEFAULT_PACKAGE_ROOT, "../..");
 const EXPECTED_PACKAGE_NAME = "@call-e/skills-sh-skill";
 const EXPECTED_SKILL_DIR = "calle";
 const EXPECTED_SKILL_NAME = "calle";
-const EXPECTED_SOURCE = "--source skills_sh";
-const EXPECTED_INTEGRATION = "--integration skills_sh_skill";
+const EXPECTED_SOURCE = "\"source\": \"skills_sh\"";
+const EXPECTED_INTEGRATION = "\"name\": \"skills_sh_skill\"";
 
 const REQUIRED_RECOVERY_GUIDANCE = [
   'call_started: "unknown"',
   "retry_safe: false",
   "recovery_id",
-  "next_command",
+  "next_argv",
   "call recover --recovery-id",
   "Do not create a new plan or repeat `call start` or `call run`.",
   "Do not loop `call recover`.",
@@ -84,9 +84,9 @@ function assertCliSelectionGuidance({ source, filePath, failures }) {
       "Do not run bare `calle` or use `npx` to select the CLI.",
       "Stop before authentication if either check fails.",
       "Reuse the verified entry point for every command.",
-      'node "$CALLE_CLI_ENTRY"',
+      'scripts/run-agent-command.mjs',
       ...(path.basename(filePath) === "commands.md" ? [
-        "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must be `./bin/calle.js`",
+        "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must name `bin/calle.js`",
         "to an absolute path",
         "without credentials or call arguments",
         "auth login --help",
@@ -105,7 +105,7 @@ function assertCliSelectionGuidance({ source, filePath, failures }) {
 
 function integrationVersionSnippet(packageJson) {
   return typeof packageJson?.version === "string" && packageJson.version.length > 0
-    ? `--integration-version ${packageJson.version}`
+    ? `"version": "${packageJson.version}"`
     : null;
 }
 

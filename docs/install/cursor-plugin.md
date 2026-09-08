@@ -72,17 +72,20 @@ get_call_run
 
 The plugin should prefer Cursor MCP tools. For CLI fallback, follow
 [CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
-and set `CALLE_CLI_ENTRY` to the verified absolute entry path before running:
+and prepare the launcher and `request.json`. Use each array below as `argv`:
 
-```bash
-node "$CALLE_CLI_ENTRY" auth status
-node "$CALLE_CLI_ENTRY" mcp tools
+```json
+["auth", "status"]
+```
+
+```json
+["mcp", "tools"]
 ```
 
 CLI commands run by the Cursor skill include this CALL-E attribution:
 
-```text
---source cursor --integration cursor_plugin --integration-version 0.1.1
+```json
+{"integration": {"source": "cursor", "name": "cursor_plugin", "version": "0.1.1"}}
 ```
 
 ## Safety
