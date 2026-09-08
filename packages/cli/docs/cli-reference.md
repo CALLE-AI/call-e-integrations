@@ -80,7 +80,8 @@ Stable fields:
 | `error.code` | yes | A code owned by the CLI, from the table below. Branch on this. |
 | `error.message` | yes | A summary **authored by the CLI**. Never contains upstream text. The same text is written to stderr. |
 | `error.status_code` | HTTP and MCP errors | Upstream HTTP status, or `null`. |
-| `error.transport` | `true` only when no response was received | The request failed at the network layer: DNS, connection, TLS, or timeout. Absent otherwise — an unrelated local error is never described as a network condition. |
+| `error.transport` | `true` only when no usable response was received | The request failed at the network layer: DNS, connection, TLS, a timeout, or a body stream that failed after the headers arrived. Absent otherwise — an unrelated local error is never described as a network condition. |
+| `error.phase` | transport errors | `connect` when nothing arrived, `body` when the response was cut off while being read. The two call for different retry decisions. |
 | `error.cause_code` | transport errors, when known | `timeout`, or the Node.js error code such as `ENOTFOUND` or `ECONNREFUSED`. |
 | `error.remote_error` | when the service said something readable | Exactly `{ code?, message? }` and never any other key, from the remote response — an HTTP body, a JSON-RPC error, a call-stage result, or a clarifying question — after sanitization. **Untrusted, informational only.** |
 | `error.error_code`, `error.status` | `call` stage failures | Sanitized remote call-outcome fields (for example `EXECUTION_ACK_LOST`). |
@@ -96,7 +97,8 @@ if the CLI can emit a code that is not listed here:
 | `auth_required` | 1 | No usable token, or the server rejected the token. Run `auth login`. |
 | `broker_unavailable` | 1 | The brokered-login service returned a 5xx. Not a local problem. |
 | `http_error` | 1 | Any other non-success HTTP status from a CLI-side request. |
-| `transport_error` | 1 | The request never received a usable response: DNS, connection, TLS, a reset while reading the body, or a timeout outside a call stage. `transport: true`. Inside a `call` stage it also carries `stage`, `call_started`, and `retry_safe`. |
+| `transport_error` | 1 | No usable response: DNS, connection, TLS, a reset while reading the body, or a timeout outside a call stage. `transport: true`, with `phase` naming where it failed. Inside a `call` stage it also carries `stage`, `call_started`, and `retry_safe`. |
+| `invalid_response` | 1 | A successful HTTP status whose body was not the expected JSON. The body is remote text, so it appears only under `remote_error`. |
 | `mcp_error` | 1 | The MCP server returned a JSON-RPC error. Its message is under `remote_error`. |
 | `plan_not_ready` | 1 | `call start`: the plan needs more information. The clarifying question is under `remote_error.message`. |
 | `plan_call_invalid_response` | 1 | `call start`: `plan_call` succeeded but returned no usable `plan_id` / `confirm_token`. |

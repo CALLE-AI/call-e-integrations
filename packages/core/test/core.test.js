@@ -678,6 +678,114 @@ test("a control sequence inserted inside a credential cannot split it past the r
   }
 });
 
+test("8-bit C1 introducers and invisible format characters cannot smuggle a credential", async () => {
+  const { safeRemoteString } = await import("@call-e/core/sanitize");
+  const ESC = String.fromCharCode(0x1b);
+  const BEL = String.fromCharCode(0x07);
+  const CSI8 = String.fromCharCode(0x9b);
+  const OSC8 = String.fromCharCode(0x9d);
+  const ST8 = String.fromCharCode(0x9c);
+
+  // Every one of these is invisible or terminal-consumed, and each splits a token in a way a
+  // character-at-a-time strip would preserve.
+  const inserts = [
+    CSI8 + "31m",                       // 8-bit CSI
+    OSC8 + "8;;http://x" + BEL,         // 8-bit OSC, BEL-terminated
+    OSC8 + "0;title" + ST8,             // 8-bit OSC, ST-terminated
+    ESC + "[2J",                        // 7-bit CSI
+    "​",                           // zero width space
+    "⁠",                           // word joiner
+    "‍",                           // zero width joiner
+    "‮",                           // right-to-left override
+    "⁦",                           // left-to-right isolate
+    "­",                           // soft hyphen
+    "﻿",                           // BOM
+    "\r\n",
+  ];
+
+  const secrets = [
+    { text: "Bearer abcdefghijklmnopqrstuvwxyz012345", fragments: ["abcdefghijkl", "qrstuvwxyz012345"] },
+    { text: "access_token=abcd1234efgh5678", fragments: ["abcd1234", "efgh5678"] },
+    { text: "sk_live_ABCDEFGHIJKLMNOPQRSTUV", fragments: ["ABCDEFGHIJ", "KLMNOPQRSTUV"] },
+    { text: "ghp_abcdefghijklmnopqrstuvwxyz0123456789", fragments: ["abcdefghijklmnop", "qrstuvwxyz0123456789"] },
+    { text: "A".repeat(20) + "B".repeat(20), fragments: ["A".repeat(20), "B".repeat(20)] },
+  ];
+
+  for (const secret of secrets) {
+    for (const insert of inserts) {
+      for (let at = 1; at < secret.text.length; at += 3) {
+        const hostile = `context ${secret.text.slice(0, at)}${insert}${secret.text.slice(at)} more`;
+        const out = safeRemoteString(hostile);
+        for (const fragment of secret.fragments) {
+          assert.equal(
+            out.includes(fragment),
+            false,
+            `fragment ${JSON.stringify(fragment)} survived as ${JSON.stringify(out)} for insert ${JSON.stringify(insert)} at ${at}`,
+          );
+        }
+      }
+    }
+  }
+});
+
+test("a body that is not JSON never reaches Error.message", async () => {
+  const { requestJson, InvalidResponseError } = await import("@call-e/core/http");
+  const marker = "REMOTE-TEXT-MARKER sk_live_ABCDEFGHIJKLMNOP";
+
+  for (const body of [marker, `"${marker}"`, "[1,2,3]", "null"]) {
+    await assert.rejects(
+      () => requestJson("GET", "https://example.test/thing", {
+        fetchImpl: async () => ({
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          headers: new Headers(),
+          async text() { return body; },
+        }),
+      }),
+      (error) => {
+        assert.ok(error instanceof InvalidResponseError, `body ${JSON.stringify(body)}`);
+        // JSON.parse quotes its input; this message must not.
+        assert.doesNotMatch(error.message, /REMOTE-TEXT-MARKER|sk_live_/u);
+        assert.match(error.message, /^Response body was not (valid JSON|a JSON object) for GET https:\/\/example\.test\/thing$/u);
+        assert.equal(error.statusCode, 200);
+        assert.equal(error.responseText, body, "the raw body is retained for sanitizing");
+        return true;
+      },
+    );
+  }
+});
+
+test("a body stream that fails after headers is transport, and says which phase", async () => {
+  const { requestJson, TransportError } = await import("@call-e/core/http");
+  const reset = Object.assign(new Error("socket hang up"), { code: "ECONNRESET" });
+
+  await assert.rejects(
+    () => requestJson("GET", "https://example.test/x", {
+      fetchImpl: async () => ({
+        ok: true, status: 200, statusText: "OK", headers: new Headers(),
+        async text() { throw reset; },
+      }),
+    }),
+    (error) => {
+      assert.ok(error instanceof TransportError);
+      assert.equal(error.phase, "body");
+      assert.equal(error.code, "ECONNRESET");
+      return true;
+    },
+  );
+
+  const dns = new TypeError("fetch failed");
+  dns.cause = { code: "ENOTFOUND" };
+  await assert.rejects(
+    () => requestJson("GET", "https://example.test/y", { fetchImpl: async () => { throw dns; } }),
+    (error) => {
+      assert.equal(error.phase, "connect", "nothing arrived, so the phase is connect");
+      return true;
+    },
+  );
+});
+
 test("numeric remote codes are accepted only as safe integers", async () => {
   const { safeRemoteCode, sanitizeRemoteError, publicRemoteError } = await import("@call-e/core/sanitize");
   assert.equal(safeRemoteCode(-32000), "-32000");

@@ -557,9 +557,10 @@ test("auth login returns a transport_error envelope when fetch rejects", async (
   assert.equal(payload.error.cause_code, "ENOTFOUND");
   assert.equal(payload.help_command, undefined);
   // Locally authored: names our request and the system error code, never the runtime's text.
+  assert.equal(payload.error.phase, "connect", "nothing arrived at all");
   assert.match(
     payload.error.message,
-    /^Request failed before a response was received for POST https:\/\/mcp\.example\/api\/v1\/openagent-auth\/sessions\. \(ENOTFOUND\)$/u
+    /^Request failed before a response was received from https:\/\/mcp\.example\/api\/v1\/openagent-auth\/sessions\. \(ENOTFOUND\)$/u
   );
   assert.ok(result.stderr.length < 500);
   // The test harness terminates each stderr write with a newline; everything else must be clean.
@@ -580,7 +581,7 @@ test("auth login classifies a request timeout as a transport_error", async () =>
   assert.equal(payload.error.code, "transport_error");
   assert.equal(payload.error.transport, true);
   assert.equal(payload.error.cause_code, "timeout");
-  assert.match(payload.error.message, /^Request timed out for POST https:\/\/mcp\.example\/api\/v1\/openagent-auth\/sessions\./u);
+  assert.match(payload.error.message, /^Request timed out waiting for https:\/\/mcp\.example\/api\/v1\/openagent-auth\/sessions\./u);
 });
 
 test("an unrelated local TypeError is internal_error, never transport_error", async () => {
@@ -903,6 +904,71 @@ test("every envelope agrees with the contract: transport flag, remote_error shap
       if (payload.error.remote_error.code !== undefined) {
         assert.match(payload.error.remote_error.code, /^-?[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/u, `${label}: remote code charset`);
       }
+    }
+  }
+});
+
+test("a successful response with a non-JSON body does not publish the body as the summary", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-invalid-json");
+  const marker = "REMOTE-TEXT-MARKER access_token=sk_live_ABCDEFGHIJKLMNOP";
+  const result = await run(
+    [...LOGIN_ARGS, "--cache-root", cacheRoot],
+    {
+      fetchImpl: async (url, init) => {
+        if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+          return new Response(marker, { status: 200, headers: { "content-type": "text/plain" } });
+        }
+        throw new Error(`unexpected request: ${init?.method} ${url}`);
+      },
+    }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "invalid_response");
+  assert.equal(payload.error.status_code, 200);
+  assert.equal(payload.error.transport, undefined, "a bad body is not a network condition");
+  assert.match(payload.error.message, /whose body was not the expected JSON/u);
+  // Node's own SyntaxError would have quoted the body here.
+  assert.doesNotMatch(payload.error.message, /REMOTE-TEXT-MARKER/u);
+  assert.doesNotMatch(result.stderr, /REMOTE-TEXT-MARKER/u);
+  assert.doesNotMatch(result.stdout, /sk_live_/u);
+  assert.doesNotMatch(result.stderr, /sk_live_/u);
+});
+
+test("a remote error_code is validated exactly like any other machine code", async () => {
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const cases = [
+    { code: "EXECUTION_ACK_LOST", kept: "EXECUTION_ACK_LOST" },
+    { code: -32000, kept: "-32000" },
+    { code: 1e100, kept: undefined },
+    { code: 1.5, kept: undefined },
+    { code: "x".repeat(80), kept: undefined },
+    { code: "  spaced code  ", kept: undefined },
+    { code: `bad${String.fromCharCode(27)}[31m`, kept: undefined },
+    { code: "has spaces", kept: undefined },
+  ];
+
+  for (const { code, kept } of cases) {
+    const cacheRoot = makeTempRoot("calle-cli-errorcode");
+    writeToken(cacheRoot, serverUrl, "tool-token");
+    const result = await run(
+      ["call", "start", "--to-phone", "+15551234567", "--goal", "g", "--base-url", "https://mcp.example", "--cache-root", cacheRoot],
+      {
+        fetchImpl: mcpFixture({
+          serverUrl,
+          onToolsCall: (p) => jsonRpcResponse({
+            jsonrpc: "2.0",
+            id: p.id,
+            result: { isError: true, structuredContent: { error_code: code, message: "stage failed" } },
+          }),
+        }),
+      }
+    );
+    const payload = JSON.parse(result.stdout);
+    assert.equal(payload.error.error_code, kept, `for input ${JSON.stringify(code)}`);
+    if (payload.error.error_code !== undefined) {
+      assert.match(payload.error.error_code, /^-?[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/u);
     }
   }
 });

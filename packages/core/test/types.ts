@@ -8,7 +8,13 @@ import { ensurePendingLogin } from "@call-e/core/broker-client";
 import { readJson } from "@call-e/core/cache";
 import { resolveServerUrl } from "@call-e/core/config";
 import { DEFAULT_CHANNEL } from "@call-e/core/constants";
-import { HttpStatusError, TransportError, causeCodeOf, requestJson } from "@call-e/core/http";
+import {
+  HttpStatusError,
+  InvalidResponseError,
+  TransportError,
+  causeCodeOf,
+  requestJson,
+} from "@call-e/core/http";
 import { McpHttpError, callMcpTool, listMcpTools } from "@call-e/core/mcp-client";
 import {
   publicRemoteError,
@@ -74,7 +80,12 @@ async function consumePublicTypes() {
   try {
     await requestJson("GET", "https://example.test/status");
   } catch (error) {
+    if (error instanceof InvalidResponseError) {
+      error.responseText.toUpperCase();
+      error.statusCode?.toFixed();
+    }
     if (error instanceof TransportError) {
+      error.phase.toUpperCase();
       error.timedOut.valueOf();
       error.code?.toUpperCase();
       error.url?.toUpperCase();

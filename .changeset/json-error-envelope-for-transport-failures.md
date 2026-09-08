@@ -19,9 +19,18 @@ failed `auth login` left them with an empty stdout and no `error.code` to branch
   are redacted; codes must match `-?[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}` (numbers only as safe
   integers); messages are bounded to 500 characters; `publicRemoteError` is the only shape
   remote detail may take (`{ code?, message? }`).
-- `@call-e/core/http` adds `TransportError` (`url`, `method`, `timedOut`, `code`) and
-  `causeCodeOf`. `requestJson` throws it when `fetch` rejects, times out, or the response body
-  cannot be read. `HttpStatusError` now records `url`.
+- Control removal is by *sequence*, covering the 7-bit `ESC [` / `ESC ]` forms, the 8-bit
+  `U+009B` / `U+009D` introducers, and invisible format characters (zero widths, joiners, bidi
+  controls, soft hyphen, BOM). Detection runs over two canonicalizations, because a sequence
+  swallows its final byte and that byte can be chosen from the word being searched for
+  (`Bea<U+009B>rer secret` strips to `Beaer`); when one reading finds a credential the other
+  does not, the whole string is redacted.
+- `@call-e/core/http` adds `TransportError` (`url`, `method`, `timedOut`, `phase`, `code`),
+  `InvalidResponseError`, and `causeCodeOf`. `requestJson` throws `TransportError` when `fetch`
+  rejects, times out, or the body cannot be read, and `InvalidResponseError` when a 2xx body is
+  not a JSON object — `JSON.parse` quotes its input in its own message, so letting a native
+  `SyntaxError` escape would have published remote text as a locally-authored summary. Arrays
+  are no longer accepted as JSON objects. `HttpStatusError` now records `url`.
 - `McpHttpError.message` is always locally authored. The server's JSON-RPC error text is kept
   raw in `payload` and, sanitized, in the new `remoteError` field. New fields `transport`,
   `timedOut`, `causeCode`. Timeouts, rejected fetches, and body-read failures are

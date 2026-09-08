@@ -23,7 +23,7 @@ import {
   resolveRuntimeConfig,
 } from "./config.js";
 import { ensurePendingLogin, loginWithBroker } from "./broker-client.js";
-import { HttpStatusError, TransportError } from "./http.js";
+import { HttpStatusError, InvalidResponseError, TransportError } from "./http.js";
 import {
   REMOTE_MESSAGE_LIMIT,
   publicRemoteError,
@@ -925,11 +925,32 @@ function errorPayload(error, config, helpCommand = null) {
     };
   }
 
+  if (error instanceof InvalidResponseError) {
+    const remoteError = publicRemoteError(sanitizeRemoteError(error.responseText));
+    return {
+      exitCode: classified.exitCode,
+      body: {
+        ok: false,
+        server_url: config?.serverUrl ?? null,
+        error: {
+          code: "invalid_response",
+          // Composed here. The body is remote, and JSON.parse quotes it in its own message.
+          message: `${describeUrl(error.url)} returned a ${error.statusCode ?? "successful"} response whose body was not the expected JSON.`,
+          ...(error.statusCode !== null ? { status_code: error.statusCode } : {}),
+          ...(remoteError ? { remote_error: remoteError } : {}),
+        },
+      },
+    };
+  }
+
   if (error instanceof TransportError) {
     const causeCode = safeRemoteCode(error.code);
+    // The phase matters to whoever has to decide about retrying: nothing sent is a different
+    // situation from a request that was accepted and then cut off mid-body.
+    const where = error.phase === "body" ? "while reading the response body from" : "before a response was received from";
     const summary = error.timedOut
-      ? `Request timed out for ${error.method ?? "request"} ${describeUrl(error.url)}.`
-      : `Request failed before a response was received for ${error.method ?? "request"} ${describeUrl(error.url)}.`;
+      ? `Request timed out ${error.phase === "body" ? "while reading the response body from" : "waiting for"} ${describeUrl(error.url)}.`
+      : `Request failed ${where} ${describeUrl(error.url)}.`;
     return {
       exitCode: classified.exitCode,
       body: {
@@ -939,6 +960,7 @@ function errorPayload(error, config, helpCommand = null) {
           code: "transport_error",
           message: causeCode && !error.timedOut ? `${summary} (${causeCode})` : summary,
           transport: true,
+          phase: error.phase,
           ...(causeCode ? { cause_code: causeCode } : {}),
         },
       },
@@ -976,6 +998,7 @@ export const ERROR_CODES = Object.freeze({
   broker_unavailable: { exitCode: 1, transport: false },
   http_error: { exitCode: 1, transport: false },
   transport_error: { exitCode: 1, transport: true },
+  invalid_response: { exitCode: 1, transport: false },
   mcp_error: { exitCode: 1, transport: false },
   plan_not_ready: { exitCode: 1, transport: false },
   plan_call_invalid_response: { exitCode: 1, transport: false },
@@ -1017,6 +1040,9 @@ export function classifyError(error) {
   }
   if (error instanceof TransportError) {
     return { code: "transport_error", exitCode: 1, transport: true };
+  }
+  if (error instanceof InvalidResponseError) {
+    return { code: "invalid_response", exitCode: 1, transport: false };
   }
   // Anything else is a local defect. It is never described as a network condition.
   return { code: "internal_error", exitCode: 1, transport: false };
@@ -1170,14 +1196,13 @@ function safeRemoteCallError(result) {
   const structured = recordObject(structuredPayload(result)) || {};
   const nestedError = recordObject(structured.error) || {};
   const field = (name) => nestedError[name] ?? structured[name];
-  const errorCodeValue = field("error_code") ?? field("code");
-  const errorCode = typeof errorCodeValue === "number"
-    ? errorCodeValue
-    : safeRemoteString(errorCodeValue, 200);
+  // Same validation as any other remote code: safe charset, bounded, safe integers only.
+  // A number is not automatically trustworthy — 1e100 and NaN are numbers too.
+  const errorCode = safeRemoteCode(field("error_code") ?? field("code"));
   const statusValue = field("status");
   const status = typeof statusValue === "number"
-    ? statusValue
-    : safeRemoteString(statusValue, 200);
+    ? (Number.isSafeInteger(statusValue) ? statusValue : undefined)
+    : safeRemoteCode(statusValue);
   const message = safeRemoteString(field("message"));
   const retrySafe = typeof field("retry_safe") === "boolean" ? field("retry_safe") : undefined;
   const callStartedValue = field("call_started");

@@ -29,13 +29,34 @@ export function causeCodeOf(error) {
  * a network problem. An unrelated local exception must not be classified as transport.
  */
 export class TransportError extends Error {
-  constructor(message, { url, method, timedOut = false, cause } = {}) {
+  constructor(message, { url, method, timedOut = false, phase = "connect", cause } = {}) {
     super(message, cause !== undefined ? { cause } : undefined);
     this.name = "TransportError";
     this.url = url ?? null;
     this.method = method ?? null;
     this.timedOut = Boolean(timedOut);
+    /** "connect" when nothing arrived, "body" when the stream failed after headers. */
+    this.phase = phase;
     this.code = timedOut ? "timeout" : causeCodeOf(cause);
+  }
+}
+
+/**
+ * A 2xx response whose body is not the JSON the caller needs.
+ *
+ * This exists because `JSON.parse` puts the offending input into its own message — Node emits
+ * `Unexpected token R, "REMOTE-TEXT-MARKER" is not valid JSON` — so letting a native
+ * SyntaxError escape would publish remote text as the CLI's locally-authored summary. The raw
+ * body is kept here for sanitizing, and never in `message`.
+ */
+export class InvalidResponseError extends Error {
+  constructor(message, { url, method, statusCode = null, responseText = "" } = {}) {
+    super(message);
+    this.name = "InvalidResponseError";
+    this.url = url ?? null;
+    this.method = method ?? null;
+    this.statusCode = statusCode;
+    this.responseText = responseText;
   }
 }
 
@@ -83,9 +104,19 @@ export async function requestJson(method, url, { headers = {}, json = undefined,
   } catch (error) {
     clearTimeout(timeout);
     if (error?.name === "AbortError") {
-      throw new TransportError(`Request timed out for ${method} ${url}`, { url, method, timedOut: true });
+      throw new TransportError(`Request timed out for ${method} ${url}`, {
+        url,
+        method,
+        timedOut: true,
+        phase: "body",
+      });
     }
-    throw new TransportError(`Response body could not be read for ${method} ${url}`, { url, method, cause: error });
+    throw new TransportError(`Response body could not be read for ${method} ${url}`, {
+      url,
+      method,
+      phase: "body",
+      cause: error,
+    });
   }
 
   try {
@@ -100,9 +131,26 @@ export async function requestJson(method, url, { headers = {}, json = undefined,
     if (!text.trim()) {
       return {};
     }
-    const parsed = JSON.parse(text);
-    if (!parsed || typeof parsed !== "object") {
-      throw new Error(`Expected JSON object response for ${method} ${url}`);
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      // Deliberately not rethrowing the SyntaxError: its message quotes the response body.
+      throw new InvalidResponseError(`Response body was not valid JSON for ${method} ${url}`, {
+        url,
+        method,
+        statusCode: response.status,
+        responseText: text,
+      });
+    }
+    // Arrays are objects to `typeof`, but not what any caller of this helper wants.
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new InvalidResponseError(`Response body was not a JSON object for ${method} ${url}`, {
+        url,
+        method,
+        statusCode: response.status,
+        responseText: text,
+      });
     }
     return parsed;
   } finally {

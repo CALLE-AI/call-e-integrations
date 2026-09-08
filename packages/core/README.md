@@ -137,7 +137,8 @@ try {
 | Type | Thrown by | Meaning |
 | --- | --- | --- |
 | `HttpStatusError` | `requestJson` | A non-success HTTP status. `statusCode`, `responseText`, `headers`, `url`. |
-| `TransportError` | `requestJson` | No usable response: `fetch` rejected, the body could not be read, or the timeout fired. `url`, `method`, `timedOut`, `code`. |
+| `TransportError` | `requestJson` | No usable response: `fetch` rejected, the body could not be read, or the timeout fired. `url`, `method`, `timedOut`, `phase` (`connect` or `body`), `code`. |
+| `InvalidResponseError` | `requestJson` | A 2xx whose body was not the expected JSON object. `responseText` holds the raw body; `message` never quotes it, because `JSON.parse` puts its input into its own message. |
 | `McpHttpError` | MCP client | HTTP failure (`code: "http_error"`), JSON-RPC error (`"mcp_error"`), or transport failure (`"transport_error"`). |
 
 `@call-e/core/sanitize`:
@@ -153,7 +154,16 @@ try {
 
 Controls are removed rather than replaced before secret detection, so
 `access_token=abcd<ESC>[31m1234` is redacted as one credential instead of surviving as two
-halves.
+halves. Removal is by *sequence*, covering both the 7-bit `ESC [` / `ESC ]` forms and the
+8-bit `U+009B` / `U+009D` introducers, plus invisible format characters such as zero-width
+spaces and bidi controls.
+
+Detection runs over two canonicalizations, because they disagree and both matter. Consuming
+a whole sequence is what a terminal does, but a sequence swallows its final byte, and that
+byte can be chosen from the word being searched for: `Bea<U+009B>rer secret` is a valid CSI
+sequence ending in `r`, so correct stripping yields `Beaer` and the credential stops looking
+like one. When one reading finds a credential the other does not, the whole string is
+replaced with `[redacted]`.
 
 ## Development
 
