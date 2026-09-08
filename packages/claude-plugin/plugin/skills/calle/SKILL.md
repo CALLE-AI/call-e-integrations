@@ -44,32 +44,22 @@ simulated conversation, or general contact lookup that does not require CALL-E.
 
 ## CLI selection
 
-All CLI commands run from this Claude Code plugin must include the CALL-E
-integration attribution environment:
-
-```bash
-env CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.2
-```
-
 <!-- sync-with: packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point -->
-Use a trusted installation of `@call-e/cli` or a trusted
-`CALLE-AI/call-e-integrations` checkout. A file in the current workspace or a
-command on `PATH` is not enough to identify the MCP CLI.
+Run every CLI command through the bundled `scripts/run-agent-command.mjs`.
 Follow the [entry-point checks](references/commands.md#verify-the-cli-entry-point)
-before running auth or call commands. Stop before authentication if either check fails.
-
+and write command arguments as JSON data, never shell text.
+Stop before authentication if either check fails.
 Do not run bare `calle` or use `npx` to select the CLI.
 Reuse the verified entry point for every command.
-`CALLE_CLI_ENTRY` below is the absolute path verified in those checks:
 
-```bash
-env CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.2 node "$CALLE_CLI_ENTRY"
+Include this attribution in every request:
+
+```json
+{"integration": {"source": "claude", "name": "claude_code_plugin", "version": "0.2.2"}}
 ```
 
-If no trusted installation is available, install `@call-e/cli` in a dedicated
-directory you control with `npm install --prefix <directory> @call-e/cli`,
-then verify its entry point. Stop on a failed check; do not try another binary
-with the same arguments.
+If the package is missing, use `npm install --prefix <directory> @call-e/cli`
+in a dedicated directory you control, then select that installation.
 
 
 ## Readiness flow
@@ -129,8 +119,9 @@ I'll keep you updated on the phone status, call content, and summary.
 
 1. Use `call plan` first.
    If the user has not provided enough explicit fields for `call plan`, use
-   `mcp call plan_call --args-json '{"user_input":"<latest user message verbatim>"}'`
-   so CALL-E can ask for the missing details.
+   `mcp call plan_call` with `--args-json` set to
+   `JSON.stringify({ user_input: latestUserMessage })` in the request's `argv`.
+   Read `latestUserMessage` from conversation data, never interpolate it into code.
 2. Read the returned `plan_id` and `confirm_token`.
 3. If the user's request is to place a call, immediately use `call run` with
    the exact `plan_id` and `confirm_token` returned by planning.
@@ -155,9 +146,9 @@ I'll keep you updated on the phone status, call content, and summary.
 If CLI `call start` or `call run` returns `call_started: "unknown"` with
 `retry_safe: false`, the call may already be in progress.
 Do not create a new plan or repeat `call start` or `call run`.
-Use the CLI-generated top-level `next_command` arguments with the verified
-entry point. Replace its leading `calle`; do not execute it as-is. The
-`call recover --recovery-id <recovery_id>` command uses the private local record.
+Use the CLI-generated top-level `next_argv` array as the next request's `argv`.
+Keep the same package and integration. Do not parse or execute `next_command`.
+The `call recover --recovery-id <recovery_id>` arguments use the private local record.
 Follow the [recovery steps](references/commands.md#call-recovery).
 
 If recovery is still uncertain, keep the local record and stop for manual

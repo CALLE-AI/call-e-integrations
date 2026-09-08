@@ -5,4 +5,4 @@
 "@call-e/cursor-plugin": patch
 ---
 
-Select `@call-e/cli` by its verified JavaScript entry point in agent skills and setup instructions. Reuse that entry for login, status, and recovery to avoid sending auth or call arguments to the Developer API SDK's same-name command.
+Run agent commands through a bundled launcher that verifies the MCP package and help before passing JSON argument arrays without a shell. Preserve structured login, help, and recovery arguments and integration attribution across Bash, PowerShell, and cmd, including installations with SDK releases that also export `calle`.

@@ -10,10 +10,10 @@ completes.
 
 The plugin uses a verified absolute `@call-e/cli` entry point. Follow
 [CLI entry point selection](../../cli/docs/cli-reference.md#selecting-the-cli-entry-point)
-to verify the package and set `CALLE_CLI_ENTRY` before running CLI commands.
+to prepare the bundled launcher and a JSON request before running CLI commands.
 
 CLI commands run with:
 
-```text
-CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.2
+```json
+{"integration": {"source": "claude", "name": "claude_code_plugin", "version": "0.2.2"}}
 ```

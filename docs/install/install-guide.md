@@ -120,17 +120,24 @@ choose `Prompt`, then paste the ClawHub install prompt into Hermes Agent.
 ### CLI
 
 Follow [CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
-to select a trusted checkout or installed `@call-e/cli`, verify its package and
-MCP command help, and set `CALLE_CLI_ENTRY` to its absolute `bin/calle.js` path.
+to select the trusted MCP package and prepare the launcher and `request.json`.
+The JSON arrays below are values for that request's `argv`; execute them one
+at a time with `node run-agent-command.mjs request.json`.
 
 That guide includes installation into a dedicated directory when needed.
 
 Then authenticate and verify:
 
-```bash
-node "$CALLE_CLI_ENTRY" auth login
-node "$CALLE_CLI_ENTRY" auth status
-node "$CALLE_CLI_ENTRY" mcp tools
+```json
+["auth", "login"]
+```
+
+```json
+["auth", "status"]
+```
+
+```json
+["mcp", "tools"]
 ```
 
 <!-- sync-with: cli.md#plan-a-call -->
@@ -138,10 +145,16 @@ node "$CALLE_CLI_ENTRY" mcp tools
 Discover nested commands and inspect their exact parameters with hierarchical
 help:
 
-```bash
-node "$CALLE_CLI_ENTRY" --help
-node "$CALLE_CLI_ENTRY" call --help
-node "$CALLE_CLI_ENTRY" call plan --help
+```json
+["--help"]
+```
+
+```json
+["call", "--help"]
+```
+
+```json
+["call", "plan", "--help"]
 ```
 
 ### MCP-Only Clients
@@ -163,18 +176,21 @@ get_call_run
 
 ## Authentication And Verification
 
-CLI-based integrations use the verified `CALLE_CLI_ENTRY` selected in the
-[CLI setup](#cli) above. Pre-authorize with:
+CLI-based integrations use the launcher prepared in [CLI setup](#cli) above.
+Use this array as the request's `argv` to pre-authorize:
 
-```bash
-node "$CALLE_CLI_ENTRY" auth login
+```json
+["auth", "login"]
 ```
 
 Then verify:
 
-```bash
-node "$CALLE_CLI_ENTRY" auth status
-node "$CALLE_CLI_ENTRY" mcp tools
+```json
+["auth", "status"]
+```
+
+```json
+["mcp", "tools"]
 ```
 
 The Codex, Claude Code, Cursor plugin, OpenClaw, and skills.sh skills reuse the

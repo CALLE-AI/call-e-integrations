@@ -157,9 +157,9 @@ function assertCliGuidance({ source, filePath, packageJson, failures }) {
     "Do not run bare `calle` or use `npx` to select the CLI.",
     "Stop before authentication if either check fails.",
     "Reuse the verified entry point for every command.",
-    'node "$CALLE_CLI_ENTRY"',
+    'scripts/run-agent-command.mjs',
     ...(path.basename(filePath) === "commands.md" ? [
-      "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must be `./bin/calle.js`",
+      "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must name `bin/calle.js`",
       "to an absolute path",
       "without credentials or call arguments",
       "auth login --help",
@@ -170,7 +170,7 @@ function assertCliGuidance({ source, filePath, packageJson, failures }) {
     'call_started: "unknown"',
     "retry_safe: false",
     "recovery_id",
-    "next_command",
+    "next_argv",
     "call recover --recovery-id",
     "Do not create a new plan or repeat `call start` or `call run`.",
     "Do not loop `call recover`.",
@@ -183,14 +183,14 @@ function assertCliGuidance({ source, filePath, packageJson, failures }) {
     failures,
     `${displayPath(filePath)} must not invoke bare calle or npx to select the CLI.`,
   );
-  assert(source.includes(`CALLE_SOURCE=${EXPECTED_CLI_SOURCE}`), failures, `${displayPath(filePath)} must include Cursor CLI source attribution.`);
+  assert(source.includes(`"source": "${EXPECTED_CLI_SOURCE}"`), failures, `${displayPath(filePath)} must include Cursor CLI source attribution.`);
   assert(
-    source.includes(`CALLE_INTEGRATION=${EXPECTED_CLI_INTEGRATION}`),
+    source.includes(`"name": "${EXPECTED_CLI_INTEGRATION}"`),
     failures,
     `${displayPath(filePath)} must include Cursor CLI integration attribution.`,
   );
   assert(
-    source.includes(`CALLE_INTEGRATION_VERSION=${packageJson.version}`),
+    source.includes(`"version": "${packageJson.version}"`),
     failures,
     `${displayPath(filePath)} must include Cursor CLI integration version ${packageJson.version}.`,
   );

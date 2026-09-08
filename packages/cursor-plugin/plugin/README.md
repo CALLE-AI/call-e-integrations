@@ -24,6 +24,6 @@ explicit; do not configure it for auto-run.
 If Cursor MCP tools are unavailable, the skill can fall back to the shared
 `calle` CLI. CLI commands run with:
 
-```text
-CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1
+```json
+{"integration": {"source": "cursor", "name": "cursor_plugin", "version": "0.1.1"}}
 ```

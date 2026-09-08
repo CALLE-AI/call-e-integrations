@@ -52,9 +52,9 @@ function assertCliGuidance({ source, filePath, failures }) {
     "Do not run bare `calle` or use `npx` to select the CLI.",
     "Stop before authentication if either check fails.",
     "Reuse the verified entry point for every command.",
-    'node "$CALLE_CLI_ENTRY"',
+    'scripts/run-agent-command.mjs',
     ...(path.basename(filePath) === "commands.md" ? [
-      "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must be `./bin/calle.js`",
+      "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must name `bin/calle.js`",
       "to an absolute path",
       "without credentials or call arguments",
       "auth login --help",
@@ -65,7 +65,7 @@ function assertCliGuidance({ source, filePath, failures }) {
     'call_started: "unknown"',
     "retry_safe: false",
     "recovery_id",
-    "next_command",
+    "next_argv",
     "call recover --recovery-id",
     "Do not create a new plan or repeat `call start` or `call run`.",
     "Do not loop `call recover`.",
@@ -125,7 +125,7 @@ function checkSkill({ packageRoot, failures }) {
   assert(frontmatter, failures, `${displayPath(skillFile)} must start with YAML frontmatter.`);
   assert(source.includes("assistant_hint.message"), failures, `${displayPath(skillFile)} must document assistant_hint.message handling.`);
   assert(source.includes("auth_required"), failures, `${displayPath(skillFile)} must document auth_required handling.`);
-  assert(source.includes("CALLE_INTEGRATION=openclaw_cli_skill"), failures, `${displayPath(skillFile)} must include OpenClaw CLI skill integration attribution.`);
+  assert(source.includes("\"name\": \"openclaw_cli_skill\""), failures, `${displayPath(skillFile)} must include OpenClaw CLI skill integration attribution.`);
   assert(
     source.includes("auth login --start-only --no-browser-open"),
     failures,
@@ -228,8 +228,8 @@ function checkReference({ packageRoot, failures }) {
   const source = fs.readFileSync(referenceFile, "utf8");
   assertCliGuidance({ source, filePath: referenceFile, failures });
   const requiredSnippets = [
-    "CALLE_SOURCE=openclaw",
-    "CALLE_INTEGRATION=openclaw_cli_skill",
+    "\"source\": \"openclaw\"",
+    "\"name\": \"openclaw_cli_skill\"",
     "auth_required",
     "assistant_hint.message",
     "auth login --start-only --no-browser-open",
