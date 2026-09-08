@@ -25,6 +25,9 @@ JavaScript entry point for agent workflows.
 3. Run the help checks below without credentials or call arguments. Confirm
    that they describe brokered `auth login`, `call plan`, `call run`, and
    `call recover`, including `--plan-id`, `--confirm-token`, and `--recovery-id`.
+   For packaged agent workflows, global help must also list `--source`,
+   `--integration`, and `--integration-version`. Update the CLI and repeat the
+   checks if those options are missing.
    Stop before authentication if either check fails.
 
 ```bash
@@ -36,9 +39,15 @@ node "$CALLE_CLI_ENTRY" call recover --help
 ```
 
 Use a trusted Node executable. Reuse the verified entry point for every
-command, keeping the integration attribution environment required by the
+command, appending the integration attribution options required by the
 calling skill. Recheck it after changing the installation or selected path.
 Do not run bare `calle` or use `npx` to select the CLI.
+
+The examples use `$CALLE_CLI_ENTRY`, a shell variable containing the verified
+absolute path. Assign it with `CALLE_CLI_ENTRY="<absolute-path>"` in Bash or
+`$CALLE_CLI_ENTRY = '<absolute-path>'` in PowerShell. In cmd.exe, assign it with
+`set "CALLE_CLI_ENTRY=<absolute-path>"` and use `"%CALLE_CLI_ENTRY%"` in commands.
+Keep the quotes when the path contains spaces.
 
 If the package is missing, install it in a dedicated directory you control
 with `npm install --prefix <directory> @call-e/cli`, then perform the checks
@@ -47,7 +56,8 @@ instead of installing or running a remote npm package.
 
 The command names below and CLI-generated `login_command`, `help_command`,
 and `next_command` use `calle` as shorthand. Replace only that leading command
-with `node "$CALLE_CLI_ENTRY"`; preserve the remaining arguments, including
+with `node "$CALLE_CLI_ENTRY"` and append the calling skill's attribution
+options. Preserve the remaining arguments, including
 server, cache, and timezone settings. Do not execute the returned string as-is
 or use `eval`. In a Node host, pass the verified entry and arguments to
 `spawn(process.execPath, [entry, ...args], { shell: false })`. Only use command
@@ -168,12 +178,34 @@ with boolean `retry_safe` and boolean-or-`"unknown"` `call_started` guidance.
 
 ## Common Options
 
+Use `--source`, `--integration`, and `--integration-version` after the command
+to pass integration attribution without a shell-specific environment prefix.
+Each option overrides its matching `CALLE_SOURCE`, `CALLE_INTEGRATION`, or
+`CALLE_INTEGRATION_VERSION` environment variable for that invocation. Existing
+environment-based integrations continue to work.
+
+Use letters, numbers, dots, underscores, plus signs, or hyphens in these values.
+Empty or invalid option values return `invalid_arguments` before requests are
+sent. With no attribution supplied, the CLI uses `cli/cli/<CLI version>`.
+When only part of the context is supplied, missing fields become `unknown`.
+
+```bash
+node "$CALLE_CLI_ENTRY" auth status --source example_agent --integration example_plugin --integration-version 1.0.0
+```
+
+The same command works in Bash and PowerShell after setting `CALLE_CLI_ENTRY`.
+Pass the options on each invocation, including recovery commands; the CLI does
+not change the parent shell's environment.
+
 These options are accepted by all commands. Runtime configuration is resolved
 before command dispatch; some commands only use the subset relevant to their
 network requests or output.
 
 | Option | Value | Default | Applies to | Required | Repeatable | Purpose | Example |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `--source` | Attribution segment | `CALLE_SOURCE` or `cli` | All commands | No | No | Set the calling agent's source. | `calle auth status --source codex` |
+| `--integration` | Attribution segment | `CALLE_INTEGRATION` or `cli` | All commands | No | No | Set the integration name. | `calle auth status --integration codex_plugin` |
+| `--integration-version` | Attribution segment | `CALLE_INTEGRATION_VERSION` or CLI version | All commands | No | No | Set the calling integration's version. | `calle auth status --integration-version 1.0.0` |
 | `--help`, `-h` | Boolean | `false` | Every command level | No | No | Print help for the current root, group, or subcommand and exit. | `calle call plan --help` |
 | `--version`, `-V` | Boolean | `false` | Every command level | No | No | Print the installed CLI version and exit. | `calle --version` |
 | `--base-url` | URL | `https://seleven-mcp-sg.airudder.com` | All commands | No | No | Base CALL-E service URL used to derive broker, auth, MCP, and telemetry URLs unless those are set separately. | `calle mcp tools --base-url https://example.test` |

@@ -16,8 +16,8 @@ const DEFAULT_REPO_ROOT = path.resolve(DEFAULT_PACKAGE_ROOT, "../..");
 const EXPECTED_PACKAGE_NAME = "@call-e/skills-sh-skill";
 const EXPECTED_SKILL_DIR = "calle";
 const EXPECTED_SKILL_NAME = "calle";
-const EXPECTED_SOURCE = "CALLE_SOURCE=skills_sh";
-const EXPECTED_INTEGRATION = "CALLE_INTEGRATION=skills_sh_skill";
+const EXPECTED_SOURCE = "--source skills_sh";
+const EXPECTED_INTEGRATION = "--integration skills_sh_skill";
 
 const REQUIRED_RECOVERY_GUIDANCE = [
   'call_started: "unknown"',
@@ -105,7 +105,7 @@ function assertCliSelectionGuidance({ source, filePath, failures }) {
 
 function integrationVersionSnippet(packageJson) {
   return typeof packageJson?.version === "string" && packageJson.version.length > 0
-    ? `CALLE_INTEGRATION_VERSION=${packageJson.version}`
+    ? `--integration-version ${packageJson.version}`
     : null;
 }
 

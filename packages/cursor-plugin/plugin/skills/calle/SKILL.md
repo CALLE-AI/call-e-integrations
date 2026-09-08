@@ -128,10 +128,10 @@ transcript.
 ## CLI fallback
 
 All CLI commands run from this Cursor plugin must include the CALL-E integration
-attribution environment:
+attribution options:
 
-```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1
+```text
+--source cursor --integration cursor_plugin --integration-version 0.1.1
 ```
 
 <!-- sync-with: packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point -->
@@ -143,10 +143,13 @@ before running auth or call commands. Stop before authentication if either check
 
 Do not run bare `calle` or use `npx` to select the CLI.
 Reuse the verified entry point for every command.
+The examples use Bash or PowerShell's `$CALLE_CLI_ENTRY` variable. In
+cmd.exe, use `%CALLE_CLI_ENTRY%` instead. Append the attribution options
+after the subcommand; do not prefix the command with Unix `env`.
 `CALLE_CLI_ENTRY` below is the absolute path verified in those checks:
 
 ```bash
-env CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1 node "$CALLE_CLI_ENTRY"
+node "$CALLE_CLI_ENTRY" auth status --source cursor --integration cursor_plugin --integration-version 0.1.1
 ```
 
 If no trusted installation is available, install `@call-e/cli` in a dedicated

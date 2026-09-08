@@ -128,9 +128,9 @@ function assertCliGuidance({ source, filePath, failures }) {
     failures,
     `${displayPath(filePath)} must not invoke bare calle or npx to select the CLI.`,
   );
-  assert(source.includes(`CALLE_SOURCE=${EXPECTED_CLI_SOURCE}`), failures, `${displayPath(filePath)} must include Claude CLI source attribution.`);
+  assert(source.includes(`--source ${EXPECTED_CLI_SOURCE}`), failures, `${displayPath(filePath)} must include Claude CLI source attribution.`);
   assert(
-    source.includes(`CALLE_INTEGRATION=${EXPECTED_CLI_INTEGRATION}`),
+    source.includes(`--integration ${EXPECTED_CLI_INTEGRATION}`),
     failures,
     `${displayPath(filePath)} must include Claude CLI integration attribution.`,
   );

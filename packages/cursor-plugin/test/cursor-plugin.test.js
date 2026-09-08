@@ -42,7 +42,7 @@ const VALID_RECOVERY_GUIDANCE =
   "Keep `recovery_id` and the recovery command out of user-visible replies and shared logs.\n";
 function validCliGuidance(version = VERSION) {
   return (
-    "CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=" + version + "\n\n" +
+    "--source cursor --integration cursor_plugin --integration-version " + version + "\n\n" +
     "auth status\n\n" +
     "mcp tools\n\n" +
     "call plan\n\n" +

@@ -28,6 +28,9 @@ is available.
 Follow [CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
 to select a trusted checkout or installed `@call-e/cli`, verify its package and
 MCP command help, and set `CALLE_CLI_ENTRY` to its absolute `bin/calle.js` path.
+Follow that guide's shell-specific assignment syntax. The commands below work
+in Bash and PowerShell; in cmd.exe, use `%CALLE_CLI_ENTRY%` in place of
+`$CALLE_CLI_ENTRY`.
 
 Install into a dedicated directory if needed, following the same guide. Finish
 this setup before invoking the skill; the skill does not download remote npm
@@ -36,7 +39,7 @@ packages.
 Verify the command:
 
 ```bash
-env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 node "$CALLE_CLI_ENTRY" --help
+node "$CALLE_CLI_ENTRY" --help --source skills_sh --integration skills_sh_skill --integration-version 0.1.0
 ```
 
 ## Step 3 Authenticate
@@ -44,27 +47,27 @@ env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_V
 Run the login command and let the user complete browser authorization:
 
 ```bash
-env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 node "$CALLE_CLI_ENTRY" auth login
+node "$CALLE_CLI_ENTRY" auth login --source skills_sh --integration skills_sh_skill --integration-version 0.1.0
 ```
 
 For agents that need to show the authorization link without opening a browser
 inside the agent environment, run:
 
 ```bash
-env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 node "$CALLE_CLI_ENTRY" auth login --start-only --no-browser-open
+node "$CALLE_CLI_ENTRY" auth login --start-only --no-browser-open --source skills_sh --integration skills_sh_skill --integration-version 0.1.0
 ```
 
 After the user confirms authorization is complete, finish the pending login:
 
 ```bash
-env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 node "$CALLE_CLI_ENTRY" auth login --no-browser-open
+node "$CALLE_CLI_ENTRY" auth login --no-browser-open --source skills_sh --integration skills_sh_skill --integration-version 0.1.0
 ```
 
 ## Step 4 Verify
 
 ```bash
-env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 node "$CALLE_CLI_ENTRY" auth status
-env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 node "$CALLE_CLI_ENTRY" mcp tools
+node "$CALLE_CLI_ENTRY" auth status --source skills_sh --integration skills_sh_skill --integration-version 0.1.0
+node "$CALLE_CLI_ENTRY" mcp tools --source skills_sh --integration skills_sh_skill --integration-version 0.1.0
 ```
 
 Confirm that the tool list includes:
@@ -78,9 +81,8 @@ get_call_run
 CALL-E can place real outbound phone calls. Setup verification must not start a
 call; only place a call when the user clearly asks for one.
 
-The `CALLE_SOURCE`, `CALLE_INTEGRATION`, and `CALLE_INTEGRATION_VERSION`
-environment variables preserve install and setup telemetry attribution for the
-portable skills.sh integration.
+The `--source`, `--integration`, and `--integration-version` options preserve
+install and setup telemetry attribution for the portable skills.sh integration.
 
 ## More
 

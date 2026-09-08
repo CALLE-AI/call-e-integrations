@@ -76,9 +76,9 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
       }
 
       const source = fs.readFileSync(integrationPath, "utf8");
-      const staleMatches = source.match(/CALLE_INTEGRATION_VERSION=(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/g) || [];
+      const staleMatches = source.match(/--integration-version (\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/g) || [];
       for (const match of staleMatches) {
-        const version = match.replace("CALLE_INTEGRATION_VERSION=", "");
+        const version = match.replace("--integration-version ", "");
         if (version !== packageVersion) {
           failures.push(
             `${entry.name}: ${path.relative(packageDir, integrationPath)} ${match} does not match package.json version (${packageVersion}).`
@@ -95,9 +95,9 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
       }
 
       const source = fs.readFileSync(integrationPath, "utf8");
-      const staleMatches = source.match(/CALLE_INTEGRATION_VERSION=(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/g) || [];
+      const staleMatches = source.match(/--integration-version (\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/g) || [];
       for (const match of staleMatches) {
-        const version = match.replace("CALLE_INTEGRATION_VERSION=", "");
+        const version = match.replace("--integration-version ", "");
         if (version !== packageVersion) {
           failures.push(
             `${entry.name}: ${path.relative(packageDir, integrationPath)} ${match} does not match package.json version (${packageVersion}).`

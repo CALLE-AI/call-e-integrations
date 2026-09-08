@@ -125,7 +125,7 @@ function checkSkill({ packageRoot, failures }) {
   assert(frontmatter, failures, `${displayPath(skillFile)} must start with YAML frontmatter.`);
   assert(source.includes("assistant_hint.message"), failures, `${displayPath(skillFile)} must document assistant_hint.message handling.`);
   assert(source.includes("auth_required"), failures, `${displayPath(skillFile)} must document auth_required handling.`);
-  assert(source.includes("CALLE_INTEGRATION=openclaw_cli_skill"), failures, `${displayPath(skillFile)} must include OpenClaw CLI skill integration attribution.`);
+  assert(source.includes("--integration openclaw_cli_skill"), failures, `${displayPath(skillFile)} must include OpenClaw CLI skill integration attribution.`);
   assert(
     source.includes("auth login --start-only --no-browser-open"),
     failures,
@@ -228,8 +228,8 @@ function checkReference({ packageRoot, failures }) {
   const source = fs.readFileSync(referenceFile, "utf8");
   assertCliGuidance({ source, filePath: referenceFile, failures });
   const requiredSnippets = [
-    "CALLE_SOURCE=openclaw",
-    "CALLE_INTEGRATION=openclaw_cli_skill",
+    "--source openclaw",
+    "--integration openclaw_cli_skill",
     "auth_required",
     "assistant_hint.message",
     "auth login --start-only --no-browser-open",

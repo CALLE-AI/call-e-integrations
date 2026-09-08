@@ -106,40 +106,40 @@ const replacements = [
 const codexIntegrationReplacements = [
   {
     label: "Codex plugin integration attribution version",
-    pattern: /CALLE_INTEGRATION_VERSION=\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
-    value: `CALLE_INTEGRATION_VERSION=${readPackageVersion("packages/codex-plugin")}`,
+    pattern: /--integration-version \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
+    value: `--integration-version ${readPackageVersion("packages/codex-plugin")}`,
   },
 ];
 
 const openclawCliSkillIntegrationReplacements = [
   {
     label: "OpenClaw CLI skill integration attribution version",
-    pattern: /CALLE_INTEGRATION_VERSION=\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
-    value: `CALLE_INTEGRATION_VERSION=${readPackageVersion("packages/openclaw-cli-skill")}`,
+    pattern: /--integration-version \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
+    value: `--integration-version ${readPackageVersion("packages/openclaw-cli-skill")}`,
   },
 ];
 
 const skillsShSkillIntegrationReplacements = [
   {
     label: "skills.sh skill integration attribution version",
-    pattern: /CALLE_INTEGRATION_VERSION=\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
-    value: `CALLE_INTEGRATION_VERSION=${readPackageVersion("packages/skills-sh-skill")}`,
+    pattern: /--integration-version \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
+    value: `--integration-version ${readPackageVersion("packages/skills-sh-skill")}`,
   },
 ];
 
 const claudeCliIntegrationReplacements = [
   {
     label: "Claude Code plugin CLI integration attribution version",
-    pattern: /CALLE_INTEGRATION_VERSION=\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
-    value: `CALLE_INTEGRATION_VERSION=${readPackageVersion("packages/claude-plugin")}`,
+    pattern: /--integration-version \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
+    value: `--integration-version ${readPackageVersion("packages/claude-plugin")}`,
   },
 ];
 
 const cursorCliIntegrationReplacements = [
   {
     label: "Cursor plugin CLI integration attribution version",
-    pattern: /CALLE_INTEGRATION_VERSION=\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
-    value: `CALLE_INTEGRATION_VERSION=${readPackageVersion("packages/cursor-plugin")}`,
+    pattern: /--integration-version \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
+    value: `--integration-version ${readPackageVersion("packages/cursor-plugin")}`,
   },
 ];
 

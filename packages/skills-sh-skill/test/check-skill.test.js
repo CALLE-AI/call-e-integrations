@@ -84,7 +84,7 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
       "Never paraphrase call results.",
       "For non-terminal statuses, the entire reply must be exactly this shape.",
       "Poll every 10 seconds.",
-      `Run with CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=${integrationVersion}.`,
+      `Run with --source skills_sh --integration skills_sh_skill --integration-version ${integrationVersion}.`,
       "",
     ].join("\n"),
   );
@@ -107,7 +107,7 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
       VALID_CLI_SELECTION_GUIDANCE,
       VALID_RECOVERY_GUIDANCE,
       "",
-      `env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=${integrationVersion} node "$CALLE_CLI_ENTRY"`,
+      `node "$CALLE_CLI_ENTRY" auth status --source skills_sh --integration skills_sh_skill --integration-version ${integrationVersion}`,
       "Run auth login --start-only --no-browser-open and ask the user to use the authorization instructions returned by the CLI.",
       "Run auth login --no-browser-open to exchange a pending authorization.",
       "Great, authorization is complete",
@@ -218,10 +218,10 @@ test("reports stale integration attribution", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-skills-sh-skill-stale-attribution"));
   const referenceFile = path.join(repoRoot, "skills", "calle", "references", "commands.md");
   const source = fs.readFileSync(referenceFile, "utf8");
-  fs.writeFileSync(referenceFile, source.replaceAll("CALLE_SOURCE=skills_sh", "CALLE_SOURCE=openclaw"));
+  fs.writeFileSync(referenceFile, source.replaceAll("--source skills_sh", "--source openclaw"));
 
   const failures = checkSkillsShSkill({ packageRoot, repoRoot });
-  assert.ok(failures.some((failure) => failure.includes("CALLE_SOURCE=skills_sh")));
+  assert.ok(failures.some((failure) => failure.includes("--source skills_sh")));
 });
 
 test("reports stale integration version", () => {
@@ -231,7 +231,7 @@ test("reports stale integration version", () => {
   );
 
   const failures = checkSkillsShSkill({ packageRoot, repoRoot });
-  assert.ok(failures.some((failure) => failure.includes("CALLE_INTEGRATION_VERSION=9.8.7")));
+  assert.ok(failures.some((failure) => failure.includes("--integration-version 9.8.7")));
 });
 
 test("reports a duplicate package-local skill copy", () => {

@@ -83,7 +83,7 @@ function createValidFixture(root) {
       "Never paraphrase call results.",
       "For non-terminal statuses, the entire reply must be exactly this shape.",
       "Poll every 10 seconds and Do not stay silent until a terminal status.",
-      "Run with CALLE_INTEGRATION=openclaw_cli_skill.",
+      "Run with --integration openclaw_cli_skill.",
       "",
     ].join("\n"),
   );
@@ -95,7 +95,7 @@ function createValidFixture(root) {
       VALID_CLI_SELECTION_GUIDANCE,
       VALID_RECOVERY_GUIDANCE,
       "",
-      "env CALLE_SOURCE=openclaw CALLE_INTEGRATION=openclaw_cli_skill node \"$CALLE_CLI_ENTRY\"",
+      "env --source openclaw --integration openclaw_cli_skill node \"$CALLE_CLI_ENTRY\"",
       "Run auth login --start-only --no-browser-open and ask the user to use the authorization instructions returned by the CLI.",
       "Run auth login --no-browser-open to exchange a pending authorization.",
       "Great, authorization is complete",

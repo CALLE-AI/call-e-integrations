@@ -62,7 +62,7 @@ The plugin reuses the verified entry point for every CLI command. Commands run
 by the skill include this CALL-E attribution:
 
 ```text
-CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.2
+--source claude --integration claude_code_plugin --integration-version 0.2.2
 ```
 
 ## Use

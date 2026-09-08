@@ -11,7 +11,7 @@ const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "../..");
 const VERSION = "0.0.0";
 const VALID_AUTH_GUIDANCE =
-  "CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.0.0\n\n" +
+  "--source claude --integration claude_code_plugin --integration-version 0.0.0\n\n" +
   "auth status\n\n" +
   "mcp tools\n\n" +
   "call plan\n\n" +

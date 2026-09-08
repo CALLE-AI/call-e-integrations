@@ -82,7 +82,7 @@ node "$CALLE_CLI_ENTRY" mcp tools
 CLI commands run by the Cursor skill include this CALL-E attribution:
 
 ```text
-CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1
+--source cursor --integration cursor_plugin --integration-version 0.1.1
 ```
 
 ## Safety

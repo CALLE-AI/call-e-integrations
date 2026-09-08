@@ -61,8 +61,8 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
 
       const source = fs.readFileSync(integrationPath, "utf8");
       const nextSource = source.replace(
-        /CALLE_INTEGRATION_VERSION=\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
-        `CALLE_INTEGRATION_VERSION=${version}`,
+        /--integration-version \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
+        `--integration-version ${version}`,
       );
       if (nextSource !== source) {
         fs.writeFileSync(integrationPath, nextSource);
@@ -90,8 +90,8 @@ for (const entry of fs.readdirSync(packagesDir, { withFileTypes: true })) {
 
       const source = fs.readFileSync(integrationPath, "utf8");
       const nextSource = source.replace(
-        /CALLE_INTEGRATION_VERSION=\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
-        `CALLE_INTEGRATION_VERSION=${version}`,
+        /--integration-version \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g,
+        `--integration-version ${version}`,
       );
       if (nextSource !== source) {
         fs.writeFileSync(integrationPath, nextSource);

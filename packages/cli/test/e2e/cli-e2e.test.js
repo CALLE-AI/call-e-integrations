@@ -34,11 +34,11 @@ function writeToken(cacheRoot, baseUrl, token = accessToken) {
   });
 }
 
-function runCalle(args, { entry = binPath, env = {} } = {}) {
+function runCalle(args, { entry = binPath, env = {}, executable = process.execPath, executableArgs = [entry, ...args] } = {}) {
   return new Promise((resolve) => {
     execFile(
-      process.execPath,
-      [entry, ...args],
+      executable,
+      executableArgs,
       {
         cwd: packageRoot,
         env: {
@@ -91,7 +91,7 @@ function writeJson(res, payload, { status = 200, headers = {} } = {}) {
   res.end(`${JSON.stringify(payload)}\n`);
 }
 
-async function startFakeServer({ token = accessToken, unauthorizedMcp = false, droppedRunResponses = 0 } = {}) {
+async function startFakeServer({ token = accessToken, unauthorizedMcp = false, droppedRunResponses = 0, integrationHeader = defaultIntegrationHeader } = {}) {
   let baseUrl = "";
   let runAttempts = 0;
   const state = {
@@ -124,7 +124,7 @@ async function startFakeServer({ token = accessToken, unauthorizedMcp = false, d
       if (req.method === "POST" && pathname === "/api/v1/openagent-auth/sessions") {
         const body = await readRequestJson(req);
         state.brokerCreates.push(body);
-        assert.equal(req.headers["x-call-e-integration"], defaultIntegrationHeader);
+        assert.equal(req.headers["x-call-e-integration"], integrationHeader);
         assert.equal(body.channel, "openagent_oauth");
         assert.equal(body.server_url, serverUrl(baseUrl));
         assert.equal(body.auth_base_url, baseUrl);
@@ -144,7 +144,7 @@ async function startFakeServer({ token = accessToken, unauthorizedMcp = false, d
       if (req.method === "GET" && pathname === "/api/v1/openagent-auth/sessions/session-1") {
         state.brokerStatusCount += 1;
         assert.equal(req.headers["x-openagent-session-secret"], sessionSecret);
-        assert.equal(req.headers["x-call-e-integration"], defaultIntegrationHeader);
+        assert.equal(req.headers["x-call-e-integration"], integrationHeader);
         writeJson(res, { status: "AUTHORIZED", expires_at: expiresAt });
         return;
       }
@@ -152,7 +152,7 @@ async function startFakeServer({ token = accessToken, unauthorizedMcp = false, d
       if (req.method === "POST" && pathname === "/api/v1/openagent-auth/sessions/session-1/exchange") {
         state.brokerExchangeCount += 1;
         assert.equal(req.headers["x-openagent-session-secret"], sessionSecret);
-        assert.equal(req.headers["x-call-e-integration"], defaultIntegrationHeader);
+        assert.equal(req.headers["x-call-e-integration"], integrationHeader);
         writeJson(res, {
           token: { access_token: token },
           expires_at: expiresAt,
@@ -173,7 +173,7 @@ async function startFakeServer({ token = accessToken, unauthorizedMcp = false, d
         assert.equal(req.headers.authorization, `Bearer ${token}`);
         assert.match(req.headers["content-type"] || "", /application\/json/);
         assert.equal(req.headers["mcp-protocol-version"], "2025-11-25");
-        assert.equal(req.headers["x-call-e-integration"], defaultIntegrationHeader);
+        assert.equal(req.headers["x-call-e-integration"], integrationHeader);
 
         if (payload.method === "initialize") {
           writeJson(
@@ -644,7 +644,8 @@ test("starts a call without exposing plan confirmation data", async (t) => {
 
 for (const command of ["start", "run"]) {
   test(`recovers call ${command} through a verified entry despite PATH shadowing and lost HTTP responses`, async (t) => {
-    const fake = await startFakeServer({ droppedRunResponses: 2 });
+    const attribution = ["--source", "test_agent", "--integration", "test_plugin", "--integration-version", "1.0.0"];
+    const fake = await startFakeServer({ droppedRunResponses: 2, integrationHeader: "test_agent/test_plugin/1.0.0" });
     const cacheParent = makeTempCacheRoot();
     const cacheRoot = path.join(cacheParent, "recovery cache");
     t.after(() => fake.close());
@@ -672,6 +673,7 @@ for (const command of ["start", "run"]) {
     writeToken(cacheRoot, fake.baseUrl);
     const auth = await runCalle([
       "auth", "status", "--base-url", fake.baseUrl, "--cache-root", cacheRoot, "--no-telemetry",
+      ...attribution,
     ], cliOptions);
     assert.equal(auth.code, 0);
     assert.equal(parseJson(auth.stdout).usable, true);
@@ -684,6 +686,7 @@ for (const command of ["start", "run"]) {
       "--timezone", "Asia/Shanghai",
       "--base-url", fake.baseUrl,
       "--cache-root", cacheRoot,
+      ...attribution,
     ], cliOptions);
     const firstPayload = parseJson(first.stdout);
 
@@ -709,7 +712,7 @@ for (const command of ["start", "run"]) {
     ];
     const quotedCacheRoot = `'${cacheRoot.replaceAll("'", "'\\''")}'`;
     assert.equal(firstPayload.next_command, ["calle", ...recoveryArgs.slice(0, -1), quotedCacheRoot].join(" "));
-    const uncertain = await runCalle(recoveryArgs, cliOptions);
+    const uncertain = await runCalle([...recoveryArgs, ...attribution], cliOptions);
     const uncertainPayload = parseJson(uncertain.stdout);
     assert.equal(uncertain.code, 1);
     assert.equal(uncertainPayload.stage, "run_call");
@@ -720,7 +723,7 @@ for (const command of ["start", "run"]) {
     assert.equal(fs.readFileSync(recoveryPath, "utf8"), recoveryRecord);
     assert.equal(fake.state.acceptedRuns.length, 1);
 
-    const recovered = await runCalle(recoveryArgs, cliOptions);
+    const recovered = await runCalle([...recoveryArgs, ...attribution], cliOptions);
     const recoveredPayload = parseJson(recovered.stdout);
     assert.equal(recovered.code, 0);
     assert.equal(recoveredPayload.ok, true);
@@ -875,4 +878,119 @@ test("returns command help for invalid option values", async () => {
   assert.match(payload.error.message, /--timeout-seconds expects a positive number of seconds/);
   assert.equal(payload.help_command, "calle call plan --help");
   assert.match(result.stderr, /Run 'calle call plan --help' for usage\./);
+});
+
+test("documented agent commands preserve attribution through the host shell", { timeout: 180000 }, async (t) => {
+  const repoRoot = path.resolve(packageRoot, "../..");
+  const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), "calle CLI path "));
+  t.after(() => fs.rmSync(installRoot, { recursive: true, force: true }));
+  const installedCli = path.join(installRoot, "node_modules/@call-e/cli");
+  for (const name of ["cli", "core"]) {
+    const destination = path.join(installRoot, "node_modules/@call-e", name);
+    fs.mkdirSync(destination, { recursive: true });
+    for (const file of ["package.json", "lib", ...(name === "cli" ? ["bin"] : [])]) {
+      fs.cpSync(path.join(repoRoot, "packages", name, file), path.join(destination, file), { recursive: true });
+    }
+  }
+  const entry = path.join(installedCli, "bin/calle.js");
+  const shell = process.env.CALLE_TEST_SHELL || (process.platform === "win32" ? "pwsh" : "bash");
+  assert.ok(["bash", "pwsh"].includes(shell));
+  const executable = shell === "pwsh" ? process.env.CALLE_TEST_PWSH || "pwsh" : "bash";
+  const assignments = shell === "pwsh"
+    ? "$ErrorActionPreference = 'Stop'; $CALLE_CLI_ENTRY = $env:CALLE_CLI_ENTRY; $CALLE_TEST_BASE_URL = $env:CALLE_TEST_BASE_URL; $CALLE_TEST_CACHE_ROOT = $env:CALLE_TEST_CACHE_ROOT; "
+    : "";
+  const execute = (line, env) => runCalle([], {
+    executable,
+    executableArgs: shell === "pwsh"
+      ? ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", `${assignments}${line}; exit $LASTEXITCODE`]
+      : ["--noprofile", "--norc", "-c", line],
+    env: {
+      ...env,
+      PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH}`,
+      CALLE_CLI_ENTRY: entry,
+      CALLE_TELEMETRY: "1",
+      CALLE_TELEMETRY_URL: "",
+      DO_NOT_TRACK: "0",
+    },
+  });
+
+  if (process.platform === "win32") {
+    const legacy = await runCalle([], {
+      executable,
+      executableArgs: ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command",
+        "$ErrorActionPreference = 'Stop'; env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.11 node --version"],
+      env: { PATH: path.dirname(process.execPath) },
+    });
+    assert.notEqual(legacy.code, 0);
+    assert.match(legacy.stderr, /env/);
+    t.diagnostic("Reproduced the legacy env prefix failure in Windows PowerShell");
+  }
+
+  const profiles = [
+    ["codex", "codex_plugin", "codex-plugin", "packages/codex-plugin/plugin/skills/calle"],
+    ["claude", "claude_code_plugin", "claude-plugin", "packages/claude-plugin/plugin/skills/calle"],
+    ["cursor", "cursor_plugin", "cursor-plugin", "packages/cursor-plugin/plugin/skills/calle"],
+    ["openclaw", "openclaw_cli_skill", "openclaw-cli-skill", "packages/openclaw-cli-skill/skills/phone-call-calle"],
+    ["skills_sh", "skills_sh_skill", "skills-sh-skill", "skills/calle"],
+    ["example_agent", "example_plugin", null, null],
+  ];
+  for (const [source, integration, packageName, skillDirectory] of profiles) {
+    await t.test(`${source} literal commands in ${shell}`, async (st) => {
+      const version = packageName
+        ? JSON.parse(fs.readFileSync(path.join(repoRoot, "packages", packageName, "package.json"), "utf8")).version
+        : "1.0.0";
+      const integrationHeader = `${source}/${integration}/${version}`;
+      const fake = await startFakeServer({ integrationHeader });
+      st.after(() => fake.close());
+      const cacheRoot = path.join(installRoot, `${source} auth cache`);
+      const files = skillDirectory
+        ? [`${skillDirectory}/references/commands.md`, `${skillDirectory}/SKILL.md`]
+        : ["packages/cli/docs/cli-reference.md"];
+      if (source === "skills_sh") files.push("docs/install/CALL-E-installation-guide.md");
+      const lines = new Set();
+      for (const file of files) {
+        const markdown = fs.readFileSync(path.join(repoRoot, file), "utf8");
+        assert.doesNotMatch(markdown, /^env CALLE_SOURCE=/mu, file);
+        for (const line of markdown.split("\n")) {
+          if (line.startsWith('node "$CALLE_CLI_ENTRY"') && line.includes(" --source ")) lines.add(line);
+        }
+      }
+      assert.ok(lines.size > 0);
+      for (const documented of lines) {
+        assert.ok(documented.includes(`--source ${source} --integration ${integration} --integration-version ${version}`), documented);
+        const command = documented
+          .replaceAll("<plan_id>", "plan-1").replaceAll("<confirm_token>", "confirm-1")
+          .replaceAll("<run_id>", "run-2").replaceAll("<latest user message verbatim>", "Local plan test");
+        const result = await execute(
+          `${command} --base-url "$CALLE_TEST_BASE_URL" --cache-root "$CALLE_TEST_CACHE_ROOT"` +
+            (command.includes(" auth login ") && !command.includes("--no-browser-open") ? " --no-browser-open" : ""),
+          { CALLE_TEST_BASE_URL: fake.baseUrl, CALLE_TEST_CACHE_ROOT: cacheRoot },
+        );
+        assert.equal(result.code, 0, `${documented}\n${result.stdout}\n${result.stderr}`);
+        if (command.includes("--help")) {
+          for (const option of ["--source", "--integration", "--integration-version"]) assert.ok(result.stdout.includes(option));
+        } else {
+          const payload = parseJson(result.stdout);
+          assert.notEqual(payload.ok, false);
+          if (command.includes(" mcp tools ")) {
+            assert.deepEqual(payload.result.tools.map((tool) => tool.name), ["plan_call", "run_call", "get_call_run"]);
+          }
+        }
+      }
+      assert.ok(fake.state.telemetryEvents.length > 0);
+      for (const event of fake.state.telemetryEvents) {
+        assert.deepEqual(event.context.integration_context, { source, integration, version });
+        assert.equal(event.properties.integration_source, source);
+        assert.equal(event.properties.integration_name, integration);
+        assert.equal(event.properties.integration_version, version);
+      }
+      if (skillDirectory) {
+        assert.equal(fake.state.brokerCreates.length, 1);
+        assert.ok(fake.state.mcpRequests.some((request) => request.method === "tools/list"));
+        assert.ok(fake.state.toolCalls.some((call) => call.name === "plan_call"));
+      }
+      assert.deepEqual(fake.state.failures, []);
+      st.diagnostic(`${lines.size} documented commands passed; attribution ${integrationHeader}`);
+    });
+  }
 });

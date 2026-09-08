@@ -69,7 +69,7 @@ When the Cursor skill falls back to CLI commands, it uses this integration
 attribution:
 
 ```text
-CALLE_SOURCE=cursor CALLE_INTEGRATION=cursor_plugin CALLE_INTEGRATION_VERSION=0.1.1
+--source cursor --integration cursor_plugin --integration-version 0.1.1
 ```
 
 The version segment must stay in sync with this package version.

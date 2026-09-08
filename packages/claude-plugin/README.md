@@ -47,7 +47,7 @@ to verify the package and set `CALLE_CLI_ENTRY`.
 The skill runs CLI commands with this integration attribution:
 
 ```text
-CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.2
+--source claude --integration claude_code_plugin --integration-version 0.2.2
 ```
 
 The version segment must stay in sync with this package version.
