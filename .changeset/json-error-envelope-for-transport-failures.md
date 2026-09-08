@@ -23,10 +23,13 @@ failed `auth login` left them with an empty stdout and no `error.code` to branch
   `U+009B` / `U+009D` introducers, and invisible format characters (zero widths, joiners, bidi
   controls, soft hyphen, BOM). Detection runs over two canonicalizations, because a sequence
   swallows its final byte and that byte can be chosen from the word being searched for
-  (`Bea<U+009B>rer secret` strips to `Beaer`); when one reading finds a credential the other
-  does not, the whole string is redacted.
+  (`Bea<U+009B>rer secret` strips to `Beaer`). The readings are compared by how many
+  credentials each finds, not merely whether either found one, so a message carrying two
+  secrets cannot publish the second on the strength of the first being caught; when the
+  alternate reading finds more, the whole string is redacted.
 - `@call-e/core/http` adds `TransportError` (`url`, `method`, `timedOut`, `phase`, `code`),
-  `InvalidResponseError`, and `causeCodeOf`. `requestJson` throws `TransportError` when `fetch`
+  `InvalidResponseError`, and `causeCodeOf`. `McpHttpError` carries `phase` too, so every
+  transport failure names where it failed. `requestJson` throws `TransportError` when `fetch`
   rejects, times out, or the body cannot be read, and `InvalidResponseError` when a 2xx body is
   not a JSON object — `JSON.parse` quotes its input in its own message, so letting a native
   `SyntaxError` escape would have published remote text as a locally-authored summary. Arrays

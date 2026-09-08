@@ -728,6 +728,82 @@ test("8-bit C1 introducers and invisible format characters cannot smuggle a cred
   }
 });
 
+test("a second credential visible only in the alternate reading is not published", async () => {
+  const { safeRemoteString } = await import("@call-e/core/sanitize");
+  const ESC = String.fromCharCode(0x1b);
+  const CSI8 = String.fromCharCode(0x9b);
+
+  // The first credential is caught in the displayed reading, so a test of "did we redact
+  // anything" passes on its strength alone. The second is only recognisable in the
+  // character-only reading, and would ride out on the back of the first.
+  const caughtInDisplay = `access_token=abcd1234efgh${ESC}[31m5678`;
+  const caughtOnlyInAlternate = `Bea${CSI8}rer abcdefghijklmnopqrstuvwxyz012345`;
+  const out = safeRemoteString(`${caughtInDisplay} and ${caughtOnlyInAlternate}`);
+
+  assert.doesNotMatch(out, /abcdefghijkl/u, "the bearer token must not survive");
+  assert.doesNotMatch(out, /abcd1234|efgh5678/u);
+  assert.equal(out, "[redacted]", "when the readings disagree in count, the whole string goes");
+
+  // The ordinary case must not be over-redacted into uselessness.
+  assert.equal(safeRemoteString("Claim 4471 was paid on August 12."), "Claim 4471 was paid on August 12.");
+  assert.equal(
+    safeRemoteString("Failed to register an OAuth client. err_type=HTTPStatusError"),
+    "Failed to register an OAuth client. err_type=HTTPStatusError",
+  );
+});
+
+test("an MCP transport failure names its phase, as the published contract promises", async () => {
+  const config = mcpConfig(makeTempRoot("calle-core-mcp-phase"));
+
+  const dns = new TypeError("fetch failed");
+  dns.cause = { code: "ENOTFOUND" };
+  await assert.rejects(
+    () => listMcpTools({ config, fetchImpl: async () => { throw dns; } }),
+    (error) => {
+      assert.equal(error.transport, true);
+      assert.equal(error.phase, "connect", "nothing arrived");
+      return true;
+    },
+  );
+
+  const reset = Object.assign(new Error("socket hang up"), { code: "ECONNRESET" });
+  const afterHeaders = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") {
+      return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "s" } });
+    }
+    if (payload.method === "notifications/initialized") return jsonResponse({});
+    return {
+      ok: true, status: 200, statusText: "OK", headers: new Headers(),
+      async text() { throw reset; },
+    };
+  };
+  await assert.rejects(
+    () => callMcpTool({ config: mcpConfig(makeTempRoot("calle-core-mcp-phase-body")), toolName: "plan_call", fetchImpl: afterHeaders }),
+    (error) => {
+      assert.equal(error.transport, true);
+      assert.equal(error.phase, "body", "headers arrived, the stream did not finish");
+      return true;
+    },
+  );
+
+  // A non-transport error must not claim a phase at all.
+  const rpcError = async (_url, init) => {
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "s" } });
+    if (payload.method === "notifications/initialized") return jsonResponse({});
+    return jsonResponse({ error: { code: -32000, message: "nope" } });
+  };
+  await assert.rejects(
+    () => callMcpTool({ config: mcpConfig(makeTempRoot("calle-core-mcp-phase-none")), toolName: "plan_call", fetchImpl: rpcError }),
+    (error) => {
+      assert.equal(error.transport, false);
+      assert.equal(error.phase, null);
+      return true;
+    },
+  );
+});
+
 test("a body that is not JSON never reaches Error.message", async () => {
   const { requestJson, InvalidResponseError } = await import("@call-e/core/http");
   const marker = "REMOTE-TEXT-MARKER sk_live_ABCDEFGHIJKLMNOP";

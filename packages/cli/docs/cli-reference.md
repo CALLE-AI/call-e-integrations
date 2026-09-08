@@ -81,7 +81,7 @@ Stable fields:
 | `error.message` | yes | A summary **authored by the CLI**. Never contains upstream text. The same text is written to stderr. |
 | `error.status_code` | HTTP and MCP errors | Upstream HTTP status, or `null`. |
 | `error.transport` | `true` only when no usable response was received | The request failed at the network layer: DNS, connection, TLS, a timeout, or a body stream that failed after the headers arrived. Absent otherwise — an unrelated local error is never described as a network condition. |
-| `error.phase` | transport errors | `connect` when nothing arrived, `body` when the response was cut off while being read. The two call for different retry decisions. |
+| `error.phase` | transport errors | `connect` when nothing arrived, `body` when the response was cut off while being read. The two call for different retry decisions. Present on both plain and `call`-stage transport failures. |
 | `error.cause_code` | transport errors, when known | `timeout`, or the Node.js error code such as `ENOTFOUND` or `ECONNREFUSED`. |
 | `error.remote_error` | when the service said something readable | Exactly `{ code?, message? }` and never any other key, from the remote response — an HTTP body, a JSON-RPC error, a call-stage result, or a clarifying question — after sanitization. **Untrusted, informational only.** |
 | `error.error_code`, `error.status` | `call` stage failures | Sanitized remote call-outcome fields (for example `EXECUTION_ACK_LOST`). |

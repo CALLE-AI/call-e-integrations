@@ -29,6 +29,7 @@ export class McpHttpError extends Error {
     code = "http_error",
     transport = false,
     timedOut = false,
+    phase = null,
     cause,
   } = {}) {
     super(message, cause !== undefined ? { cause } : undefined);
@@ -40,6 +41,8 @@ export class McpHttpError extends Error {
     this.code = code;
     this.transport = Boolean(transport);
     this.timedOut = Boolean(timedOut);
+    /** "connect" or "body" on a transport failure; null otherwise. */
+    this.phase = transport ? (phase ?? "connect") : null;
     /** "timeout", the system error code behind a rejected fetch, or null. */
     this.causeCode = timedOut ? "timeout" : causeCodeOf(cause);
     this.remoteError = sanitizeRemoteError(payload ?? responseText);
@@ -93,12 +96,14 @@ async function requestJsonRpc(fetchImpl, url, { headers, payload, timeoutMs }) {
         code: "transport_error",
         transport: true,
         timedOut: true,
+        phase: "connect",
       });
     }
     // fetch rejected before any response: DNS, connection, TLS. Only this path is transport.
     throw new McpHttpError(`MCP request failed before a response was received for ${payload.method}`, {
       code: "transport_error",
       transport: true,
+      phase: "connect",
       cause: error,
     });
   }
@@ -115,11 +120,13 @@ async function requestJsonRpc(fetchImpl, url, { headers, payload, timeoutMs }) {
         code: "transport_error",
         transport: true,
         timedOut: true,
+        phase: "body",
       });
     }
     throw new McpHttpError(`MCP response body could not be read for ${payload.method}`, {
       code: "transport_error",
       transport: true,
+      phase: "body",
       cause: error,
     });
   }

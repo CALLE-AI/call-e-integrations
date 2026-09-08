@@ -895,6 +895,7 @@ function errorPayload(error, config, helpCommand = null) {
           message: localMessage(error.message),
           status_code: error.statusCode,
           ...(classified.transport ? { transport: true } : {}),
+          ...(classified.transport && error.phase ? { phase: error.phase } : {}),
           ...(causeCode ? { cause_code: causeCode } : {}),
           ...(stageRemote?.error_code !== undefined ? { error_code: stageRemote.error_code } : {}),
           ...(stageRemote?.status !== undefined ? { status: stageRemote.status } : {}),

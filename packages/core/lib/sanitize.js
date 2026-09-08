@@ -112,6 +112,10 @@ function canonicalForms(value) {
   return [text.replace(TERMINAL_CONTROL_RE, ""), text.replace(LONE_CONTROL_RE, "")];
 }
 
+function redactionCount(text) {
+  return text.split(REDACTION).length - 1;
+}
+
 /** Redact credential-shaped substrings. Never throws. */
 export function redactSecrets(value) {
   let out = String(value ?? "");
@@ -136,10 +140,12 @@ export function safeRemoteString(value, maxLength = REMOTE_MESSAGE_LIMIT) {
   const [display, alternate] = canonicalForms(value);
   const redacted = redactSecrets(display);
 
-  // If the other reading of the same bytes contains a credential that this one does not, the
-  // string is hiding something in its control characters. There is no reliable way to map that
-  // finding back onto the displayed form, so the whole thing goes.
-  if (redacted === display && redactSecrets(alternate) !== alternate) {
+  // Compare how *many* credentials each reading finds, not merely whether either found one.
+  // Asking only "did the display form redact anything" is not enough: a message carrying two
+  // secrets, one visible in each reading, would satisfy that test on the strength of the first
+  // and quietly publish the second. There is no reliable way to map a finding from one reading
+  // onto the other's offsets, so when the alternate sees more, the whole string goes.
+  if (redactionCount(redactSecrets(alternate)) > redactionCount(redacted)) {
     return REDACTION;
   }
 

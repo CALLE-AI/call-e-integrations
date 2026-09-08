@@ -19,6 +19,7 @@ export interface McpHttpErrorOptions {
   code?: string;
   transport?: boolean;
   timedOut?: boolean;
+  phase?: "connect" | "body" | null;
   cause?: unknown;
 }
 
@@ -58,6 +59,8 @@ export class McpHttpError extends Error {
   /** True only when no HTTP response was received (timeout, DNS, connection, TLS). */
   transport: boolean;
   timedOut: boolean;
+  /** "connect" or "body" on a transport failure; null otherwise. */
+  phase: "connect" | "body" | null;
   /** "timeout", the system error code behind a rejected fetch (e.g. "ENOTFOUND"), or null. */
   causeCode: string | null;
   /** Sanitized, bounded `{ code?, message? }` from the remote body, or null. Safe to display. */
