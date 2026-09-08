@@ -143,9 +143,8 @@ before running auth or call commands. Stop before authentication if either check
 
 Do not run bare `calle` or use `npx` to select the CLI.
 Reuse the verified entry point for every command.
-The examples use Bash or PowerShell's `$CALLE_CLI_ENTRY` variable. In
-cmd.exe, use `%CALLE_CLI_ENTRY%` instead. Append the attribution options
-after the subcommand; do not prefix the command with Unix `env`.
+The examples use `$CALLE_CLI_ENTRY` in Bash or PowerShell.
+Append the attribution options after the subcommand.
 `CALLE_CLI_ENTRY` below is the absolute path verified in those checks:
 
 ```bash

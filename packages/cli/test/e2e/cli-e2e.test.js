@@ -918,8 +918,8 @@ test("documented agent commands preserve attribution through the host shell", { 
     const legacy = await runCalle([], {
       executable,
       executableArgs: ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command",
-        "$ErrorActionPreference = 'Stop'; env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.11 node --version"],
-      env: { PATH: path.dirname(process.execPath) },
+        "$ErrorActionPreference = 'Stop'; $env:PATH = $env:CALLE_TEST_NODE_DIR; env CALLE_SOURCE=codex CALLE_INTEGRATION=codex_plugin CALLE_INTEGRATION_VERSION=0.1.11 node --version"],
+      env: { CALLE_TEST_NODE_DIR: path.dirname(process.execPath) },
     });
     assert.notEqual(legacy.code, 0);
     assert.match(legacy.stderr, /env/);

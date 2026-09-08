@@ -32,9 +32,8 @@ node "$CALLE_CLI_ENTRY" call recover --help --source codex --integration codex_p
 ```
 
 Reuse the verified entry point for every command.
-The examples use Bash or PowerShell's `$CALLE_CLI_ENTRY` variable. In
-cmd.exe, use `%CALLE_CLI_ENTRY%` instead. Append the attribution options
-after the subcommand; do not prefix the command with Unix `env`.
+The examples use `$CALLE_CLI_ENTRY` in Bash or PowerShell.
+Append the attribution options after the subcommand.
 Recheck it after changing the installation or selected path.
 
 If the package is missing, use `npm install --prefix <directory> @call-e/cli`

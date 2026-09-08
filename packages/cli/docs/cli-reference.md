@@ -45,8 +45,7 @@ Do not run bare `calle` or use `npx` to select the CLI.
 
 The examples use `$CALLE_CLI_ENTRY`, a shell variable containing the verified
 absolute path. Assign it with `CALLE_CLI_ENTRY="<absolute-path>"` in Bash or
-`$CALLE_CLI_ENTRY = '<absolute-path>'` in PowerShell. In cmd.exe, assign it with
-`set "CALLE_CLI_ENTRY=<absolute-path>"` and use `"%CALLE_CLI_ENTRY%"` in commands.
+`$CALLE_CLI_ENTRY = '<absolute-path>'` in PowerShell.
 Keep the quotes when the path contains spaces.
 
 If the package is missing, install it in a dedicated directory you control

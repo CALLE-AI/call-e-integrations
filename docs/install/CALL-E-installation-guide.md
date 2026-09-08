@@ -29,8 +29,7 @@ Follow [CLI entry point selection](../../packages/cli/docs/cli-reference.md#sele
 to select a trusted checkout or installed `@call-e/cli`, verify its package and
 MCP command help, and set `CALLE_CLI_ENTRY` to its absolute `bin/calle.js` path.
 Follow that guide's shell-specific assignment syntax. The commands below work
-in Bash and PowerShell; in cmd.exe, use `%CALLE_CLI_ENTRY%` in place of
-`$CALLE_CLI_ENTRY`.
+in Bash and PowerShell.
 
 Install into a dedicated directory if needed, following the same guide. Finish
 this setup before invoking the skill; the skill does not download remote npm
