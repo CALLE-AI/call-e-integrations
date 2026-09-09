@@ -23,10 +23,9 @@ failed `auth login` left them with an empty stdout and no `error.code` to branch
   `U+009B` / `U+009D` introducers, and invisible format characters (zero widths, joiners, bidi
   controls, soft hyphen, BOM). Detection runs over two canonicalizations, because a sequence
   swallows its final byte and that byte can be chosen from the word being searched for
-  (`Bea<U+009B>rer secret` strips to `Beaer`). The readings are compared by how many
-  credentials each finds, not merely whether either found one, so a message carrying two
-  secrets cannot publish the second on the strength of the first being caught; when the
-  alternate reading finds more, the whole string is redacted.
+  (`Bea<U+009B>rer secret` strips to `Beaer`). The readings are compared by the credentials
+  they actually find, not by how many, because two secrets crossed one per reading produce
+  equal counts; any disagreement redacts the whole string.
 - `@call-e/core/http` adds `TransportError` (`url`, `method`, `timedOut`, `phase`, `code`),
   `InvalidResponseError`, and `causeCodeOf`. `McpHttpError` carries `phase` too, so every
   transport failure names where it failed. `requestJson` throws `TransportError` when `fetch`
@@ -49,6 +48,9 @@ failed `auth login` left them with an empty stdout and no `error.code` to branch
   under `error.remote_error` after sanitization.
 - `transport_error` (and `error.transport: true`) is set only from the typed transport
   boundary. An unrelated local `TypeError` is `internal_error`, never a network condition.
+- `error.phase` survives the call-stage wrapper, and a body-phase failure says the request
+  had already been accepted rather than claiming nothing was received — the difference
+  decides whether retrying would place a second real call.
 - Hostile-input regressions: forged `auth_required`, 20 KB flat and nested bodies,
   CR/LF/ANSI content, secret-like fields and secret-like substrings inside messages absent
   from stdout and stderr, hostile MCP `tools/list` and `tools/call` errors, a hostile
