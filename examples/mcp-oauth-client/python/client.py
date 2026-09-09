@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-import httpx
+import httpx2
 from mcp import ClientSession
-from mcp.client.auth import OAuthClientProvider, TokenStorage
+from mcp.client.auth import AuthorizationCodeResult, OAuthClientProvider, TokenStorage
 from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
 
@@ -101,8 +101,8 @@ def read_config() -> dict[str, Any]:
     }
 
 
-async def complete_authorization_automatically(authorization_url: str) -> tuple[str, str | None]:
-    async with httpx.AsyncClient(follow_redirects=False, timeout=10.0) as client:
+async def complete_authorization_automatically(authorization_url: str) -> AuthorizationCodeResult:
+    async with httpx2.AsyncClient(follow_redirects=False, timeout=10.0) as client:
         response = await client.get(authorization_url)
     location = response.headers.get("location")
     if not location:
@@ -113,10 +113,10 @@ async def complete_authorization_automatically(authorization_url: str) -> tuple[
     state = params.get("state", [None])[0]
     if not code:
         raise RuntimeError("Auto authorization redirect did not include a code")
-    return code, state
+    return AuthorizationCodeResult(code=code, state=state, iss=params.get("iss", [None])[0])
 
 
-async def wait_for_local_callback(redirect_uri: str, authorization_url: str) -> tuple[str, str | None]:
+async def wait_for_local_callback(redirect_uri: str, authorization_url: str) -> AuthorizationCodeResult:
     parsed_redirect = urlparse(redirect_uri)
     if parsed_redirect.hostname not in {"127.0.0.1", "localhost"}:
         raise RuntimeError("Only localhost redirect URIs can be handled by this example")
@@ -137,6 +137,7 @@ async def wait_for_local_callback(redirect_uri: str, authorization_url: str) -> 
             params = parse_qs(parsed.query)
             result["code"] = params.get("code", [None])[0]
             result["state"] = params.get("state", [None])[0]
+            result["iss"] = params.get("iss", [None])[0]
             self.send_response(200 if result["code"] else 400)
             self.end_headers()
             self.wfile.write(b"Authorization complete. You can return to the terminal.")
@@ -158,18 +159,23 @@ async def wait_for_local_callback(redirect_uri: str, authorization_url: str) -> 
     code = result.get("code")
     if not code:
         raise RuntimeError("OAuth callback did not include a code")
-    return code, result.get("state")
+    return AuthorizationCodeResult(code=code, state=result.get("state"), iss=result.get("iss"))
 
 
 async def run_client() -> None:
     config = read_config()
     latest_authorization_url: str | None = None
+    session_id: str | None = None
+
+    async def capture_session_id(response: httpx2.Response) -> None:
+        nonlocal session_id
+        session_id = response.headers.get("mcp-session-id", session_id)
 
     async def redirect_handler(authorization_url: str) -> None:
         nonlocal latest_authorization_url
         latest_authorization_url = authorization_url
 
-    async def callback_handler() -> tuple[str, str | None]:
+    async def callback_handler() -> AuthorizationCodeResult:
         if not latest_authorization_url:
             raise RuntimeError("OAuth callback requested before authorization URL was produced")
         if config["auto_authorize"]:
@@ -190,14 +196,15 @@ async def run_client() -> None:
         storage=InMemoryTokenStorage(),
         redirect_handler=redirect_handler,
         callback_handler=callback_handler,
-        timeout=300,
     )
 
-    async with httpx.AsyncClient(auth=oauth, timeout=30.0) as http_client:
-        async with streamable_http_client(config["server_url"], http_client=http_client) as (read, write, get_session_id):
+    async with httpx2.AsyncClient(
+        auth=oauth, timeout=30.0, follow_redirects=True, event_hooks={"response": [capture_session_id]}
+    ) as http_client:
+        async with streamable_http_client(config["server_url"], http_client=http_client) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
-                emit("connected", server_url=config["server_url"], session_id=get_session_id())
+                emit("connected", server_url=config["server_url"], session_id=session_id)
 
                 tools = await session.list_tools()
                 emit("tools/list", count=len(tools.tools), tools=[tool.name for tool in tools.tools])

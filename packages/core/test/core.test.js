@@ -728,6 +728,32 @@ test("8-bit C1 introducers and invisible format characters cannot smuggle a cred
   }
 });
 
+test("credentials crossed between the two readings cannot ride out on an equal count", async () => {
+  const { safeRemoteString } = await import("@call-e/core/sanitize");
+  const ESC = String.fromCharCode(0x1b);
+  const BEL = String.fromCharCode(0x07);
+  const CSI8 = String.fromCharCode(0x9b);
+  const OSC8 = String.fromCharCode(0x9d);
+
+  // One credential each reading can see, so both find exactly one and the counts tie.
+  // Keeping the displayed form on that tie publishes the one only the other reading saw.
+  const seenInDisplay = `access_to${OSC8}8;;x${BEL}ken=abcd1234efgh5678`;
+  const seenInAlternate = `Bea${CSI8}rer abcdefghijklmnopqrstuvwxyz012345`;
+
+  for (const [first, second] of [[seenInDisplay, seenInAlternate], [seenInAlternate, seenInDisplay]]) {
+    const out = safeRemoteString(`${first} and ${second}`);
+    assert.equal(out, "[redacted]", "disagreeing readings cost the whole string");
+    for (const fragment of ["abcdefghijkl", "qrstuvwxyz012345", "abcd1234", "efgh5678"]) {
+      assert.equal(out.includes(fragment), false, `fragment ${fragment} survived`);
+    }
+  }
+
+  // Three secrets, two readings, still no partial publication.
+  const triple = `${seenInDisplay} then ${seenInAlternate} then sk_live_ABCDEFGHIJ${ESC}[0mKLMNOPQRSTUV`;
+  const out = safeRemoteString(triple);
+  assert.doesNotMatch(out, /abcdefghijkl|abcd1234|KLMNOPQRSTUV/u);
+});
+
 test("a second credential visible only in the alternate reading is not published", async () => {
   const { safeRemoteString } = await import("@call-e/core/sanitize");
   const ESC = String.fromCharCode(0x1b);

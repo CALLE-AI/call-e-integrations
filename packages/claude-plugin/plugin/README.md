@@ -8,11 +8,12 @@ authentication is missing or expired, it runs blocking `calle auth login`,
 shows the browser authorization URL, and continues after authorization
 completes.
 
-The skill uses the repository-local CLI when available, then a global `calle`,
-then `npx -y @call-e/cli`.
+The plugin uses a verified absolute `@call-e/cli` entry point. Follow
+[CLI entry point selection](../../cli/docs/cli-reference.md#selecting-the-cli-entry-point)
+to prepare the bundled launcher and a JSON request before running CLI commands.
 
 CLI commands run with:
 
-```text
-CALLE_SOURCE=claude CALLE_INTEGRATION=claude_code_plugin CALLE_INTEGRATION_VERSION=0.2.2
+```json
+{"integration": {"source": "claude", "name": "claude_code_plugin", "version": "0.2.2"}}
 ```

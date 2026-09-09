@@ -68,9 +68,10 @@ class CallStageError extends McpHttpError {
     remoteError = null,
     transport = false,
     timedOut = false,
+    phase = null,
     cause,
   }) {
-    super(message, { code, statusCode, transport, timedOut, ...(cause !== undefined ? { cause } : {}) });
+    super(message, { code, statusCode, transport, timedOut, phase, ...(cause !== undefined ? { cause } : {}) });
     this.name = "CallStageError";
     this.stage = stage;
     this.callStarted = callStarted;
@@ -233,6 +234,9 @@ const COMMAND_GROUPS = {
 };
 
 const COMMON_OPTION_NAMES = new Set([
+  "source",
+  "integration",
+  "integration-version",
   "base-url",
   "broker-base-url",
   "server-url",
@@ -274,6 +278,9 @@ const KNOWN_OPTION_NAMES = new Set([
 ]);
 
 const COMMON_HELP = `Global options (accepted by every command):
+  --source <name>              Override CALLE_SOURCE attribution
+  --integration <name>         Override CALLE_INTEGRATION attribution
+  --integration-version <ver>  Override CALLE_INTEGRATION_VERSION attribution
   --base-url <url>             Default: ${DEFAULT_BASE_URL}
   --broker-base-url <url>      Default: --base-url
   --server-url <url>           Default: <base-url>/mcp/<channel>
@@ -296,12 +303,12 @@ const COMMON_HELP = `Global options (accepted by every command):
 
 function helpCommandFor(group, command) {
   if (COMMAND_GROUPS[group]?.commands?.[command]) {
-    return `calle ${group} ${command} --help`;
+    return [group, command, "--help"];
   }
   if (COMMAND_GROUPS[group]) {
-    return `calle ${group} --help`;
+    return [group, "--help"];
   }
-  return "calle --help";
+  return ["--help"];
 }
 
 function printRootHelp(stdout) {
@@ -321,6 +328,7 @@ ${commands}
 Run 'calle <command> --help' to list a group's subcommands.
 Run 'calle <command> <subcommand> --help' to view all supported parameters.
 Example: calle call plan --help
+Agent follow-ups: login_argv, help_argv, next_argv contain JSON argument arrays.
 
 ${COMMON_HELP}
 `);
@@ -747,9 +755,15 @@ function shellQuote(value) {
   return `'${text.replaceAll("'", "'\\''")}'`;
 }
 
+function commandFields(name, argv) {
+  return {
+    [`${name}_command`]: ["calle", ...argv].map(shellQuote).join(" "),
+    [`${name}_argv`]: argv,
+  };
+}
+
 function loginCommand(config) {
-  return [
-    "calle",
+  return commandFields("login", [
     "auth",
     "login",
     "--server-url",
@@ -762,14 +776,11 @@ function loginCommand(config) {
     config.channel,
     "--cache-root",
     config.cacheRoot,
-  ]
-    .map(shellQuote)
-    .join(" ");
+  ]);
 }
 
 function callStatusCommand(config, runId, timezone = null) {
-  return [
-    "calle",
+  return commandFields("next", [
     "call",
     "status",
     "--run-id",
@@ -779,14 +790,11 @@ function callStatusCommand(config, runId, timezone = null) {
     config.serverUrl,
     "--cache-root",
     config.cacheRoot,
-  ]
-    .map(shellQuote)
-    .join(" ");
+  ]);
 }
 
 function callRecoveryCommand(config, recoveryId, timezone = null) {
-  return [
-    "calle",
+  return commandFields("next", [
     "call",
     "recover",
     "--recovery-id",
@@ -796,9 +804,7 @@ function callRecoveryCommand(config, recoveryId, timezone = null) {
     config.serverUrl,
     "--cache-root",
     config.cacheRoot,
-  ]
-    .map(shellQuote)
-    .join(" ");
+  ]);
 }
 
 function isActivePendingLogin(pending) {
@@ -816,7 +822,7 @@ function authRequiredPayload(config, message = "A usable CALL-E auth token is re
       code: "auth_required",
       message,
     },
-    login_command: loginCommand(config),
+    ...loginCommand(config),
     ...(loginUrl ? { login_url: loginUrl } : {}),
     ...(assistantHint ? { assistant_hint: assistantHint } : {}),
   };
@@ -845,7 +851,7 @@ function errorPayload(error, config, helpCommand = null) {
           code: "invalid_arguments",
           message: error.message,
         },
-        ...(helpCommand ? { help_command: helpCommand } : {}),
+        ...(helpCommand ? commandFields("help", helpCommand) : {}),
       },
     };
   }
@@ -856,7 +862,7 @@ function errorPayload(error, config, helpCommand = null) {
       call_started: error.callStarted,
       retry_safe: error.retrySafe,
       ...(error.recoveryId ? { recovery_id: error.recoveryId } : {}),
-      ...(error.nextCommand ? { next_command: error.nextCommand } : {}),
+      ...(error.nextCommand ?? {}),
     } : {};
     return {
       exitCode: 1,
@@ -888,7 +894,7 @@ function errorPayload(error, config, helpCommand = null) {
           call_started: error.callStarted,
           retry_safe: error.retrySafe,
           ...(error.recoveryId ? { recovery_id: error.recoveryId } : {}),
-          ...(error.nextCommand ? { next_command: error.nextCommand } : {}),
+          ...(error.nextCommand ?? {}),
         } : {}),
         error: {
           code: classified.code,
@@ -1237,10 +1243,18 @@ function callStageErrorFrom(error, {
     : null;
   // The summary is ours. The server's wording, if any, rides along under remote_error.
   const transport = error instanceof McpHttpError && error.transport === true;
+  // A body-phase failure means the request was accepted and the response was cut off while
+  // being read. Reporting that as "before a response was received" would invite a retry of a
+  // call that may already have been placed.
+  const phase = transport ? (error.phase ?? "connect") : null;
   const message = timedOut
-    ? `${stage} timed out before the CLI received a response.`
+    ? (phase === "body"
+      ? `${stage} timed out while the response was being read; the request had already been accepted.`
+      : `${stage} timed out before the CLI received a response.`)
     : (transport
-      ? `${stage} failed before a response was received.`
+      ? (phase === "body"
+        ? `${stage} failed while the response was being read; the request had already been accepted.`
+        : `${stage} failed before a response was received.`)
       : `${stage} failed.`);
   // A rejected/reset transport at a stage is `transport_error` (with the stage fields kept),
   // so the code and the `transport` flag can never disagree with the documented table.
@@ -1258,6 +1272,7 @@ function callStageErrorFrom(error, {
       remoteError,
       transport,
       timedOut,
+      phase,
       ...(error?.cause !== undefined ? { cause: error.cause } : {}),
     }
   );
@@ -1486,7 +1501,7 @@ async function writeRunCallSuccess({
     status_query_succeeded: statusError === null,
     status_result: statusResult,
     ...(statusError ? { status_error: statusError } : {}),
-    next_command: callStatusCommand(config, runId, statusTimezone),
+    ...callStatusCommand(config, runId, statusTimezone),
   });
 }
 

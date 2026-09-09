@@ -56,7 +56,8 @@ export class McpHttpError extends Error {
   payload: unknown;
   headers: Record<string, string>;
   code: string;
-  /** True only when no HTTP response was received (timeout, DNS, connection, TLS). */
+  /** True only when no usable response arrived: timeout, DNS, connection, TLS, or a body
+   * stream that failed after the headers. `phase` says which. */
   transport: boolean;
   timedOut: boolean;
   /** "connect" or "body" on a transport failure; null otherwise. */

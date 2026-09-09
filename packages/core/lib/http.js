@@ -24,9 +24,10 @@ export function causeCodeOf(error) {
 }
 
 /**
- * The request never received an HTTP response: DNS failure, connection refused, TLS error,
- * or the client-side timeout. This is the only condition that may be described to a caller as
- * a network problem. An unrelated local exception must not be classified as transport.
+ * No usable response: DNS failure, connection refused, TLS error, the client-side timeout, or
+ * a body stream that failed after the headers arrived. `phase` distinguishes the last case
+ * (`body`) from the rest (`connect`). This is the only condition that may be described to a
+ * caller as a network problem; an unrelated local exception must not be classified as one.
  */
 export class TransportError extends Error {
   constructor(message, { url, method, timedOut = false, phase = "connect", cause } = {}) {

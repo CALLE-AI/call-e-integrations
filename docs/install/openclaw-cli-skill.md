@@ -9,17 +9,15 @@ gateway restart from this repository.
 
 ## CLI Availability
 
-The skill uses the repository-local CLI when available, then a global `calle`
-command when available, then falls back to:
-
-```bash
-npx -y @call-e/cli
-```
+Follow [CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
+to select the trusted MCP package and prepare the launcher and `request.json`.
+The JSON arrays below are values for that request's `argv`; execute them one
+at a time with `node run-agent-command.mjs request.json`.
 
 To authenticate before using the skill:
 
-```bash
-npx -y @call-e/cli auth login
+```json
+["auth", "login"]
 ```
 
 ## Local Development

@@ -196,7 +196,7 @@ pip install calle-ai
 **Set your API key:**
 
 ```bash
-export CALLE_API_KEY="calle_live_key"
+export CALLE_API_KEY="iams_live_example"
 ```
 
 Get your API key from the [CALL-E dashboard](https://dashboard.heycall-e.com/account/api-keys).
@@ -258,7 +258,7 @@ The CALL-E Developer API provides direct HTTP access for any trusted backend, wo
 **Set credentials:**
 
 ```bash
-export CALLE_API_KEY="calle_live_key"
+export CALLE_API_KEY="iams_live_example"
 export CALLE_BASE_URL="https://api.heycall-e.com"
 ```
 
@@ -463,12 +463,12 @@ The `calle` CLI sends best-effort usage telemetry to help diagnose installation,
 
 **What is never collected:** phone numbers, call goals, OAuth tokens, broker login URLs, transcripts, or contact data.
 
-**Opt out** with any of:
+**Opt out** with `--no-telemetry`. First follow
+[CLI entry point selection](packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
+to prepare the launcher and a JSON request. Add `--no-telemetry` to its `argv`:
 
-```bash
-DO_NOT_TRACK=1 calle auth status
-CALLE_TELEMETRY=0 calle auth status
-calle auth status --no-telemetry
+```json
+["auth", "status", "--no-telemetry"]
 ```
 
 Broker and MCP requests still create service-side security, audit, and operational logs required to run calls.

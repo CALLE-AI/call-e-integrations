@@ -809,7 +809,11 @@ test("a body read that fails during a call stage is a typed transport outcome wi
   assert.equal(abortPayload.error.code, "plan_call_timeout");
   assert.equal(abortPayload.error.transport, true);
   assert.equal(abortPayload.error.cause_code, "timeout");
-  assert.match(abortPayload.error.message, /^plan_call timed out before the CLI received a response\.$/u);
+  assert.equal(abortPayload.error.phase, "body");
+  assert.match(
+    abortPayload.error.message,
+    /^plan_call timed out while the response was being read; the request had already been accepted\.$/u
+  );
 
   const resetRoot = makeTempRoot("calle-cli-stage-body-reset");
   writeToken(resetRoot, serverUrl, "tool-token");
@@ -826,7 +830,60 @@ test("a body read that fails during a call stage is a typed transport outcome wi
   assert.equal(resetPayload.error.code, "transport_error", "a rejected transport at a stage is transport_error, not <stage>_error");
   assert.equal(resetPayload.error.transport, true);
   assert.equal(resetPayload.error.cause_code, "ECONNRESET");
-  assert.match(resetPayload.error.message, /^plan_call failed before a response was received\.$/u);
+  assert.equal(resetPayload.error.phase, "body");
+  assert.match(
+    resetPayload.error.message,
+    /^plan_call failed while the response was being read; the request had already been accepted\.$/u
+  );
+});
+
+test("a call-stage body failure keeps its phase and does not claim nothing was received", async () => {
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const startArgs = ["call", "start", "--to-phone", "+15551234567", "--goal", "g", "--base-url", "https://mcp.example"];
+
+  const bodyFailures = [
+    {
+      name: "timeout while reading the body",
+      error: Object.assign(new Error("aborted"), { name: "AbortError" }),
+      code: "plan_call_timeout",
+      causeCode: "timeout",
+      summary: /^plan_call timed out while the response was being read; the request had already been accepted\.$/u,
+    },
+    {
+      name: "reset while reading the body",
+      error: Object.assign(new Error("socket hang up"), { code: "ECONNRESET" }),
+      code: "transport_error",
+      causeCode: "ECONNRESET",
+      summary: /^plan_call failed while the response was being read; the request had already been accepted\.$/u,
+    },
+  ];
+
+  for (const failure of bodyFailures) {
+    const cacheRoot = makeTempRoot("calle-cli-stage-phase");
+    writeToken(cacheRoot, serverUrl, "tool-token");
+    const result = await run([...startArgs, "--cache-root", cacheRoot], {
+      fetchImpl: mcpFixture({ serverUrl, onToolsCall: () => bodyFailingResponse(failure.error) }),
+    });
+    const payload = JSON.parse(result.stdout);
+
+    assert.equal(payload.error.code, failure.code, failure.name);
+    assert.equal(payload.error.transport, true, failure.name);
+    assert.equal(payload.error.phase, "body", `${failure.name}: the phase must survive the stage wrapper`);
+    assert.equal(payload.error.cause_code, failure.causeCode, failure.name);
+    assert.match(payload.error.message, failure.summary, failure.name);
+    assert.doesNotMatch(payload.error.message, /before a response was received/u, failure.name);
+    assert.equal(payload.stage, "plan_call");
+  }
+
+  // A connect-phase failure at the same stage must still say the request never landed.
+  const cacheRoot = makeTempRoot("calle-cli-stage-phase-connect");
+  writeToken(cacheRoot, serverUrl, "tool-token");
+  const dns = new TypeError("fetch failed");
+  dns.cause = { code: "ENOTFOUND" };
+  const connect = await run([...startArgs, "--cache-root", cacheRoot], { fetchImpl: async () => { throw dns; } });
+  const connectPayload = JSON.parse(connect.stdout);
+  assert.equal(connectPayload.error.phase, "connect");
+  assert.match(connectPayload.error.message, /^plan_call failed before a response was received\.$/u);
 });
 
 test("a credential split by a control sequence inside a remote body is still fully redacted", async () => {
@@ -1357,6 +1414,41 @@ test("auth login forwards upstream integration context from environment", async 
     "codex/codex_plugin/0.1.2",
   ]);
   assert.deepEqual(mcpMethods, ["initialize", "notifications/initialized", "tools/list"]);
+});
+
+test("attribution options override environment values without changing the environment", async (t) => {
+  const cacheRoot = makeTempRoot("calle-cli-attribution-options");
+  t.after(() => fs.rmSync(cacheRoot, { recursive: true, force: true }));
+  const env = { CALLE_SOURCE: "old", CALLE_INTEGRATION: "legacy", CALLE_INTEGRATION_VERSION: "0.1.0" };
+  const events = [];
+  const result = await run([
+    "auth", "status", "--cache-root", cacheRoot,
+    "--source", "codex", "--integration=codex_plugin", "--integration-version", "1.2.3-beta.1+test",
+  ], { env: { ...env, CALLE_TELEMETRY: "1" }, telemetryFetchImpl: captureTelemetry(events) });
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.deepEqual(events[0].payload.context.integration_context, {
+    source: "codex", integration: "codex_plugin", version: "1.2.3-beta.1+test",
+  });
+  assert.equal(resolveRuntimeConfig({ source: "codex" }, env).integrationHeader, "codex/legacy/0.1.0");
+  assert.deepEqual(env, { CALLE_SOURCE: "old", CALLE_INTEGRATION: "legacy", CALLE_INTEGRATION_VERSION: "0.1.0" });
+  assert.equal(resolveRuntimeConfig({}, {}).integrationHeader, defaultIntegrationHeader);
+  assert.equal(resolveRuntimeConfig({ source: "codex" }, {}).integrationHeader, "codex/unknown/unknown");
+
+  for (const flag of ["--source", "--integration", "--integration-version"]) {
+    for (const value of ["", "bad/value", "bad value", "bad\r\nheader"]) {
+      const invalid = await run(["auth", "status", flag, value], {
+        fetchImpl: () => assert.fail("invalid attribution must not reach the server"),
+      });
+      assert.equal(invalid.code, 2);
+      const payload = JSON.parse(invalid.stdout);
+      assert.equal(payload.error.code, "invalid_arguments");
+      assert.ok(payload.error.message.includes(`${flag} expects`), payload.error.message);
+    }
+    const missing = await run(["auth", "status", flag]);
+    assert.equal(missing.code, 2);
+    assert.ok(JSON.parse(missing.stdout).error.message.includes(`Missing value for ${flag}`));
+  }
 });
 
 test("auth login resumes a pending login without creating a new session", async () => {
