@@ -24,6 +24,11 @@ The command opens the brokered login URL, polls until authorization completes,
 exchanges the authorized session, and stores the token in a private local cache.
 The token is never printed to stdout.
 
+<!-- sync-with: install-guide.md#first-time-users-create-the-account -->
+First time? On the sign-in page choose **Continue with Google** to register a
+new account; the Google flow preserves the broker/MCP return parameters.
+Details: [install-guide.md](./install-guide.md#first-time-users-create-the-account).
+
 For agent integrations that need to show the authorization link before
 continuing:
 

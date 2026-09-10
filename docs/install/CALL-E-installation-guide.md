@@ -61,6 +61,16 @@ After the user confirms authorization is complete, finish the pending login:
 ["auth", "login", "--no-browser-open"]
 ```
 
+## Step 3.5 First-Time Users: Create The Account
+
+<!-- sync-with: docs/install/install-guide.md#first-time-users-create-the-account -->
+
+`calle auth login` uses the same flow for new and existing accounts: it opens
+the brokered dashboard sign-in, where **Continue with Google** registers a new
+account or signs in an existing one while preserving the broker/MCP return
+parameters. Full first-time-user detail:
+[First-Time Users](./install-guide.md#first-time-users-create-the-account).
+
 ## Step 4 Verify
 
 ```json
