@@ -85,7 +85,7 @@ and prepare the launcher and `request.json`. Use each array below as `argv`:
 CLI commands run by the Cursor skill include this CALL-E attribution:
 
 ```json
-{"integration": {"source": "cursor", "name": "cursor_plugin", "version": "0.1.1"}}
+{"integration": {"source": "cursor", "name": "cursor_plugin", "version": "0.1.2"}}
 ```
 
 ## Safety
