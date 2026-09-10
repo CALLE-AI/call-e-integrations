@@ -133,10 +133,11 @@ async function requestJsonRpc(fetchImpl, url, { headers, payload, timeoutMs }) {
 
   try {
     let body = null;
+    let parseFailed = false;
     try {
       body = parseResponseBody(text);
     } catch {
-      body = null;
+      parseFailed = true;
     }
     const responseHeaders = Object.fromEntries(response.headers.entries());
 
@@ -149,7 +150,27 @@ async function requestJsonRpc(fetchImpl, url, { headers, payload, timeoutMs }) {
       });
     }
 
-    if (body?.error) {
+    // A successful status is not a successful RPC when the response cannot be interpreted.
+    // Keep the raw body available for the shared sanitizer, but never let JSON.parse's
+    // remote-quoting SyntaxError escape or silently turn malformed input into an empty result.
+    const expectsResponse = payload.id !== undefined;
+    const bodyIsObject = Boolean(body && typeof body === "object" && !Array.isArray(body));
+    const hasRpcResult = bodyIsObject && Object.hasOwn(body, "result");
+    const hasRpcError = bodyIsObject && Boolean(
+      body.error && typeof body.error === "object" && !Array.isArray(body.error),
+    );
+    const hasRpcOutcome = hasRpcResult || hasRpcError;
+    if (parseFailed || (text.trim() && !bodyIsObject) || (expectsResponse && !hasRpcOutcome)) {
+      throw new McpHttpError(`MCP response was invalid for ${payload.method}`, {
+        statusCode: response.status,
+        responseText: text,
+        payload: bodyIsObject ? body : null,
+        headers: responseHeaders,
+        code: "invalid_response",
+      });
+    }
+
+    if (hasRpcError) {
       // The server's message is untrusted: it is kept in `payload` and, sanitized, in
       // `remoteError`. The Error message itself stays locally authored.
       throw new McpHttpError(`Remote MCP error for ${payload.method}`, {

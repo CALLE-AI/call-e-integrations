@@ -53,25 +53,41 @@ const LBRACKET = `${BACKSLASH}[`;
 const RBRACKET = `${BACKSLASH}]`;
 
 // OSC ] , DCS P, SOS X, PM ^, APC _ — introduced either as ESC + letter or as one C1 byte.
-const STRING_CONTROL_INTRO =
-  `(?:${ESC}[${RBRACKET}PX^_]|[${OSC_8BIT}${DCS_8BIT}${SOS_8BIT}${PM_8BIT}${APC_8BIT}])`;
-// ST in either form, BEL as OSC's legacy terminator, or the end of the string.
-const STRING_CONTROL_END = `(?:${BEL}|${ESC}${BACKSLASH}${BACKSLASH}|${ST_8BIT}|$)`;
+// OSC has a legacy BEL terminator. DCS, SOS, PM and APC do not: a BEL inside those payloads
+// must stay consumed until ST, or the text after it can survive and split a credential.
+const OSC_INTRO = `(?:${ESC}${RBRACKET}|${OSC_8BIT})`;
+const ST_STRING_INTRO =
+  `(?:${ESC}[PX^_]|[${DCS_8BIT}${SOS_8BIT}${PM_8BIT}${APC_8BIT}])`;
+const ST_END = `(?:${ESC}${BACKSLASH}${BACKSLASH}|${ST_8BIT}|$)`;
+const OSC_END = `(?:${BEL}|${ST_END})`;
+// ESC is legal inside a string-control payload unless it introduces ST (`ESC \\`). Match it
+// explicitly rather than excluding every ESC: otherwise an embedded CSI makes the whole
+// string-control match fail, and the payload is left behind as ordinary text.
+const ST_STRING_PAYLOAD =
+  `(?:[^${ESC}${ST_8BIT}]|${ESC}(?!${BACKSLASH}${BACKSLASH}))*`;
+const OSC_PAYLOAD =
+  `(?:[^${BEL}${ESC}${ST_8BIT}]|${ESC}(?!${BACKSLASH}${BACKSLASH}))*`;
 
 const TERMINAL_CONTROL_RE = new RegExp(
   [
     // String controls first: they own their payload, and their introducers also match the
-    // two-character ESC rule below.
-    `${STRING_CONTROL_INTRO}[^${BEL}${ESC}${ST_8BIT}]*${STRING_CONTROL_END}`,
-    // CSI, terminated by its final byte or by end of input.
-    `(?:${ESC}${LBRACKET}|${CSI_8BIT})[0-?]*[ -/]*(?:[@-~]|$)`,
-    // Remaining two-character ESC sequences.
-    `${ESC}[@-_]`,
+    // general ESC rule below.
+    `${OSC_INTRO}${OSC_PAYLOAD}${OSC_END}`,
+    `${ST_STRING_INTRO}${ST_STRING_PAYLOAD}${ST_END}`,
+    // CSI, terminated by its final byte or by end of input. C0/C1 controls may occur while a
+    // terminal is parsing CSI; consume them with the sequence instead of leaving parameter
+    // text behind when the strict parameter/intermediate grammar is interrupted.
+    `(?:${ESC}${LBRACKET}|${CSI_8BIT})[${C0_START}-${C0_END}${DEL}-${C1_END} -?]*(?:[@-~]|$)`,
+    // Remaining ECMA-35 escape sequences: zero or more intermediate bytes, then a final byte.
+    // This includes private and standardized forms such as ESC 7, ESC =, ESC c and ESC ( B,
+    // not only the Fe (`ESC @` through `ESC _`) family.
+    `${ESC}[${C0_START}-${C0_END}${DEL}-${C1_END} -/]*(?:[0-~]|$)`,
     // Whatever control characters are left, including CR, LF and TAB.
     `[${C0_START}-${C0_END}${DEL}-${C1_END}]`,
     // Invisible format and default-ignorable characters: zero widths, joiners, bidi controls,
-    // soft hyphen, BOM.
-    `[${BACKSLASH}p{Cf}${BACKSLASH}p{Default_Ignorable_Code_Point}]`,
+    // soft hyphen, BOM. Unicode line/paragraph separators are terminal/log line controls too;
+    // removing them also prevents a token value being split across two visual lines.
+    `[${BACKSLASH}p{Cf}${BACKSLASH}p{Zl}${BACKSLASH}p{Zp}${BACKSLASH}p{Default_Ignorable_Code_Point}]`,
   ].join("|"),
   "gu",
 );
@@ -80,7 +96,7 @@ const TERMINAL_CONTROL_RE = new RegExp(
 // payload. This is the *wrong* thing to display, and a necessary second reading for detection
 // — see canonicalForms.
 const LONE_CONTROL_RE = new RegExp(
-  `[${C0_START}-${C0_END}${DEL}-${C1_END}]|[${BACKSLASH}p{Cf}${BACKSLASH}p{Default_Ignorable_Code_Point}]`,
+  `[${C0_START}-${C0_END}${DEL}-${C1_END}]|[${BACKSLASH}p{Cf}${BACKSLASH}p{Zl}${BACKSLASH}p{Zp}${BACKSLASH}p{Default_Ignorable_Code_Point}]`,
   "gu",
 );
 
@@ -192,6 +208,11 @@ export function safeRemoteCode(value) {
     return undefined;
   }
   const trimmed = value.trim();
+  // Codes are opaque machine values, not prose. Do not normalize surrounding whitespace
+  // into a different, plausible code any more than we normalize embedded controls.
+  if (trimmed !== value) {
+    return undefined;
+  }
   // A code carrying control characters is dropped, never repaired. Accepting the remainder
   // would turn `bad<ESC>[31m` into the entirely plausible `bad`, which is precisely the
   // "clean it into something that looks valid" behaviour this function refuses to do.

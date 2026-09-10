@@ -523,6 +523,74 @@ test("auth login bounds and sanitizes hostile upstream JSON", async () => {
   }
 });
 
+test("auth login keeps a terminal broker failure out of the trusted summary", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-terminal-failure");
+  const marker = `REMOTE-TEXT-MARKER access_token=abcd1234${String.fromCharCode(27)}[31mefgh5678`;
+  const fetchImpl = async (url, init) => {
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+      return jsonResponse({
+        session_id: "session-failed",
+        session_secret: "secret-failed",
+        login_url: "https://mcp.example/start",
+        status: "PENDING",
+        poll_after_ms: 1,
+      });
+    }
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-failed") && init?.method === "GET") {
+      return jsonResponse({ status: "FAILED", error_message: marker });
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+
+  const result = await run(
+    ["auth", "login", "--no-browser-open", "--base-url", "https://mcp.example", "--cache-root", cacheRoot],
+    { fetchImpl },
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "broker_login_failed");
+  assert.equal(payload.error.message, "Brokered login failed.");
+  assert.equal(payload.error.remote_error.code, "FAILED");
+  assert.equal(payload.error.remote_error.message, "[redacted]");
+  assert.doesNotMatch(payload.error.message, /REMOTE-TEXT-MARKER|abcd1234|efgh5678/u);
+  assert.doesNotMatch(result.stderr, /REMOTE-TEXT-MARKER|abcd1234|efgh5678/u);
+});
+
+test("auth login reports the overall authorization wait as a non-transport timeout", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-wait-timeout");
+  const fetchImpl = async (url, init) => {
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+      return jsonResponse({
+        session_id: "session-pending",
+        session_secret: "secret-pending",
+        login_url: "https://mcp.example/start",
+        status: "PENDING",
+        poll_after_ms: 1,
+      });
+    }
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-pending") && init?.method === "GET") {
+      return jsonResponse({ status: "PENDING", poll_after_ms: 1 });
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+
+  const result = await run(
+    [
+      "auth", "login", "--no-browser-open", "--poll-timeout-seconds", "0.0001",
+      "--base-url", "https://mcp.example", "--cache-root", cacheRoot,
+    ],
+    { fetchImpl, sleepImpl: async () => {} },
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "broker_login_timeout");
+  assert.equal(payload.error.message, "Timed out waiting for brokered login authorization.");
+  assert.equal(payload.error.transport, undefined, "the broker kept answering; this is not a network failure");
+  assert.equal(payload.error.remote_error, undefined);
+});
+
 test("auth login reads a nested upstream error object and drops everything else", async () => {
   const cacheRoot = makeTempRoot("calle-cli-login-nested");
   const result = await run(
@@ -676,6 +744,31 @@ test("mcp tools keeps a hostile JSON-RPC error out of the summary and bounds it 
   }
   assert.doesNotMatch(result.stderr.trimEnd(), CONTROL_CHARS);
   assert.ok(result.stderr.length < 300);
+});
+
+test("mcp tools rejects a successful status with a malformed JSON-RPC body", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-mcp-invalid-response");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const marker = "REMOTE-TEXT-MARKER access_token=abcd1234efgh5678";
+  writeToken(cacheRoot, serverUrl, "tool-token");
+  const fetchImpl = mcpFixture({
+    serverUrl,
+    onToolsList: () => new Response(marker, { status: 200, headers: { "content-type": "text/plain" } }),
+  });
+
+  const result = await run(
+    ["mcp", "tools", "--base-url", "https://mcp.example", "--cache-root", cacheRoot],
+    { fetchImpl },
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "invalid_response");
+  assert.equal(payload.error.message, "MCP response was invalid for tools/list");
+  assert.equal(payload.error.status_code, 200);
+  assert.doesNotMatch(payload.error.message, /REMOTE-TEXT-MARKER|abcd1234|efgh5678/u);
+  assert.doesNotMatch(result.stderr, /REMOTE-TEXT-MARKER|abcd1234|efgh5678/u);
+  assert.match(payload.error.remote_error.message, /\[redacted\]/u);
 });
 
 test("mcp call applies the same boundary to a tool-call error", async () => {
@@ -935,6 +1028,36 @@ test("a credential split by a control sequence inside a remote body is still ful
   assert.doesNotMatch(payload.error.remote_error.message, CONTROL_CHARS);
 });
 
+test("nested terminal payloads and Unicode line separators cannot leak through the CLI envelope", async () => {
+  const ESC = String.fromCharCode(0x1b);
+  const BEL = String.fromCharCode(0x07);
+  const cases = [
+    `access_to${ESC}]title${ESC}[31mmore${BEL}ken=abcd1234efgh5678`,
+    `access_to${String.fromCharCode(0x90)}junk${ESC}[31mmore${String.fromCharCode(0x9c)}ken=abcd1234efgh5678`,
+    `access_to${String.fromCharCode(0x90)}junk${BEL}more${String.fromCharCode(0x9c)}ken=abcd1234efgh5678`,
+    `access_to${ESC}cken=abcd1234efgh5678`,
+    `access_to${String.fromCharCode(0x9b)}1${String.fromCharCode(0)}2mken=abcd1234efgh5678`,
+    "access_token=abcd1234\u2028efgh5678",
+    "Bearer abcdefghijkl\u2029mnopqrstuvwxyz012345",
+  ];
+
+  for (const message of cases) {
+    const cacheRoot = makeTempRoot("calle-cli-nested-control-credential");
+    const result = await run(
+      [...LOGIN_ARGS, "--cache-root", cacheRoot],
+      { fetchImpl: brokerFailure(502, { error: "oauth_register_failed", message }) },
+    );
+    const payload = JSON.parse(result.stdout);
+
+    assert.equal(payload.error.code, "broker_unavailable");
+    assert.match(payload.error.remote_error.message, /\[redacted\]/u);
+    for (const fragment of ["abcd1234", "efgh5678", "abcdefghijkl", "mnopqrstuvwxyz012345", "junk", "more"]) {
+      assert.doesNotMatch(result.stdout, new RegExp(fragment), `${fragment} leaked to stdout`);
+      assert.doesNotMatch(result.stderr, new RegExp(fragment), `${fragment} leaked to stderr`);
+    }
+  }
+});
+
 test("every envelope agrees with the contract: transport flag, remote_error shape, local summary", async () => {
   const { ERROR_CODES } = await import("../lib/cli.js");
   const serverUrl = "https://mcp.example/mcp/openagent_oauth";
@@ -1030,6 +1153,7 @@ test("a remote error_code is validated exactly like any other machine code", asy
     { code: 1.5, kept: undefined },
     { code: "x".repeat(80), kept: undefined },
     { code: "  spaced code  ", kept: undefined },
+    { code: " SAFE_CODE ", kept: undefined },
     { code: `bad${String.fromCharCode(27)}[31m`, kept: undefined },
     { code: "has spaces", kept: undefined },
   ];

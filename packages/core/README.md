@@ -8,7 +8,7 @@ This package is used by CALL-E integrations such as `@call-e/cli`. It is not a s
 
 ```js
 import { tokenCachePath } from "@call-e/core/cache";
-import { createBrokerSession } from "@call-e/core/broker-client";
+import { BrokerLoginError, createBrokerSession } from "@call-e/core/broker-client";
 import { callMcpTool } from "@call-e/core/mcp-client";
 ```
 
@@ -139,7 +139,8 @@ try {
 | `HttpStatusError` | `requestJson` | A non-success HTTP status. `statusCode`, `responseText`, `headers`, `url`. |
 | `TransportError` | `requestJson` | No usable response: `fetch` rejected, the body could not be read, or the timeout fired. `url`, `method`, `timedOut`, `phase` (`connect` or `body`), `code` (`timeout`, or the system code such as `ECONNRESET` for a body-phase failure). |
 | `InvalidResponseError` | `requestJson` | A 2xx whose body was not the expected JSON object. `responseText` holds the raw body; `message` never quotes it, because `JSON.parse` puts its input into its own message. |
-| `McpHttpError` | MCP client | HTTP failure (`code: "http_error"`), JSON-RPC error (`"mcp_error"`), or transport failure (`"transport_error"`). |
+| `McpHttpError` | MCP client | HTTP failure (`code: "http_error"`), JSON-RPC error (`"mcp_error"`), malformed successful response (`"invalid_response"`), or transport failure (`"transport_error"`). |
+| `BrokerLoginError` | `loginWithBroker` | A terminal broker outcome (`code: "broker_login_failed"`) or overall authorization wait timeout (`"broker_login_timeout"`). `message` is locally authored; sanitized service detail is in `remoteError`. |
 
 `@call-e/core/sanitize`:
 
@@ -156,12 +157,17 @@ Controls are removed rather than replaced before secret detection, so
 `access_token=abcd<ESC>[31m1234` is redacted as one credential instead of surviving as two
 halves. Removal is by *sequence*, covering both the 7-bit `ESC [` / `ESC ]` forms and the
 8-bit `U+009B` / `U+009D` introducers, plus invisible format characters such as zero-width
-spaces and bidi controls.
+spaces and bidi controls and Unicode line/paragraph separators.
 
 Removal covers every terminal string control — OSC, DCS, SOS, PM and APC, in their 7-bit
 (`ESC ]`, `ESC P`, `ESC X`, `ESC ^`, `ESC _`) and 8-bit forms — through its terminator, and
 through end of input when a sequence is left unterminated. Stripping only the introducer would
-leave the payload behind as ordinary text, which is what splits a key name apart.
+leave the payload behind as ordinary text, which is what splits a key name apart. An embedded
+ESC sequence is consumed as payload unless it is the string terminator; it cannot make the
+outer sequence fall back to character-at-a-time stripping. Other ECMA-35 escape functions,
+including private, standardized, and intermediate-byte forms, are removed as complete
+sequences; embedded C0/C1 controls do not make CSI parameter text survive. BEL is accepted as
+a legacy OSC terminator only; inside DCS, SOS, PM, and APC it remains payload until ST.
 
 Detection runs over two canonicalizations, because they disagree and both matter. Consuming
 a whole sequence is what a terminal does, but a sequence swallows its final byte, and that

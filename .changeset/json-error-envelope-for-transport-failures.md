@@ -27,19 +27,29 @@ failed `auth login` left them with an empty stdout and no `error.code` to branch
   sees a credential, the whole string is redacted: comparing findings is not enough, because
   two identical copies of one credential, one visible to each reading, compare equal.
 - Every terminal string control is consumed with its payload — OSC, DCS, SOS, PM and APC, in
-  both 7-bit and 8-bit forms, through BEL, `ESC \`, 8-bit ST, or end of input when
-  unterminated. Stripping a lone introducer left the payload as text and split key names apart.
+  both 7-bit and 8-bit forms. OSC ends at BEL or ST; the other four end only at ST. All consume
+  through end of input when unterminated. Embedded non-terminating ESC sequences remain part
+  of that payload rather than defeating the outer match. Unicode line/paragraph separators
+  are removed with other line
+  controls so they cannot split a credential value. Private, standardized, and
+  intermediate-byte ECMA-35 escape functions are removed whole, and C0/C1 bytes embedded in a
+  CSI cannot strand its parameters. Stripping a lone introducer left the payload as text and
+  split key names apart.
 - `@call-e/core/http` adds `TransportError` (`url`, `method`, `timedOut`, `phase`, `code`),
   `InvalidResponseError`, and `causeCodeOf`. `McpHttpError` carries `phase` too, so every
   transport failure names where it failed. `requestJson` throws `TransportError` when `fetch`
   rejects, times out, or the body cannot be read, and `InvalidResponseError` when a 2xx body is
   not a JSON object — `JSON.parse` quotes its input in its own message, so letting a native
   `SyntaxError` escape would have published remote text as a locally-authored summary. Arrays
-  are no longer accepted as JSON objects. `HttpStatusError` now records `url`.
+  are no longer accepted as JSON objects. `HttpStatusError` now records `url` and keeps the
+  server-controlled HTTP reason phrase out of its locally authored `message`.
+- `BrokerLoginError` keeps a terminal broker status/error message out of `Error.message` and
+  distinguishes a terminal authorization outcome from the overall authorization wait timeout.
 - `McpHttpError.message` is always locally authored. The server's JSON-RPC error text is kept
   raw in `payload` and, sanitized, in the new `remoteError` field. New fields `transport`,
   `timedOut`, `causeCode`. Timeouts, rejected fetches, and body-read failures are
-  `code: "transport_error"`.
+  `code: "transport_error"`. Successful statuses with malformed or missing JSON-RPC outcomes
+  are typed `invalid_response` errors instead of silently becoming empty successful results.
 
 **cli**
 
@@ -51,6 +61,9 @@ failed `auth login` left them with an empty stdout and no `error.code` to branch
   under `error.remote_error` after sanitization.
 - `transport_error` (and `error.transport: true`) is set only from the typed transport
   boundary. An unrelated local `TypeError` is `internal_error`, never a network condition.
+- Terminal broker outcomes and the overall authorization wait use the CLI-owned
+  `broker_login_failed` / `broker_login_timeout` codes; service wording is sanitized under
+  `error.remote_error`, never copied into the trusted summary.
 - `error.phase` survives the call-stage wrapper, and a body-phase failure says the request
   had already been accepted rather than claiming nothing was received — the difference
   decides whether retrying would place a second real call.

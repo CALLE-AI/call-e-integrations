@@ -1,4 +1,5 @@
 import {
+  BrokerLoginError,
   currentTokenDocument,
   loginWithBroker,
   tokenIsUsable,
@@ -80,6 +81,10 @@ async function consumePublicTypes() {
   try {
     await requestJson("GET", "https://example.test/status");
   } catch (error) {
+    if (error instanceof BrokerLoginError) {
+      error.code.toUpperCase();
+      error.remoteError?.message?.toUpperCase();
+    }
     if (error instanceof InvalidResponseError) {
       error.responseText.toUpperCase();
       error.statusCode?.toFixed();

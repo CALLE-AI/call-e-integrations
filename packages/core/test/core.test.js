@@ -25,6 +25,7 @@ import {
   writePrivateJson,
 } from "@call-e/core/cache";
 import {
+  BrokerLoginError,
   createBrokerSession,
   ensurePendingLogin,
   loginWithBroker,
@@ -329,6 +330,47 @@ test("broker login exchanges active pending before reusing cached token", async 
   ]);
 });
 
+test("broker terminal detail is typed and sanitized instead of entering Error.message", async () => {
+  const cacheRoot = makeTempRoot("calle-core-broker-terminal-error");
+  const config = {
+    cacheRoot,
+    brokerBaseUrl: "https://broker.test",
+    serverUrl: "https://broker.test/mcp/openagent_oauth",
+    authBaseUrl: "https://broker.test",
+    channel: "openagent_oauth",
+    scope: "openid email profile",
+    clientName: "calle Login",
+    minTtlSeconds: 300,
+    timeoutSeconds: 15,
+    pollTimeoutSeconds: 1,
+  };
+  const marker = "REMOTE-TEXT-MARKER access_token=abcd1234efgh5678";
+  const fetchImpl = async (url, init) => {
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init.method === "POST") {
+      return jsonResponse({
+        session_id: "session-failed",
+        session_secret: "secret-failed",
+        login_url: "https://broker.test/start",
+        status: "PENDING",
+        poll_after_ms: 1,
+      });
+    }
+    return jsonResponse({ status: "FAILED", error_message: marker });
+  };
+
+  await assert.rejects(
+    () => loginWithBroker(config, { fetchImpl, noBrowserOpen: true, sleepImpl: async () => {} }),
+    (error) => {
+      assert.ok(error instanceof BrokerLoginError);
+      assert.equal(error.code, "broker_login_failed");
+      assert.equal(error.message, "Brokered login failed.");
+      assert.deepEqual(error.remoteError, { code: "FAILED", message: "REMOTE-TEXT-MARKER access_token=[redacted]" });
+      assert.doesNotMatch(error.message, /REMOTE-TEXT-MARKER|abcd1234|efgh5678/u);
+      return true;
+    },
+  );
+});
+
 test("MCP client initializes a session and lists tools", async () => {
   const config = mcpConfig(makeTempRoot("calle-core-mcp-tools"));
   const calls = [];
@@ -600,6 +642,69 @@ test("MCP client classifies a rejected fetch as transport, and keeps the server 
   );
 });
 
+test("successful MCP statuses with invalid JSON-RPC bodies are typed invalid responses", async () => {
+  const marker = "REMOTE-TEXT-MARKER access_token=abcd1234efgh5678";
+  const bodies = [
+    marker,
+    JSON.stringify([marker]),
+    JSON.stringify(null),
+    JSON.stringify({}),
+    JSON.stringify({ error: null }),
+    JSON.stringify({ error: "not-an-error-object" }),
+    "",
+  ];
+
+  for (const responseText of bodies) {
+    const config = mcpConfig(makeTempRoot("calle-core-mcp-invalid-response"));
+    const fetchImpl = async () => ({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      headers: new Headers({ "content-type": "application/json" }),
+      async text() { return responseText; },
+    });
+
+    await assert.rejects(
+      () => listMcpTools({ config, fetchImpl }),
+      (error) => {
+        assert.ok(error instanceof McpHttpError);
+        assert.equal(error.code, "invalid_response");
+        assert.equal(error.statusCode, 200);
+        assert.equal(error.message, "MCP response was invalid for initialize");
+        assert.doesNotMatch(error.message, /REMOTE-TEXT-MARKER|abcd1234|efgh5678/u);
+        if (error.remoteError?.message) {
+          assert.doesNotMatch(error.remoteError.message, /abcd1234|efgh5678/u);
+        }
+        return true;
+      },
+    );
+  }
+});
+
+test("HTTP status reason text and body never reach the core error message", async () => {
+  const { requestJson, HttpStatusError } = await import("@call-e/core/http");
+  const marker = "REMOTE-TEXT-MARKER access_token=abcd1234efgh5678";
+
+  await assert.rejects(
+    () => requestJson("POST", "https://example.test/thing", {
+      fetchImpl: async () => ({
+        ok: false,
+        status: 502,
+        statusText: marker,
+        headers: new Headers(),
+        async text() { return marker; },
+      }),
+    }),
+    (error) => {
+      assert.ok(error instanceof HttpStatusError);
+      assert.equal(error.message, "HTTP 502 for POST https://example.test/thing");
+      assert.doesNotMatch(error.message, /REMOTE-TEXT-MARKER|abcd1234|efgh5678/u);
+      assert.equal(error.responseText, marker, "raw detail remains available for sanitizing");
+      return true;
+    },
+  );
+});
+
 test("sanitize helpers strip terminal controls, redact secrets, and bound length", async () => {
   const { safeRemoteString, safeRemoteCode, redactSecrets, sanitizeRemoteError } = await import("@call-e/core/sanitize");
   const ESC = String.fromCharCode(27);
@@ -627,6 +732,7 @@ test("sanitize helpers strip terminal controls, redact secrets, and bound length
 
   assert.equal(safeRemoteCode("oauth_register_failed"), "oauth_register_failed");
   assert.equal(safeRemoteCode("nested.code-1"), "nested.code-1");
+  assert.equal(safeRemoteCode(" oauth_register_failed "), undefined);
   assert.equal(safeRemoteCode(`bad code${ESC}[31m`), undefined);
   assert.equal(safeRemoteCode("x".repeat(65)), undefined);
 
@@ -780,6 +886,62 @@ test("every terminal string-control family is consumed with its payload", async 
   // An unterminated CSI must not leave its parameters behind either.
   const csi = safeRemoteString(`access_to${CSI8}12345 token=abcd1234efgh5678`);
   assert.doesNotMatch(csi.replace(/\[redacted\]/gu, ""), /abcd1234|efgh5678/u);
+});
+
+test("embedded ESC payloads and Unicode line separators cannot split credentials", async () => {
+  const { safeRemoteString, stripTerminalControls } = await import("@call-e/core/sanitize");
+  const ESC = String.fromCharCode(0x1b);
+  const BEL = String.fromCharCode(0x07);
+  const ST8 = String.fromCharCode(0x9c);
+  const introducers = [
+    `${ESC}]`, String.fromCharCode(0x9d),
+    `${ESC}P`, String.fromCharCode(0x90),
+    `${ESC}X`, String.fromCharCode(0x98),
+    `${ESC}^`, String.fromCharCode(0x9e),
+    `${ESC}_`, String.fromCharCode(0x9f),
+  ];
+
+  // An ESC sequence inside the payload used to make the outer string-control regex give up.
+  // Its `junk...more` payload then survived and split the sensitive key name in both readings.
+  for (const [index, intro] of introducers.entries()) {
+    const terminators = index < 2 ? [BEL, `${ESC}\\`, ST8] : [`${ESC}\\`, ST8];
+    for (const terminator of terminators) {
+      const hostile = `access_to${intro}junk${ESC}[31mmore${terminator}ken=abcd1234efgh5678`;
+      const stripped = stripTerminalControls(hostile);
+      const out = safeRemoteString(hostile);
+      assert.equal(stripped, "access_token=abcd1234efgh5678");
+      assert.doesNotMatch(out.replace(/\[redacted\]/gu, ""), /abcd1234|efgh5678/u);
+    }
+  }
+
+  // BEL terminates OSC only. For the other four string families it is payload, so stripping
+  // must continue through the later ST instead of stranding the text between BEL and ST.
+  for (const intro of introducers.slice(2)) {
+    for (const terminator of [`${ESC}\\`, ST8]) {
+      const hostile = `access_to${intro}junk${BEL}more${terminator}ken=abcd1234efgh5678`;
+      assert.equal(stripTerminalControls(hostile), "access_token=abcd1234efgh5678");
+      assert.doesNotMatch(safeRemoteString(hostile).replace(/\[redacted\]/gu, ""), /abcd1234|efgh5678/u);
+    }
+  }
+
+  // These are line controls even though they sit outside the C0/C1 ranges. Keeping either
+  // one lets the key/value pattern redact only the first half and publish the tail on a new
+  // visual line.
+  for (const separator of ["\u2028", "\u2029"]) {
+    const hostile = `access_token=abcd1234${separator}efgh5678`;
+    assert.equal(stripTerminalControls(hostile), "access_token=abcd1234efgh5678");
+    assert.equal(safeRemoteString(hostile), "access_token=[redacted]");
+  }
+
+  // ECMA-35 has private/standardized and multi-byte escape forms outside ESC @ through
+  // ESC _. A CSI parser also remains active across embedded C0 controls.
+  const NUL = String.fromCharCode(0x00);
+  const CSI8 = String.fromCharCode(0x9b);
+  for (const sequence of [`${ESC}7`, `${ESC}=`, `${ESC}c`, `${ESC}(B`, `${ESC}[1${NUL}2m`, `${CSI8}1${NUL}2m`]) {
+    const hostile = `access_to${sequence}ken=abcd1234efgh5678`;
+    assert.equal(stripTerminalControls(hostile), "access_token=abcd1234efgh5678");
+    assert.doesNotMatch(safeRemoteString(hostile).replace(/\[redacted\]/gu, ""), /abcd1234|efgh5678/u);
+  }
 });
 
 test("identical credentials crossed between the readings cannot compare equal", async () => {
@@ -975,6 +1137,7 @@ test("numeric remote codes are accepted only as safe integers", async () => {
   assert.equal(safeRemoteCode(Number.NaN), undefined);
   assert.equal(safeRemoteCode(Number.MAX_SAFE_INTEGER + 2), undefined);
   assert.equal(safeRemoteCode("-abc"), "-abc");
+  assert.equal(safeRemoteCode(" -abc "), undefined);
   assert.equal(safeRemoteCode("1e+100"), undefined);
   assert.deepEqual(sanitizeRemoteError({ error: { code: 1e100, message: "m" } }), { message: "m" });
   assert.deepEqual(publicRemoteError({ code: -32601, message: "x", extra: "dropped" }), { code: "-32601", message: "x" });

@@ -22,7 +22,7 @@ import {
   CLI_VERSION,
   resolveRuntimeConfig,
 } from "./config.js";
-import { ensurePendingLogin, loginWithBroker } from "./broker-client.js";
+import { BrokerLoginError, ensurePendingLogin, loginWithBroker } from "./broker-client.js";
 import { HttpStatusError, InvalidResponseError, TransportError } from "./http.js";
 import {
   REMOTE_MESSAGE_LIMIT,
@@ -974,6 +974,22 @@ function errorPayload(error, config, helpCommand = null) {
     };
   }
 
+  if (error instanceof BrokerLoginError) {
+    const remoteError = publicRemoteError(error.remoteError);
+    return {
+      exitCode: classified.exitCode,
+      body: {
+        ok: false,
+        server_url: config?.serverUrl ?? null,
+        error: {
+          code: classified.code,
+          message: localMessage(error.message) ?? "Brokered login failed.",
+          ...(remoteError ? { remote_error: remoteError } : {}),
+        },
+      },
+    };
+  }
+
   return {
     exitCode: classified.exitCode,
     body: {
@@ -1006,6 +1022,8 @@ export const ERROR_CODES = Object.freeze({
   http_error: { exitCode: 1, transport: false },
   transport_error: { exitCode: 1, transport: true },
   invalid_response: { exitCode: 1, transport: false },
+  broker_login_failed: { exitCode: 1, transport: false },
+  broker_login_timeout: { exitCode: 1, transport: false },
   mcp_error: { exitCode: 1, transport: false },
   plan_not_ready: { exitCode: 1, transport: false },
   plan_call_invalid_response: { exitCode: 1, transport: false },
@@ -1050,6 +1068,10 @@ export function classifyError(error) {
   }
   if (error instanceof InvalidResponseError) {
     return { code: "invalid_response", exitCode: 1, transport: false };
+  }
+  if (error instanceof BrokerLoginError) {
+    const code = error.code === "broker_login_timeout" ? error.code : "broker_login_failed";
+    return { code, exitCode: 1, transport: false };
   }
   // Anything else is a local defect. It is never described as a network condition.
   return { code: "internal_error", exitCode: 1, transport: false };

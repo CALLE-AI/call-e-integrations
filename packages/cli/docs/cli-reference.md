@@ -178,7 +178,9 @@ if the CLI can emit a code that is not listed here:
 | `broker_unavailable` | 1 | The brokered-login service returned a 5xx. Not a local problem. |
 | `http_error` | 1 | Any other non-success HTTP status from a CLI-side request. |
 | `transport_error` | 1 | No usable response: DNS, connection, TLS, a reset while reading the body, or a timeout outside a call stage. `transport: true`, with `phase` naming where it failed. Inside a `call` stage it also carries `stage`, `call_started`, and `retry_safe`. |
-| `invalid_response` | 1 | A successful HTTP status whose body was not the expected JSON. The body is remote text, so it appears only under `remote_error`. |
+| `invalid_response` | 1 | A successful HTTP or MCP status whose body was not the expected JSON object / JSON-RPC outcome. The body is remote text, so it appears only under `remote_error`. |
+| `broker_login_failed` | 1 | Brokered authorization reached a terminal failed/expired/exchanged state. Sanitized service detail is under `remote_error`. |
+| `broker_login_timeout` | 1 | The overall brokered-authorization wait expired while the broker was still pending. This is not a network transport error. |
 | `mcp_error` | 1 | The MCP server returned a JSON-RPC error. Its message is under `remote_error`. |
 | `plan_not_ready` | 1 | `call start`: the plan needs more information. The clarifying question is under `remote_error.message`. |
 | `plan_call_invalid_response` | 1 | `call start`: `plan_call` succeeded but returned no usable `plan_id` / `confirm_token`. |
@@ -194,11 +196,12 @@ if the CLI can emit a code that is not listed here:
 | `internal_error` | 1 | An unexpected local exception inside the CLI. Not a network condition. |
 
 `error.code` is never taken from a remote response, and `error.message` never
-contains remote text. Remote text — HTTP bodies, JSON-RPC error messages,
-clarifying questions, call-outcome fields — appears only under
+contains remote text. Remote text — HTTP bodies, broker terminal messages,
+JSON-RPC error messages, clarifying questions, call-outcome fields — appears only under
 `error.remote_error` (and the sanitized `error_code` / `status` stage fields),
 after one shared sanitizer: only `code` and `message` are read, every other
-field is dropped unread; terminal control sequences are removed *before*
+field is dropped unread; terminal control sequences, embedded string-control
+payloads, and Unicode line/paragraph separators are removed *before*
 credential detection so a control code cannot split a secret into two
 innocent-looking halves; credential-shaped substrings are redacted; codes must
 match `-?[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}` (numeric codes only as safe integers)

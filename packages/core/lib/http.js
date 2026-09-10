@@ -122,7 +122,9 @@ export async function requestJson(method, url, { headers = {}, json = undefined,
 
   try {
     if (!response.ok) {
-      throw new HttpStatusError(`Client error '${response.status} ${response.statusText}' for url '${url}'`, {
+      // `statusText` is supplied by the server. Keep Error.message locally authored so core
+      // consumers can print it without repeating the CLI's remote-text boundary themselves.
+      throw new HttpStatusError(`HTTP ${response.status} for ${method} ${url}`, {
         statusCode: response.status,
         responseText: text,
         headers: Object.fromEntries(response.headers.entries()),
