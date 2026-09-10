@@ -147,6 +147,10 @@ errors, writes one JSON object to stdout and exits non-zero:
 `error.message` is composed entirely by the CLI — the status code, our own request
 URL, and a fixed hint. The service's wording appears only under `remote_error`.
 
+Follow-ups are arrays. `login_argv`, `help_argv` and `next_argv` are the only
+executable forms; the matching `*_command` strings exist for display and must
+never be executed, split, or evaluated.
+
 Stable fields:
 
 | Field | Always present | Meaning |
@@ -161,15 +165,15 @@ Stable fields:
 | `error.cause_code` | transport errors, when known | `timeout`, or the Node.js error code such as `ENOTFOUND` or `ECONNREFUSED`. |
 | `error.remote_error` | when the service said something readable | Exactly `{ code?, message? }` and never any other key, from the remote response — an HTTP body, a JSON-RPC error, a call-stage result, or a clarifying question — after sanitization. **Untrusted, informational only.** |
 | `error.error_code`, `error.status` | `call` stage failures | Sanitized remote call-outcome fields (for example `EXECUTION_ACK_LOST`). |
-| `stage`, `call_started`, `retry_safe`, `recovery_id`, `next_command` | `call` stage failures | Which stage failed and whether it is safe to retry. When `retry_safe` is `false`, run the returned `next_command` (`calle call recover …`) instead of starting a new call. |
-| `help_command` | `invalid_arguments` only | A directly runnable `--help` command. |
+| `stage`, `call_started`, `retry_safe`, `recovery_id`, `next_argv` | `call` stage failures | Which stage failed and whether it is safe to retry. When `retry_safe` is `false`, use the returned `next_argv` array as the next request's `argv` instead of starting a new call. The paired `next_command` string is display-only; see [Selecting the CLI Entry Point](#selecting-the-cli-entry-point). |
+| `help_argv` | `invalid_arguments` only | The `--help` argv array for the command that failed. The paired `help_command` string is display-only and must never be executed. |
 
 `error.code` values — this table is the complete set, and the test suite fails
 if the CLI can emit a code that is not listed here:
 
 | Code | Exit | When |
 | --- | --- | --- |
-| `invalid_arguments` | 2 | Unknown command, missing or invalid option. `help_command` is set. |
+| `invalid_arguments` | 2 | Unknown command, missing or invalid option. `help_argv` is set. |
 | `auth_required` | 1 | No usable token, or the server rejected the token. Run `auth login`. |
 | `broker_unavailable` | 1 | The brokered-login service returned a 5xx. Not a local problem. |
 | `http_error` | 1 | Any other non-success HTTP status from a CLI-side request. |
@@ -178,7 +182,7 @@ if the CLI can emit a code that is not listed here:
 | `mcp_error` | 1 | The MCP server returned a JSON-RPC error. Its message is under `remote_error`. |
 | `plan_not_ready` | 1 | `call start`: the plan needs more information. The clarifying question is under `remote_error.message`. |
 | `plan_call_invalid_response` | 1 | `call start`: `plan_call` succeeded but returned no usable `plan_id` / `confirm_token`. |
-| `run_call_missing_run_id` | 1 | `call start` / `call run`: execution may have been accepted without a stable `run_id`; a `recovery_id` and `next_command` are returned. |
+| `run_call_missing_run_id` | 1 | `call start` / `call run`: execution may have been accepted without a stable `run_id`; a `recovery_id` and `next_argv` are returned. |
 | `recovery_not_found` | 1 | `call recover`: no local recovery record for that id. |
 | `recovery_storage_error` | 1 | `call recover`: the local recovery record could not be read or written. |
 | `plan_call_error` | 1 | The `plan_call` stage failed with a non-transport error. |

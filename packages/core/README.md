@@ -137,7 +137,7 @@ try {
 | Type | Thrown by | Meaning |
 | --- | --- | --- |
 | `HttpStatusError` | `requestJson` | A non-success HTTP status. `statusCode`, `responseText`, `headers`, `url`. |
-| `TransportError` | `requestJson` | No usable response: `fetch` rejected, the body could not be read, or the timeout fired. `url`, `method`, `timedOut`, `phase` (`connect` or `body`), `code`. |
+| `TransportError` | `requestJson` | No usable response: `fetch` rejected, the body could not be read, or the timeout fired. `url`, `method`, `timedOut`, `phase` (`connect` or `body`), `code` (`timeout`, or the system code such as `ECONNRESET` for a body-phase failure). |
 | `InvalidResponseError` | `requestJson` | A 2xx whose body was not the expected JSON object. `responseText` holds the raw body; `message` never quotes it, because `JSON.parse` puts its input into its own message. |
 | `McpHttpError` | MCP client | HTTP failure (`code: "http_error"`), JSON-RPC error (`"mcp_error"`), or transport failure (`"transport_error"`). |
 
@@ -158,12 +158,18 @@ halves. Removal is by *sequence*, covering both the 7-bit `ESC [` / `ESC ]` form
 8-bit `U+009B` / `U+009D` introducers, plus invisible format characters such as zero-width
 spaces and bidi controls.
 
+Removal covers every terminal string control — OSC, DCS, SOS, PM and APC, in their 7-bit
+(`ESC ]`, `ESC P`, `ESC X`, `ESC ^`, `ESC _`) and 8-bit forms — through its terminator, and
+through end of input when a sequence is left unterminated. Stripping only the introducer would
+leave the payload behind as ordinary text, which is what splits a key name apart.
+
 Detection runs over two canonicalizations, because they disagree and both matter. Consuming
 a whole sequence is what a terminal does, but a sequence swallows its final byte, and that
 byte can be chosen from the word being searched for: `Bea<U+009B>rer secret` is a valid CSI
 sequence ending in `r`, so correct stripping yields `Beaer` and the credential stops looking
-like one. When one reading finds a credential the other does not, the whole string is
-replaced with `[redacted]`.
+like one. Whenever the two readings differ at all and either sees a credential, the whole
+string is replaced with `[redacted]` — comparing what each reading found is not enough, since
+two identical copies of one credential, one visible to each reading, compare equal.
 
 ## Development
 

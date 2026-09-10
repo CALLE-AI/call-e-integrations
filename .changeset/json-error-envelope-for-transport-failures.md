@@ -23,9 +23,12 @@ failed `auth login` left them with an empty stdout and no `error.code` to branch
   `U+009B` / `U+009D` introducers, and invisible format characters (zero widths, joiners, bidi
   controls, soft hyphen, BOM). Detection runs over two canonicalizations, because a sequence
   swallows its final byte and that byte can be chosen from the word being searched for
-  (`Bea<U+009B>rer secret` strips to `Beaer`). The readings are compared by the credentials
-  they actually find, not by how many, because two secrets crossed one per reading produce
-  equal counts; any disagreement redacts the whole string.
+  (`Bea<U+009B>rer secret` strips to `Beaer`). Whenever the readings differ at all and either
+  sees a credential, the whole string is redacted: comparing findings is not enough, because
+  two identical copies of one credential, one visible to each reading, compare equal.
+- Every terminal string control is consumed with its payload — OSC, DCS, SOS, PM and APC, in
+  both 7-bit and 8-bit forms, through BEL, `ESC \`, 8-bit ST, or end of input when
+  unterminated. Stripping a lone introducer left the payload as text and split key names apart.
 - `@call-e/core/http` adds `TransportError` (`url`, `method`, `timedOut`, `phase`, `code`),
   `InvalidResponseError`, and `causeCodeOf`. `McpHttpError` carries `phase` too, so every
   transport failure names where it failed. `requestJson` throws `TransportError` when `fetch`

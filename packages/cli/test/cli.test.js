@@ -727,7 +727,9 @@ test("call start keeps a hostile clarifying question out of the plan_not_ready s
   assert.match(payload.error.message, /^Call plan needs more information before it can run\./u);
   assert.doesNotMatch(payload.error.message, /injected|zzzz/u);
   assert.ok(payload.error.remote_error.message.length <= 500);
-  assert.match(payload.error.remote_error.message, /^line oneinjected/u);
+  // The question carries both control sequences and credentials, so the readings disagree and
+  // the whole string is withheld rather than partially shown.
+  assert.equal(payload.error.remote_error.message, "[redacted]");
   assert.doesNotMatch(payload.error.remote_error.message, CONTROL_CHARS);
   assert.doesNotMatch(result.stdout, /sk_live_|abcdefghijklmnopqrstuvwxyz0123/u);
   assert.doesNotMatch(result.stderr, /injected|sk_live_/u);
@@ -776,6 +778,32 @@ test("every error code the CLI can emit is documented, and nothing undocumented 
   assert.deepEqual([...documented].sort(), [...emitted].sort());
   for (const [code, meta] of Object.entries(ERROR_CODES)) {
     assert.match(section, new RegExp(`^\\| \`${code}\` \\| ${meta.exitCode} `, "mu"), `exit code documented for ${code}`);
+  }
+});
+
+test("the error-envelope docs never tell an agent to execute a command string", () => {
+  const reference = fs.readFileSync(new URL("../docs/cli-reference.md", import.meta.url), "utf8");
+  const section = reference.split("## Error Envelopes")[1]?.split(/\n## /u)[0] ?? "";
+  assert.ok(section.length > 0, "the Error Envelopes section exists");
+
+  // The canonical page states that only the *_argv arrays are executable and the paired
+  // *_command strings are display-only. This section must not contradict it.
+  assert.match(section, /`login_argv`, `help_argv` and `next_argv` are the only\nexecutable forms/u);
+  assert.match(section, /`next_argv` array as the next request's `argv`/u);
+  assert.match(section, /`help_argv` \| `invalid_arguments` only/u);
+
+  for (const line of section.split("\n")) {
+    if (!/`(next|help|login)_command`/u.test(line)) continue;
+    assert.match(
+      line,
+      /display-only|never be executed/u,
+      `a *_command mention must mark it display-only: ${line.trim().slice(0, 120)}`,
+    );
+    assert.doesNotMatch(
+      line,
+      /\b(run|execute|invoke) the returned `\w+_command`|directly runnable/u,
+      `the docs must not instruct executing a command string: ${line.trim().slice(0, 120)}`,
+    );
   }
 });
 

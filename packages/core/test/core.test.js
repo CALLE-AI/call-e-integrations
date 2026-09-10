@@ -728,6 +728,84 @@ test("8-bit C1 introducers and invisible format characters cannot smuggle a cred
   }
 });
 
+test("every terminal string-control family is consumed with its payload", async () => {
+  const { safeRemoteString } = await import("@call-e/core/sanitize");
+  const ESC = String.fromCharCode(0x1b);
+  const BEL = String.fromCharCode(0x07);
+  const BACKSLASH = String.fromCharCode(0x5c);
+  const CSI8 = String.fromCharCode(0x9b);
+  const ST8 = String.fromCharCode(0x9c);
+  const OSC8 = String.fromCharCode(0x9d);
+  const DCS8 = String.fromCharCode(0x90);
+  const SOS8 = String.fromCharCode(0x98);
+  const PM8 = String.fromCharCode(0x9e);
+  const APC8 = String.fromCharCode(0x9f);
+
+  // Introducers in both forms. Stripping only the introducer leaves the payload as ordinary
+  // text, which is what breaks a key name apart and lets the credential through.
+  const introducers = [
+    ["OSC 7-bit", `${ESC}]`], ["OSC 8-bit", OSC8],
+    ["DCS 7-bit", `${ESC}P`], ["DCS 8-bit", DCS8],
+    ["SOS 7-bit", `${ESC}X`], ["SOS 8-bit", SOS8],
+    ["PM 7-bit", `${ESC}^`], ["PM 8-bit", PM8],
+    ["APC 7-bit", `${ESC}_`], ["APC 8-bit", APC8],
+  ];
+  const terminators = [["BEL", BEL], ["ESC backslash", `${ESC}${BACKSLASH}`], ["ST 8-bit", ST8], ["unterminated", ""]];
+
+  const secrets = [
+    { text: "access_token=abcd1234efgh5678", fragments: ["abcd1234", "efgh5678"] },
+    { text: "Bearer abcdefghijklmnopqrstuvwxyz012345", fragments: ["abcdefghijkl", "qrstuvwxyz012345"] },
+    { text: "sk_live_ABCDEFGHIJKLMNOPQRSTUV", fragments: ["ABCDEFGHIJ", "KLMNOPQRSTUV"] },
+  ];
+
+  for (const [introName, intro] of introducers) {
+    for (const [termName, term] of terminators) {
+      for (const secret of secrets) {
+        for (let at = 1; at < secret.text.length; at += 4) {
+          const hostile = `${secret.text.slice(0, at)}${intro}junk${term}${secret.text.slice(at)}`;
+          const out = safeRemoteString(`context ${hostile} more`);
+          const visible = out.replace(/\[redacted\]/gu, "");
+          for (const fragment of secret.fragments) {
+            assert.equal(
+              visible.includes(fragment),
+              false,
+              `${introName} + ${termName} at ${at}: ${JSON.stringify(fragment)} survived as ${JSON.stringify(out)}`,
+            );
+          }
+        }
+      }
+    }
+  }
+
+  // An unterminated CSI must not leave its parameters behind either.
+  const csi = safeRemoteString(`access_to${CSI8}12345 token=abcd1234efgh5678`);
+  assert.doesNotMatch(csi.replace(/\[redacted\]/gu, ""), /abcd1234|efgh5678/u);
+});
+
+test("identical credentials crossed between the readings cannot compare equal", async () => {
+  const { safeRemoteString } = await import("@call-e/core/sanitize");
+  const CSI8 = String.fromCharCode(0x9b);
+  const OSC8 = String.fromCharCode(0x9d);
+  const ST8 = String.fromCharCode(0x9c);
+  const bearer = "Bearer abcdefghijklmnopqrstuvwxyz012345";
+
+  // Two *identical* credentials. The OSC copy is only recognisable once the sequence has been
+  // consumed; the CSI copy only survives the character-only reading, because consuming the
+  // sequence eats the "r" of "Bearer". Findings therefore compare equal string-for-string.
+  const seenByDisplay = `Bea${OSC8}x${ST8}rer abcdefghijklmnopqrstuvwxyz012345`;
+  const seenByAlternate = `Bea${CSI8}rer abcdefghijklmnopqrstuvwxyz012345`;
+
+  for (const text of [
+    `${seenByDisplay} and ${seenByAlternate}`,
+    `${seenByAlternate} and ${seenByDisplay}`,
+    `${seenByDisplay} and ${seenByAlternate} and ${bearer}`,
+  ]) {
+    const out = safeRemoteString(text);
+    assert.equal(out, "[redacted]", "disagreeing readings cost the whole string");
+    assert.doesNotMatch(out.replace(/\[redacted\]/gu, ""), /abcdefghijkl/u);
+  }
+});
+
 test("credentials crossed between the two readings cannot ride out on an equal count", async () => {
   const { safeRemoteString } = await import("@call-e/core/sanitize");
   const ESC = String.fromCharCode(0x1b);
