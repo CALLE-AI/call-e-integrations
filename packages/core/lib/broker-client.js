@@ -37,6 +37,14 @@ function pendingFromBrokerStatus(existing, status) {
   });
 }
 
+function requiredSessionField(sessionPayload, field) {
+  const value = sessionPayload?.[field];
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`Broker session response is missing required ${field}`);
+  }
+  return value;
+}
+
 async function reconcileExistingPending(config, existing, { fetchImpl = globalThis.fetch } = {}) {
   if (!existing?.session_id) {
     return null;
@@ -99,9 +107,9 @@ export async function exchangeBrokerSession(config, pending, { fetchImpl = globa
 
 export function normalizePendingSession(sessionPayload) {
   return {
-    session_id: String(sessionPayload.session_id),
-    session_secret: String(sessionPayload.session_secret),
-    login_url: String(sessionPayload.login_url),
+    session_id: requiredSessionField(sessionPayload, "session_id"),
+    session_secret: requiredSessionField(sessionPayload, "session_secret"),
+    login_url: requiredSessionField(sessionPayload, "login_url"),
     status: String(sessionPayload.status || "PENDING").toUpperCase(),
     created_at: new Date().toISOString(),
     expires_at: sessionPayload.expires_at ? String(sessionPayload.expires_at) : null,

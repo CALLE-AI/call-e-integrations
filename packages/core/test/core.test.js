@@ -171,6 +171,38 @@ test("broker client sends integration headers and normalizes pending sessions", 
   assert.ok(Date.parse(pending.created_at));
 });
 
+test("broker client rejects a malformed created session before caching it", async () => {
+  const cacheRoot = makeTempRoot("calle-core-malformed-broker-session");
+  const config = {
+    cacheRoot,
+    brokerBaseUrl: "https://broker.test",
+    serverUrl: "https://broker.test/mcp/openagent_oauth",
+    authBaseUrl: "https://broker.test",
+    channel: "openagent_oauth",
+    scope: "openid email profile",
+    clientName: "calle Login",
+    timeoutSeconds: 15,
+  };
+  const pendingPath = pendingCachePath(cacheRoot, config.serverUrl);
+  const validSession = {
+    session_id: "session-1",
+    session_secret: "secret-1",
+    login_url: "https://broker.test/openagent-auth/sessions/session-1/start",
+  };
+
+  for (const field of Object.keys(validSession)) {
+    for (const invalidValue of [undefined, null, 42, "   "]) {
+      await assert.rejects(
+        ensurePendingLogin(config, {
+          fetchImpl: async () => jsonResponse({ ...validSession, [field]: invalidValue }),
+        }),
+        new RegExp(`Broker session response is missing required ${field}`),
+      );
+      assert.equal(fs.existsSync(pendingPath), false, `${field}=${String(invalidValue)}`);
+    }
+  }
+});
+
 test("broker client refreshes active pending login against broker before reuse", async () => {
   const cacheRoot = makeTempRoot("calle-core-pending-reuse");
   const config = {
