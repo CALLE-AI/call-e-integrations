@@ -746,6 +746,46 @@ test("mcp tools keeps a hostile JSON-RPC error out of the summary and bounds it 
   assert.ok(result.stderr.length < 300);
 });
 
+test("mcp tools withholds mixed terminal-sequence text from every public error surface", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-mcp-tools-mixed-controls");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const CSI8 = String.fromCharCode(0x9b);
+  const ST8 = String.fromCharCode(0x9c);
+  const OSC8 = String.fromCharCode(0x9d);
+  const DCS8 = String.fromCharCode(0x90);
+  const mixedMessage =
+    `access_to${OSC8}junk${ST8}k${CSI8}en=abcd1234efgh5678 ` +
+    `access_to${DCS8}junk${ST8}k${CSI8}en=ijkl9012mnop3456`;
+  writeToken(cacheRoot, serverUrl, "tool-token");
+  const fetchImpl = mcpFixture({
+    serverUrl,
+    onToolsList: (payload) => jsonRpcResponse({
+      jsonrpc: "2.0",
+      id: payload.id,
+      error: { code: -32000, message: mixedMessage },
+    }),
+  });
+
+  const result = await run(
+    ["mcp", "tools", "--base-url", "https://mcp.example", "--cache-root", cacheRoot],
+    { fetchImpl },
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "mcp_error");
+  assert.equal(payload.error.remote_error.message, "[redacted]");
+  for (const fragment of ["abcd1234", "efgh5678", "ijkl9012", "mnop3456"]) {
+    assert.equal(result.stdout.includes(fragment), false);
+    assert.equal(result.stderr.includes(fragment), false);
+  }
+  for (const sequenceByte of [CSI8, ST8, OSC8, DCS8]) {
+    assert.equal(result.stdout.includes(sequenceByte), false);
+    assert.equal(result.stderr.includes(sequenceByte), false);
+  }
+  assert.doesNotMatch(result.stderr.trimEnd(), CONTROL_CHARS);
+});
+
 test("mcp tools rejects a successful status with a malformed JSON-RPC body", async () => {
   const cacheRoot = makeTempRoot("calle-cli-mcp-invalid-response");
   const serverUrl = "https://mcp.example/mcp/openagent_oauth";

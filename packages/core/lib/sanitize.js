@@ -146,15 +146,6 @@ function canonicalForms(value) {
   return [text.replace(TERMINAL_CONTROL_RE, ""), text.replace(LONE_CONTROL_RE, "")];
 }
 
-/** Does this text contain anything credential-shaped? */
-function hasSecret(text) {
-  return SECRET_PATTERNS.some((pattern) => {
-    // Each pattern is global; reset lastIndex so repeated use cannot skip a match.
-    pattern.lastIndex = 0;
-    return pattern.test(text);
-  });
-}
-
 /** Redact credential-shaped substrings. Never throws. */
 export function redactSecrets(value) {
   let out = String(value ?? "");
@@ -178,14 +169,13 @@ export function safeRemoteString(value, maxLength = REMOTE_MESSAGE_LIMIT) {
 
   const [display, alternate] = canonicalForms(value);
 
-  // Fail closed whenever the readings disagree at all and either sees a credential.
+  // Fail closed whenever the readings disagree at all.
   //
-  // Comparing what each reading *found* is not enough, however carefully: two identical copies
-  // of one credential, one visible to each reading, produce identical findings and compare
-  // equal, and the displayed form then publishes the copy only the other reading could see.
-  // Disagreement between the readings means a sequence is present that changes what the text
-  // says; combined with a credential anywhere, that is not something to display at all.
-  if (display !== alternate && (hasSecret(display) || hasSecret(alternate))) {
+  // Comparing what each reading *found* is not enough, however carefully. Two different
+  // sequences can require opposite interpretations to reconstruct a sensitive key, leaving
+  // neither global reading with a recognisable credential. Disagreement means controlled text
+  // changes what the string says; there is no unambiguous safe display form, so withhold it.
+  if (display !== alternate) {
     return REDACTION;
   }
 

@@ -21,11 +21,12 @@ failed `auth login` left them with an empty stdout and no `error.code` to branch
   remote detail may take (`{ code?, message? }`).
 - Control removal is by *sequence*, covering the 7-bit `ESC [` / `ESC ]` forms, the 8-bit
   `U+009B` / `U+009D` introducers, and invisible format characters (zero widths, joiners, bidi
-  controls, soft hyphen, BOM). Detection runs over two canonicalizations, because a sequence
+  controls, soft hyphen, BOM). Safety is checked over two canonicalizations, because a sequence
   swallows its final byte and that byte can be chosen from the word being searched for
-  (`Bea<U+009B>rer secret` strips to `Beaer`). Whenever the readings differ at all and either
-  sees a credential, the whole string is redacted: comparing findings is not enough, because
-  two identical copies of one credential, one visible to each reading, compare equal.
+  (`Bea<U+009B>rer secret` strips to `Beaer`). Whenever the readings differ at all, the whole
+  string is redacted. Mixed sequences can require a different interpretation per sequence,
+  leaving neither global reading with a recognisable sensitive key, so conditioning the
+  fail-closed path on either reading finding a credential is insufficient.
 - Every terminal string control is consumed with its payload — OSC, DCS, SOS, PM and APC, in
   both 7-bit and 8-bit forms. OSC ends at BEL or ST; the other four end only at ST. All consume
   through end of input when unterminated. Embedded non-terminating ESC sequences remain part
@@ -48,8 +49,9 @@ failed `auth login` left them with an empty stdout and no `error.code` to branch
 - `McpHttpError.message` is always locally authored. The server's JSON-RPC error text is kept
   raw in `payload` and, sanitized, in the new `remoteError` field. New fields `transport`,
   `timedOut`, `causeCode`. Timeouts, rejected fetches, and body-read failures are
-  `code: "transport_error"`. Successful statuses with malformed or missing JSON-RPC outcomes
-  are typed `invalid_response` errors instead of silently becoming empty successful results.
+  `code: "transport_error"`. Successful statuses must carry a JSON-RPC 2.0 response for the
+  exact request ID with exactly one well-formed result/error; malformed, stale, wrong-version,
+  or ambiguous outcomes are typed `invalid_response` errors instead of becoming successes.
 
 **cli**
 

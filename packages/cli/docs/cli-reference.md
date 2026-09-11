@@ -178,7 +178,7 @@ if the CLI can emit a code that is not listed here:
 | `broker_unavailable` | 1 | The brokered-login service returned a 5xx. Not a local problem. |
 | `http_error` | 1 | Any other non-success HTTP status from a CLI-side request. |
 | `transport_error` | 1 | No usable response: DNS, connection, TLS, a reset while reading the body, or a timeout outside a call stage. `transport: true`, with `phase` naming where it failed. Inside a `call` stage it also carries `stage`, `call_started`, and `retry_safe`. |
-| `invalid_response` | 1 | A successful HTTP or MCP status whose body was not the expected JSON object / JSON-RPC outcome. The body is remote text, so it appears only under `remote_error`. |
+| `invalid_response` | 1 | A successful HTTP or MCP status whose body was not the expected JSON object or a JSON-RPC 2.0 response correlated to the exact request with exactly one valid outcome. The body is remote text, so it appears only under `remote_error`. |
 | `broker_login_failed` | 1 | Brokered authorization reached a terminal failed/expired/exchanged state. Sanitized service detail is under `remote_error`. |
 | `broker_login_timeout` | 1 | The overall brokered-authorization wait expired while the broker was still pending. This is not a network transport error. |
 | `mcp_error` | 1 | The MCP server returned a JSON-RPC error. Its message is under `remote_error`. |
@@ -205,7 +205,10 @@ payloads, and Unicode line/paragraph separators are removed *before*
 credential detection so a control code cannot split a secret into two
 innocent-looking halves; credential-shaped substrings are redacted; codes must
 match `-?[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}` (numeric codes only as safe integers)
-or are dropped; messages are limited to 500 characters. Telemetry reports the
+or are dropped. If terminal-accurate sequence removal and control-byte removal
+produce different text, the ambiguous remote message is withheld as `[redacted]`;
+mixed sequences therefore cannot evade both global readings. Messages are limited
+to 500 characters. Telemetry reports the
 same `error.code` as the envelope, and `transport` is a property of the code, so
 the two cannot disagree.
 

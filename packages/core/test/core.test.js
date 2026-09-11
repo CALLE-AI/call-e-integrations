@@ -55,6 +55,10 @@ function jsonResponse(body, { status = 200, statusText = "OK", headers = {} } = 
   };
 }
 
+function jsonRpcResponse(request, outcome, options = {}) {
+  return jsonResponse({ jsonrpc: "2.0", id: request.id, ...outcome }, options);
+}
+
 function mcpConfig(cacheRoot) {
   const serverUrl = "https://example.test/mcp/openagent_oauth";
   writePrivateJson(tokenCachePath(cacheRoot, serverUrl), {
@@ -385,15 +389,15 @@ test("MCP client initializes a session and lists tools", async () => {
 
     if (payload.method === "initialize") {
       assert.deepEqual(payload.params.clientInfo, { name: "calle", version: "9.9.9" });
-      return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "mcp-session-1" } });
+      return jsonRpcResponse(payload, { result: {} }, { headers: { "mcp-session-id": "mcp-session-1" } });
     }
     if (payload.method === "notifications/initialized") {
       assert.equal(init.headers["mcp-session-id"], "mcp-session-1");
-      return jsonResponse({});
+      return jsonResponse(undefined);
     }
     if (payload.method === "tools/list") {
       assert.equal(init.headers["mcp-session-id"], "mcp-session-1");
-      return jsonResponse({ result: { tools: [{ name: "plan_call" }] } });
+      return jsonRpcResponse(payload, { result: { tools: [{ name: "plan_call" }] } });
     }
     throw new Error(`Unexpected MCP method ${payload.method}`);
   };
@@ -412,7 +416,7 @@ test("MCP client calls tools through an initialized session", async () => {
   const fetchImpl = async (_url, init) => {
     const payload = JSON.parse(init.body);
     if (payload.method === "initialize") {
-      return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "mcp-session-2" } });
+      return jsonRpcResponse(payload, { result: {} }, { headers: { "mcp-session-id": "mcp-session-2" } });
     }
     if (payload.method === "notifications/initialized") {
       return jsonResponse({});
@@ -422,7 +426,7 @@ test("MCP client calls tools through an initialized session", async () => {
         name: "plan_call",
         arguments: { goal: "Confirm the appointment" },
       });
-      return jsonResponse({ result: { content: [{ type: "text", text: "ok" }] } });
+      return jsonRpcResponse(payload, { result: { content: [{ type: "text", text: "ok" }] } });
     }
     throw new Error(`Unexpected MCP method ${payload.method}`);
   };
@@ -472,7 +476,7 @@ test("MCP client normalizes tool payloads without discarding the raw envelope", 
   const fetchImpl = async (_url, init) => {
     const payload = JSON.parse(init.body);
     if (payload.method === "initialize") {
-      return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "mcp-session-payload" } });
+      return jsonRpcResponse(payload, { result: {} }, { headers: { "mcp-session-id": "mcp-session-payload" } });
     }
     if (payload.method === "notifications/initialized") {
       return jsonResponse({});
@@ -480,7 +484,7 @@ test("MCP client normalizes tool payloads without discarding the raw envelope", 
     if (payload.method === "tools/call") {
       const result = toolResults[toolCallIndex];
       toolCallIndex += 1;
-      return jsonResponse({ result });
+      return jsonRpcResponse(payload, { result });
     }
     throw new Error(`Unexpected MCP method ${payload.method}`);
   };
@@ -506,7 +510,7 @@ test("MCP client forwards request meta on tool calls", async () => {
   const fetchImpl = async (_url, init) => {
     const payload = JSON.parse(init.body);
     if (payload.method === "initialize") {
-      return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "mcp-session-2" } });
+      return jsonRpcResponse(payload, { result: {} }, { headers: { "mcp-session-id": "mcp-session-2" } });
     }
     if (payload.method === "notifications/initialized") {
       return jsonResponse({});
@@ -520,7 +524,7 @@ test("MCP client forwards request meta on tool calls", async () => {
           timezone_offset_minutes: -480,
         },
       });
-      return jsonResponse({ result: { content: [{ type: "text", text: "ok" }] } });
+      return jsonRpcResponse(payload, { result: { content: [{ type: "text", text: "ok" }] } });
     }
     throw new Error(`Unexpected MCP method ${payload.method}`);
   };
@@ -558,12 +562,12 @@ test("MCP client exposes MCP error payloads", async () => {
   const fetchImpl = async (_url, init) => {
     const payload = JSON.parse(init.body);
     if (payload.method === "initialize") {
-      return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "mcp-session-3" } });
+      return jsonRpcResponse(payload, { result: {} }, { headers: { "mcp-session-id": "mcp-session-3" } });
     }
     if (payload.method === "notifications/initialized") {
       return jsonResponse({});
     }
-    return jsonResponse({ error: { code: -32000, message: "remote failure" } });
+    return jsonRpcResponse(payload, { error: { code: -32000, message: "remote failure" } });
   };
 
   await assert.rejects(
@@ -620,12 +624,12 @@ test("MCP client classifies a rejected fetch as transport, and keeps the server 
   const fetchImpl = async (_url, init) => {
     const payload = JSON.parse(init.body);
     if (payload.method === "initialize") {
-      return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "mcp-session-9" } });
+      return jsonRpcResponse(payload, { result: {} }, { headers: { "mcp-session-id": "mcp-session-9" } });
     }
     if (payload.method === "notifications/initialized") {
       return jsonResponse({});
     }
-    return jsonResponse({ error: { code: -32000, message: hostileMessage, access_token: "tok_SECRET_VALUE_123456" } });
+    return jsonRpcResponse(payload, { error: { code: -32000, message: hostileMessage, access_token: "tok_SECRET_VALUE_123456" } });
   };
   await assert.rejects(
     () => callMcpTool({ config: hostileConfig, toolName: "plan_call", fetchImpl }),
@@ -681,6 +685,65 @@ test("successful MCP statuses with invalid JSON-RPC bodies are typed invalid res
   }
 });
 
+test("MCP responses require version 2.0, the request id, and exactly one valid outcome", async () => {
+  const invalidResponses = [
+    { name: "wrong protocol version", body: { jsonrpc: "1.0", id: "calle-initialize", result: {} } },
+    { name: "stale request id", body: { jsonrpc: "2.0", id: "stale-request", result: {} } },
+    { name: "missing request id", body: { jsonrpc: "2.0", result: {} } },
+    {
+      name: "both result and error",
+      body: {
+        jsonrpc: "2.0",
+        id: "calle-initialize",
+        result: {},
+        error: { code: -32000, message: "must not coexist" },
+      },
+    },
+    {
+      name: "error without an integer code",
+      body: { jsonrpc: "2.0", id: "calle-initialize", error: { code: "-32000", message: "bad" } },
+    },
+    {
+      name: "error without a message",
+      body: { jsonrpc: "2.0", id: "calle-initialize", error: { code: -32000 } },
+    },
+  ];
+
+  for (const fixture of invalidResponses) {
+    const config = mcpConfig(makeTempRoot("calle-core-mcp-invalid-envelope"));
+    await assert.rejects(
+      () => listMcpTools({ config, fetchImpl: async () => jsonResponse(fixture.body) }),
+      (error) => {
+        assert.ok(error instanceof McpHttpError, fixture.name);
+        assert.equal(error.code, "invalid_response", fixture.name);
+        assert.equal(error.message, "MCP response was invalid for initialize", fixture.name);
+        return true;
+      },
+    );
+  }
+});
+
+test("MCP notifications accept empty acknowledgements but reject response envelopes", async () => {
+  const config = mcpConfig(makeTempRoot("calle-core-mcp-notification-ack"));
+  const fetchImpl = async (_url, init) => {
+    const request = JSON.parse(init.body);
+    if (request.method === "initialize") {
+      return jsonRpcResponse(request, { result: {} }, { headers: { "mcp-session-id": "s" } });
+    }
+    return jsonResponse({ jsonrpc: "2.0", id: "stale-request", result: {} });
+  };
+
+  await assert.rejects(
+    () => listMcpTools({ config, fetchImpl }),
+    (error) => {
+      assert.ok(error instanceof McpHttpError);
+      assert.equal(error.code, "invalid_response");
+      assert.equal(error.message, "MCP response was invalid for notifications/initialized");
+      return true;
+    },
+  );
+});
+
 test("HTTP status reason text and body never reach the core error message", async () => {
   const { requestJson, HttpStatusError } = await import("@call-e/core/http");
   const marker = "REMOTE-TEXT-MARKER access_token=abcd1234efgh5678";
@@ -706,13 +769,15 @@ test("HTTP status reason text and body never reach the core error message", asyn
 });
 
 test("sanitize helpers strip terminal controls, redact secrets, and bound length", async () => {
-  const { safeRemoteString, safeRemoteCode, redactSecrets, sanitizeRemoteError } = await import("@call-e/core/sanitize");
+  const { safeRemoteString, safeRemoteCode, stripTerminalControls, redactSecrets, sanitizeRemoteError } = await import("@call-e/core/sanitize");
   const ESC = String.fromCharCode(27);
   const BEL = String.fromCharCode(7);
-  const cleaned = safeRemoteString(`a${ESC}[2J${ESC}]8;;http://x${BEL}link${ESC}]8;;${BEL}b\r\nc`);
+  const controlled = `a${ESC}[2J${ESC}]8;;http://x${BEL}link${ESC}]8;;${BEL}b\r\nc`;
+  const cleaned = safeRemoteString(controlled);
   assert.equal(cleaned.includes(ESC), false);
   assert.doesNotMatch(cleaned, /[\r\n]/u);
-  assert.equal(cleaned, "alinkbc", "controls are removed, not spaced, so nothing can be split");
+  assert.equal(stripTerminalControls(controlled), "alinkbc", "controls are removed, not spaced");
+  assert.equal(cleaned, "[redacted]", "ambiguous controlled text is withheld from display");
 
   // A bound on ordinary prose. (An unbroken 10,000-character run is redacted as an opaque
   // token instead, which is the intended behaviour and is asserted below.)
@@ -968,6 +1033,28 @@ test("identical credentials crossed between the readings cannot compare equal", 
   }
 });
 
+test("mixed terminal sequences cannot evade both global canonical readings", async () => {
+  const { safeRemoteString } = await import("@call-e/core/sanitize");
+  const ESC = String.fromCharCode(0x1b);
+  const CSI8 = String.fromCharCode(0x9b);
+  const ST8 = String.fromCharCode(0x9c);
+  const OSC8 = String.fromCharCode(0x9d);
+  const DCS8 = String.fromCharCode(0x90);
+  const secret = "abcd1234efgh5678";
+  const mixed = [
+    `access_to${OSC8}junk${ST8}k${CSI8}en=${secret}`,
+    `access_to${DCS8}junk${ST8}k${CSI8}en=${secret}`,
+    `access_to${ESC}]junk${ESC}\\k${ESC}[en=${secret}`,
+    `access_to${ESC}Pjunk${ESC}\\k${ESC}[en=${secret}`,
+  ];
+
+  for (const hostile of mixed) {
+    const out = safeRemoteString(hostile);
+    assert.equal(out, "[redacted]", `ambiguous controlled text was shown: ${JSON.stringify(out)}`);
+    assert.doesNotMatch(out, /abcd1234|efgh5678/u);
+  }
+});
+
 test("credentials crossed between the two readings cannot ride out on an equal count", async () => {
   const { safeRemoteString } = await import("@call-e/core/sanitize");
   const ESC = String.fromCharCode(0x1b);
@@ -1036,7 +1123,7 @@ test("an MCP transport failure names its phase, as the published contract promis
   const afterHeaders = async (_url, init) => {
     const payload = JSON.parse(init.body);
     if (payload.method === "initialize") {
-      return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "s" } });
+      return jsonRpcResponse(payload, { result: {} }, { headers: { "mcp-session-id": "s" } });
     }
     if (payload.method === "notifications/initialized") return jsonResponse({});
     return {
@@ -1056,9 +1143,9 @@ test("an MCP transport failure names its phase, as the published contract promis
   // A non-transport error must not claim a phase at all.
   const rpcError = async (_url, init) => {
     const payload = JSON.parse(init.body);
-    if (payload.method === "initialize") return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "s" } });
+    if (payload.method === "initialize") return jsonRpcResponse(payload, { result: {} }, { headers: { "mcp-session-id": "s" } });
     if (payload.method === "notifications/initialized") return jsonResponse({});
-    return jsonResponse({ error: { code: -32000, message: "nope" } });
+    return jsonRpcResponse(payload, { error: { code: -32000, message: "nope" } });
   };
   await assert.rejects(
     () => callMcpTool({ config: mcpConfig(makeTempRoot("calle-core-mcp-phase-none")), toolName: "plan_call", fetchImpl: rpcError }),
@@ -1188,7 +1275,7 @@ test("a body read that aborts or resets after headers is a typed transport failu
   const fetchImpl = async (_url, init) => {
     const payload = JSON.parse(init.body);
     if (payload.method === "initialize") {
-      return jsonResponse({ result: {} }, { headers: { "mcp-session-id": "mcp-session-b" } });
+      return jsonRpcResponse(payload, { result: {} }, { headers: { "mcp-session-id": "mcp-session-b" } });
     }
     if (payload.method === "notifications/initialized") {
       return jsonResponse({});

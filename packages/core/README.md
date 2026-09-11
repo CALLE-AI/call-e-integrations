@@ -139,7 +139,7 @@ try {
 | `HttpStatusError` | `requestJson` | A non-success HTTP status. `statusCode`, `responseText`, `headers`, `url`. |
 | `TransportError` | `requestJson` | No usable response: `fetch` rejected, the body could not be read, or the timeout fired. `url`, `method`, `timedOut`, `phase` (`connect` or `body`), `code` (`timeout`, or the system code such as `ECONNRESET` for a body-phase failure). |
 | `InvalidResponseError` | `requestJson` | A 2xx whose body was not the expected JSON object. `responseText` holds the raw body; `message` never quotes it, because `JSON.parse` puts its input into its own message. |
-| `McpHttpError` | MCP client | HTTP failure (`code: "http_error"`), JSON-RPC error (`"mcp_error"`), malformed successful response (`"invalid_response"`), or transport failure (`"transport_error"`). |
+| `McpHttpError` | MCP client | HTTP failure (`code: "http_error"`), JSON-RPC error (`"mcp_error"`), malformed or mismatched successful response (`"invalid_response"`), or transport failure (`"transport_error"`). |
 | `BrokerLoginError` | `loginWithBroker` | A terminal broker outcome (`code: "broker_login_failed"`) or overall authorization wait timeout (`"broker_login_timeout"`). `message` is locally authored; sanitized service detail is in `remoteError`. |
 
 `@call-e/core/sanitize`:
@@ -169,13 +169,14 @@ including private, standardized, and intermediate-byte forms, are removed as com
 sequences; embedded C0/C1 controls do not make CSI parameter text survive. BEL is accepted as
 a legacy OSC terminator only; inside DCS, SOS, PM, and APC it remains payload until ST.
 
-Detection runs over two canonicalizations, because they disagree and both matter. Consuming
+Safety is checked over two canonicalizations, because they disagree and both matter. Consuming
 a whole sequence is what a terminal does, but a sequence swallows its final byte, and that
 byte can be chosen from the word being searched for: `Bea<U+009B>rer secret` is a valid CSI
 sequence ending in `r`, so correct stripping yields `Beaer` and the credential stops looking
-like one. Whenever the two readings differ at all and either sees a credential, the whole
-string is replaced with `[redacted]` — comparing what each reading found is not enough, since
-two identical copies of one credential, one visible to each reading, compare equal.
+like one. Whenever the two readings differ at all, the whole string is replaced with
+`[redacted]`. Requiring a recognised credential in either reading is not sufficient: mixed
+sequences can require a different interpretation per sequence, so neither global reading
+reconstructs the sensitive key even though the displayed value still contains its credential.
 
 ## Development
 

@@ -156,11 +156,36 @@ async function requestJsonRpc(fetchImpl, url, { headers, payload, timeoutMs }) {
     const expectsResponse = payload.id !== undefined;
     const bodyIsObject = Boolean(body && typeof body === "object" && !Array.isArray(body));
     const hasRpcResult = bodyIsObject && Object.hasOwn(body, "result");
-    const hasRpcError = bodyIsObject && Boolean(
-      body.error && typeof body.error === "object" && !Array.isArray(body.error),
+    const hasRpcErrorField = bodyIsObject && Object.hasOwn(body, "error");
+    const hasRpcError = hasRpcErrorField && Boolean(
+      body.error
+      && typeof body.error === "object"
+      && !Array.isArray(body.error)
+      && Number.isInteger(body.error.code)
+      && typeof body.error.message === "string",
     );
-    const hasRpcOutcome = hasRpcResult || hasRpcError;
-    if (parseFailed || (text.trim() && !bodyIsObject) || (expectsResponse && !hasRpcOutcome)) {
+    const bodyIsEmptyObject = bodyIsObject && Object.keys(body).length === 0;
+
+    // HTTP acknowledgements for notifications have no JSON-RPC response to correlate. Keep
+    // accepting an empty body (and the existing empty-object acknowledgement), while still
+    // rejecting malformed non-empty JSON.
+    const validNotificationAck = !expectsResponse
+      && !parseFailed
+      && (!text.trim() || bodyIsEmptyObject);
+
+    // A request response is valid only when it belongs to this exact request and carries one
+    // outcome. Checking merely for `result` let stale/wrong-version responses and envelopes
+    // containing both `result` and `error` pass as successes.
+    const validRpcResponse = expectsResponse
+      && !parseFailed
+      && bodyIsObject
+      && body.jsonrpc === "2.0"
+      && Object.hasOwn(body, "id")
+      && body.id === payload.id
+      && hasRpcResult !== hasRpcErrorField
+      && (hasRpcResult || hasRpcError);
+
+    if (!validNotificationAck && !validRpcResponse) {
       throw new McpHttpError(`MCP response was invalid for ${payload.method}`, {
         statusCode: response.status,
         responseText: text,
