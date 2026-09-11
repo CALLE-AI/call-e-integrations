@@ -1,0 +1,263 @@
+/**
+ * One boundary for every remote-supplied string.
+ *
+ * Anything that arrives from the network — an MCP JSON-RPC error, an upstream HTTP body, a
+ * clarifying question inside a tool result — is untrusted. Before it can appear in a JSON
+ * envelope, a log line, or a terminal, it passes through here.
+ *
+ * Order matters. Terminal control *sequences* are removed whole, before any credential
+ * detection, so that `access_token=abcd<ESC>[31m1234` canonicalizes to
+ * `access_token=abcd1234` and is redacted as one credential rather than surviving as two
+ * innocent-looking halves.
+ *
+ * Both the core library and the CLI import these helpers so there is exactly one
+ * implementation to review.
+ */
+
+const ESC = String.fromCharCode(0x1b);
+const BEL = String.fromCharCode(0x07);
+const BACKSLASH = String.fromCharCode(0x5c);
+const C0_START = String.fromCharCode(0x00);
+const C0_END = String.fromCharCode(0x1f);
+const DEL = String.fromCharCode(0x7f);
+const C1_END = String.fromCharCode(0x9f);
+
+// 8-bit C1 forms of the introducers. A terminal accepts these as readily as their ESC-prefixed
+// twins, so anything that understands only the 7-bit form can be walked straight past.
+const CSI_8BIT = String.fromCharCode(0x9b);
+const ST_8BIT = String.fromCharCode(0x9c);
+// The five "string" controls, whose payload runs until a terminator: OSC, DCS, SOS, PM, APC.
+const OSC_8BIT = String.fromCharCode(0x9d);
+const DCS_8BIT = String.fromCharCode(0x90);
+const SOS_8BIT = String.fromCharCode(0x98);
+const PM_8BIT = String.fromCharCode(0x9e);
+const APC_8BIT = String.fromCharCode(0x9f);
+
+/*
+ * Removal is by sequence, and every family has to be covered.
+ *
+ * Deleting a lone introducer leaves its payload behind as ordinary text, which is a bypass
+ * rather than a fix: `access_to<DCS>junk<ST>ken=secret` becomes `access_tojunkken=secret`,
+ * the key name no longer matches, and the credential survives untouched. CSI was handled
+ * first; DCS, SOS, PM and APC behave identically and need the same treatment, in both their
+ * 7-bit (`ESC P`, `ESC X`, `ESC ^`, `ESC _`) and 8-bit forms.
+ *
+ * An unterminated sequence is consumed through end of input. Leaving the tail visible would
+ * let a payload that simply omits its terminator carry a credential into the output.
+ *
+ * Invisible format characters are removed for the same reason: a zero-width space or word
+ * joiner splits a token in two without changing a single visible glyph, and half a secret in
+ * a log is still a secret.
+ */
+const LBRACKET = `${BACKSLASH}[`;
+const RBRACKET = `${BACKSLASH}]`;
+
+// OSC ] , DCS P, SOS X, PM ^, APC _ — introduced either as ESC + letter or as one C1 byte.
+// OSC has a legacy BEL terminator. DCS, SOS, PM and APC do not: a BEL inside those payloads
+// must stay consumed until ST, or the text after it can survive and split a credential.
+const OSC_INTRO = `(?:${ESC}${RBRACKET}|${OSC_8BIT})`;
+const ST_STRING_INTRO =
+  `(?:${ESC}[PX^_]|[${DCS_8BIT}${SOS_8BIT}${PM_8BIT}${APC_8BIT}])`;
+const ST_END = `(?:${ESC}${BACKSLASH}${BACKSLASH}|${ST_8BIT}|$)`;
+const OSC_END = `(?:${BEL}|${ST_END})`;
+// ESC is legal inside a string-control payload unless it introduces ST (`ESC \\`). Match it
+// explicitly rather than excluding every ESC: otherwise an embedded CSI makes the whole
+// string-control match fail, and the payload is left behind as ordinary text.
+const ST_STRING_PAYLOAD =
+  `(?:[^${ESC}${ST_8BIT}]|${ESC}(?!${BACKSLASH}${BACKSLASH}))*`;
+const OSC_PAYLOAD =
+  `(?:[^${BEL}${ESC}${ST_8BIT}]|${ESC}(?!${BACKSLASH}${BACKSLASH}))*`;
+
+const TERMINAL_CONTROL_RE = new RegExp(
+  [
+    // String controls first: they own their payload, and their introducers also match the
+    // general ESC rule below.
+    `${OSC_INTRO}${OSC_PAYLOAD}${OSC_END}`,
+    `${ST_STRING_INTRO}${ST_STRING_PAYLOAD}${ST_END}`,
+    // CSI, terminated by its final byte or by end of input. C0/C1 controls may occur while a
+    // terminal is parsing CSI; consume them with the sequence instead of leaving parameter
+    // text behind when the strict parameter/intermediate grammar is interrupted.
+    `(?:${ESC}${LBRACKET}|${CSI_8BIT})[${C0_START}-${C0_END}${DEL}-${C1_END} -?]*(?:[@-~]|$)`,
+    // Remaining ECMA-35 escape sequences: zero or more intermediate bytes, then a final byte.
+    // This includes private and standardized forms such as ESC 7, ESC =, ESC c and ESC ( B,
+    // not only the Fe (`ESC @` through `ESC _`) family.
+    `${ESC}[${C0_START}-${C0_END}${DEL}-${C1_END} -/]*(?:[0-~]|$)`,
+    // Whatever control characters are left, including CR, LF and TAB.
+    `[${C0_START}-${C0_END}${DEL}-${C1_END}]`,
+    // Invisible format and default-ignorable characters: zero widths, joiners, bidi controls,
+    // soft hyphen, BOM. Unicode line/paragraph separators are terminal/log line controls too;
+    // removing them also prevents a token value being split across two visual lines.
+    `[${BACKSLASH}p{Cf}${BACKSLASH}p{Zl}${BACKSLASH}p{Zp}${BACKSLASH}p{Default_Ignorable_Code_Point}]`,
+  ].join("|"),
+  "gu",
+);
+
+// Every control and invisible character, removed individually without consuming a sequence's
+// payload. This is the *wrong* thing to display, and a necessary second reading for detection
+// — see canonicalForms.
+const LONE_CONTROL_RE = new RegExp(
+  `[${C0_START}-${C0_END}${DEL}-${C1_END}]|[${BACKSLASH}p{Cf}${BACKSLASH}p{Zl}${BACKSLASH}p{Zp}${BACKSLASH}p{Default_Ignorable_Code_Point}]`,
+  "gu",
+);
+
+export const REMOTE_MESSAGE_LIMIT = 500;
+export const REMOTE_CODE_LIMIT = 64;
+
+// A machine code: optional leading minus (JSON-RPC codes are negative integers), then a safe
+// token. Anything else is dropped, never "cleaned" into something plausible.
+const REMOTE_CODE_RE = /^-?[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/u;
+
+const REDACTION = "[redacted]";
+
+// Token-like material that may appear inside an otherwise-allowlisted message string.
+// Each pattern is deliberately broad: a false redaction costs a little readability, a missed
+// secret ends up in an agent transcript.
+const SECRET_PATTERNS = [
+  // "Bearer abc..." / "Basic abc..."
+  /\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]{8,}/giu,
+  // key=value / key: value / "key": "value" for sensitive key names
+  /\b(access[_-]?token|refresh[_-]?token|id[_-]?token|token|secret|password|passwd|api[_-]?key|apikey|authorization|cookie|session[_-]?secret|private[_-]?key|client[_-]?secret)\b(\s*["']?\s*[:=]\s*["']?)[^\s"',;)}\]]{4,}/giu,
+  // Well-known prefixed credentials
+  /\b(?:sk|pk|rk|tok|rt|xox[abpr]|ghp|gho|ghu|ghs|AKIA|iams|calle)[_-][A-Za-z0-9_-]{12,}/gu,
+  // Long opaque runs: hex, base64url, uuid-ish
+  /\b[A-Fa-f0-9]{32,}\b/gu,
+  /\b[A-Za-z0-9_-]{40,}\b/gu,
+];
+
+/** Remove terminal control sequences and control characters entirely. Never throws. */
+export function stripTerminalControls(value) {
+  return String(value ?? "").replace(TERMINAL_CONTROL_RE, "");
+}
+
+/**
+ * The two readings of a hostile string, because they disagree and both matter.
+ *
+ * Consuming a whole sequence is what a terminal does, and it is what makes output safe to
+ * print. But a sequence swallows its final byte, and an attacker can choose a final byte that
+ * belongs to the word we are looking for: `Bea<U+009B>rer secret` is a valid CSI sequence
+ * ending in `r`, so correct stripping yields `Beaer` and the credential no longer looks like
+ * one. Removing controls individually keeps `Bearer` intact but leaves sequence payloads
+ * embedded, which is the bypass the other reading catches.
+ *
+ * Neither reading is sufficient alone.
+ */
+function canonicalForms(value) {
+  const text = String(value ?? "");
+  return [text.replace(TERMINAL_CONTROL_RE, ""), text.replace(LONE_CONTROL_RE, "")];
+}
+
+/** Redact credential-shaped substrings. Never throws. */
+export function redactSecrets(value) {
+  let out = String(value ?? "");
+  out = out.replace(SECRET_PATTERNS[0], (_m, scheme) => `${scheme} ${REDACTION}`);
+  out = out.replace(SECRET_PATTERNS[1], (_m, key, sep) => `${key}${sep}${REDACTION}`);
+  for (const pattern of SECRET_PATTERNS.slice(2)) {
+    out = out.replace(pattern, REDACTION);
+  }
+  return out;
+}
+
+/**
+ * A remote string made safe for display: controls removed, secrets redacted, whitespace
+ * trimmed, length bounded. Returns undefined for non-strings and empty results so callers can
+ * omit the field rather than emit an empty one.
+ */
+export function safeRemoteString(value, maxLength = REMOTE_MESSAGE_LIMIT) {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const [display, alternate] = canonicalForms(value);
+
+  // Fail closed whenever the readings disagree at all.
+  //
+  // Comparing what each reading *found* is not enough, however carefully. Two different
+  // sequences can require opposite interpretations to reconstruct a sensitive key, leaving
+  // neither global reading with a recognisable credential. Disagreement means controlled text
+  // changes what the string says; there is no unambiguous safe display form, so withhold it.
+  if (display !== alternate) {
+    return REDACTION;
+  }
+
+  const cleaned = redactSecrets(display).trim();
+  if (!cleaned) {
+    return undefined;
+  }
+  return cleaned.slice(0, maxLength);
+}
+
+/**
+ * A remote machine code kept as an opaque token. Anything outside the safe character set is
+ * dropped rather than "cleaned" into something that merely looks valid.
+ */
+export function safeRemoteCode(value) {
+  if (typeof value === "number") {
+    return Number.isSafeInteger(value) ? String(value) : undefined;
+  }
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  // Codes are opaque machine values, not prose. Do not normalize surrounding whitespace
+  // into a different, plausible code any more than we normalize embedded controls.
+  if (trimmed !== value) {
+    return undefined;
+  }
+  // A code carrying control characters is dropped, never repaired. Accepting the remainder
+  // would turn `bad<ESC>[31m` into the entirely plausible `bad`, which is precisely the
+  // "clean it into something that looks valid" behaviour this function refuses to do.
+  if (stripTerminalControls(trimmed) !== trimmed) {
+    return undefined;
+  }
+  return REMOTE_CODE_RE.test(trimmed) ? trimmed : undefined;
+}
+
+/**
+ * The only shape remote detail may take in a public envelope: at most `{ code, message }`,
+ * each individually validated. Every field in the input other than those two is ignored.
+ * Returns null when nothing survives, so callers omit the field.
+ */
+export function publicRemoteError(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const code = safeRemoteCode(value.code);
+  const message = safeRemoteString(value.message);
+  if (code === undefined && message === undefined) {
+    return null;
+  }
+  return {
+    ...(code !== undefined ? { code } : {}),
+    ...(message !== undefined ? { message } : {}),
+  };
+}
+
+/**
+ * Reduce an arbitrary remote error body — a JSON-RPC error object, an HTTP body, a tool
+ * result — to `publicRemoteError` shape. Reads only `code` (or a string `error`) and
+ * `message`, at the top level or nested under `error`; everything else is dropped unread.
+ */
+export function sanitizeRemoteError(body) {
+  let value = body;
+  if (typeof value === "string") {
+    const text = value.trim();
+    if (!text) {
+      return null;
+    }
+    try {
+      value = JSON.parse(text);
+    } catch {
+      return publicRemoteError({ message: text });
+    }
+  }
+
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    // JSON scalar or array: keep a bounded excerpt of its serialisation, nothing else.
+    return publicRemoteError({ message: typeof value === "string" ? value : JSON.stringify(value ?? "") });
+  }
+
+  const nested = value.error && typeof value.error === "object" && !Array.isArray(value.error) ? value.error : {};
+  const code = nested.code ?? value.code ?? (typeof value.error === "string" ? value.error : undefined);
+  const message = nested.message ?? value.message;
+  return publicRemoteError({ code, message });
+}

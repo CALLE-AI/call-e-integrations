@@ -5,6 +5,8 @@ import {
   INTEGRATION_HEADER,
   MCP_PROTOCOL_VERSION,
 } from "./constants.js";
+import { causeCodeOf } from "./http.js";
+import { sanitizeRemoteError } from "./sanitize.js";
 
 export class AuthRequiredError extends Error {
   constructor(message = "A usable CALL-E auth token is required.") {
@@ -13,15 +15,37 @@ export class AuthRequiredError extends Error {
   }
 }
 
+/**
+ * `message` is always authored locally and safe to print. Whatever the server said is kept
+ * raw in `payload` / `responseText` for programmatic use, and in sanitized, bounded form in
+ * `remoteError` for display. Nothing remote reaches `message`.
+ */
 export class McpHttpError extends Error {
-  constructor(message, { statusCode = null, responseText = "", payload = null, headers = {}, code = "http_error" } = {}) {
-    super(message);
+  constructor(message, {
+    statusCode = null,
+    responseText = "",
+    payload = null,
+    headers = {},
+    code = "http_error",
+    transport = false,
+    timedOut = false,
+    phase = null,
+    cause,
+  } = {}) {
+    super(message, cause !== undefined ? { cause } : undefined);
     this.name = "McpHttpError";
     this.statusCode = statusCode;
     this.responseText = responseText;
     this.payload = payload;
     this.headers = headers;
     this.code = code;
+    this.transport = Boolean(transport);
+    this.timedOut = Boolean(timedOut);
+    /** "connect" or "body" on a transport failure; null otherwise. */
+    this.phase = transport ? (phase ?? "connect") : null;
+    /** "timeout", the system error code behind a rejected fetch, or null. */
+    this.causeCode = timedOut ? "timeout" : causeCodeOf(cause);
+    this.remoteError = sanitizeRemoteError(payload ?? responseText);
   }
 }
 
@@ -57,19 +81,63 @@ async function requestJsonRpc(fetchImpl, url, { headers, payload, timeoutMs }) {
     timeout.unref();
   }
 
+  let response;
   try {
-    const response = await fetchImpl(url, {
+    response = await fetchImpl(url, {
       method: "POST",
       headers,
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
-    const text = await response.text();
+  } catch (error) {
+    clearTimeout(timeout);
+    if (error?.name === "AbortError") {
+      throw new McpHttpError(`MCP request timed out for ${payload.method}`, {
+        code: "transport_error",
+        transport: true,
+        timedOut: true,
+        phase: "connect",
+      });
+    }
+    // fetch rejected before any response: DNS, connection, TLS. Only this path is transport.
+    throw new McpHttpError(`MCP request failed before a response was received for ${payload.method}`, {
+      code: "transport_error",
+      transport: true,
+      phase: "connect",
+      cause: error,
+    });
+  }
+
+  // Headers arrived; the body can still fail (timeout mid-stream, socket reset). Map that to
+  // the same typed transport error as a rejected fetch.
+  let text;
+  try {
+    text = await response.text();
+  } catch (error) {
+    clearTimeout(timeout);
+    if (error?.name === "AbortError") {
+      throw new McpHttpError(`MCP request timed out for ${payload.method}`, {
+        code: "transport_error",
+        transport: true,
+        timedOut: true,
+        phase: "body",
+      });
+    }
+    throw new McpHttpError(`MCP response body could not be read for ${payload.method}`, {
+      code: "transport_error",
+      transport: true,
+      phase: "body",
+      cause: error,
+    });
+  }
+
+  try {
     let body = null;
+    let parseFailed = false;
     try {
       body = parseResponseBody(text);
     } catch {
-      body = null;
+      parseFailed = true;
     }
     const responseHeaders = Object.fromEntries(response.headers.entries());
 
@@ -82,21 +150,62 @@ async function requestJsonRpc(fetchImpl, url, { headers, payload, timeoutMs }) {
       });
     }
 
-    if (body?.error) {
-      const error = body.error;
-      throw new McpHttpError(error.message || `Remote MCP error for ${payload.method}`, {
-        payload: error,
+    // A successful status is not a successful RPC when the response cannot be interpreted.
+    // Keep the raw body available for the shared sanitizer, but never let JSON.parse's
+    // remote-quoting SyntaxError escape or silently turn malformed input into an empty result.
+    const expectsResponse = payload.id !== undefined;
+    const bodyIsObject = Boolean(body && typeof body === "object" && !Array.isArray(body));
+    const hasRpcResult = bodyIsObject && Object.hasOwn(body, "result");
+    const hasRpcErrorField = bodyIsObject && Object.hasOwn(body, "error");
+    const hasRpcError = hasRpcErrorField && Boolean(
+      body.error
+      && typeof body.error === "object"
+      && !Array.isArray(body.error)
+      && Number.isInteger(body.error.code)
+      && typeof body.error.message === "string",
+    );
+    const bodyIsEmptyObject = bodyIsObject && Object.keys(body).length === 0;
+
+    // HTTP acknowledgements for notifications have no JSON-RPC response to correlate. Keep
+    // accepting an empty body (and the existing empty-object acknowledgement), while still
+    // rejecting malformed non-empty JSON.
+    const validNotificationAck = !expectsResponse
+      && !parseFailed
+      && (!text.trim() || bodyIsEmptyObject);
+
+    // A request response is valid only when it belongs to this exact request and carries one
+    // outcome. Checking merely for `result` let stale/wrong-version responses and envelopes
+    // containing both `result` and `error` pass as successes.
+    const validRpcResponse = expectsResponse
+      && !parseFailed
+      && bodyIsObject
+      && body.jsonrpc === "2.0"
+      && Object.hasOwn(body, "id")
+      && body.id === payload.id
+      && hasRpcResult !== hasRpcErrorField
+      && (hasRpcResult || hasRpcError);
+
+    if (!validNotificationAck && !validRpcResponse) {
+      throw new McpHttpError(`MCP response was invalid for ${payload.method}`, {
+        statusCode: response.status,
+        responseText: text,
+        payload: bodyIsObject ? body : null,
+        headers: responseHeaders,
+        code: "invalid_response",
+      });
+    }
+
+    if (hasRpcError) {
+      // The server's message is untrusted: it is kept in `payload` and, sanitized, in
+      // `remoteError`. The Error message itself stays locally authored.
+      throw new McpHttpError(`Remote MCP error for ${payload.method}`, {
+        payload: body.error,
         headers: responseHeaders,
         code: "mcp_error",
       });
     }
 
     return { body, headers: responseHeaders };
-  } catch (error) {
-    if (error?.name === "AbortError") {
-      throw new McpHttpError(`MCP request timed out for ${payload.method}`, { code: "http_error" });
-    }
-    throw error;
   } finally {
     clearTimeout(timeout);
   }

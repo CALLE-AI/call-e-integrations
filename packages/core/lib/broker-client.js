@@ -1,6 +1,17 @@
 import { pendingCachePath, pendingIsExpired, readPendingLogin, removeFile, tokenCachePath, tokenIsUsable, writePrivateJson, readJson } from "./cache.js";
 import { INTEGRATION_HEADER, SESSION_SECRET_HEADER } from "./constants.js";
 import { HttpStatusError, requestJson } from "./http.js";
+import { publicRemoteError } from "./sanitize.js";
+
+/** A broker workflow outcome whose message is always locally authored. */
+export class BrokerLoginError extends Error {
+  constructor(message, { code = "broker_login_failed", remoteError = null } = {}) {
+    super(message);
+    this.name = "BrokerLoginError";
+    this.code = code === "broker_login_timeout" ? code : "broker_login_failed";
+    this.remoteError = publicRemoteError(remoteError);
+  }
+}
 
 function integrationHeaders(config) {
   return config?.integrationHeader ? { [INTEGRATION_HEADER]: config.integrationHeader } : {};
@@ -176,12 +187,16 @@ export async function loginWithBroker(config, {
     }
     if (status === "FAILED" || status === "EXPIRED" || status === "EXCHANGED") {
       removeFile(pendingPath);
-      throw new Error(`Brokered login failed: ${current.error_message || status}`);
+      throw new BrokerLoginError("Brokered login failed.", {
+        remoteError: { code: status, message: current.error_message },
+      });
     }
 
     const delayMs = Math.max(500, Math.min(Number(current.poll_after_ms || 2000), 10000));
     await sleepImpl(delayMs);
   }
 
-  throw new Error("Timed out waiting for brokered login authorization.");
+  throw new BrokerLoginError("Timed out waiting for brokered login authorization.", {
+    code: "broker_login_timeout",
+  });
 }

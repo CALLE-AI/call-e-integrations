@@ -17,6 +17,10 @@ export interface McpHttpErrorOptions {
   payload?: unknown;
   headers?: Record<string, string>;
   code?: string;
+  transport?: boolean;
+  timedOut?: boolean;
+  phase?: "connect" | "body" | null;
+  cause?: unknown;
 }
 
 export interface McpToolDefinition extends JsonObject {
@@ -52,6 +56,16 @@ export class McpHttpError extends Error {
   payload: unknown;
   headers: Record<string, string>;
   code: string;
+  /** True only when no usable response arrived: timeout, DNS, connection, TLS, or a body
+   * stream that failed after the headers. `phase` says which. */
+  transport: boolean;
+  timedOut: boolean;
+  /** "connect" or "body" on a transport failure; null otherwise. */
+  phase: "connect" | "body" | null;
+  /** "timeout", the system error code behind a rejected fetch (e.g. "ENOTFOUND"), or null. */
+  causeCode: string | null;
+  /** Sanitized, bounded `{ code?, message? }` from the remote body, or null. Safe to display. */
+  remoteError: { code?: string; message?: string } | null;
 }
 
 export function isUnauthorizedMcpError(error: unknown): error is McpHttpError;

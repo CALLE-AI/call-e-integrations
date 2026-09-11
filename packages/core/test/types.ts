@@ -1,4 +1,5 @@
 import {
+  BrokerLoginError,
   currentTokenDocument,
   loginWithBroker,
   tokenIsUsable,
@@ -8,8 +9,23 @@ import { ensurePendingLogin } from "@call-e/core/broker-client";
 import { readJson } from "@call-e/core/cache";
 import { resolveServerUrl } from "@call-e/core/config";
 import { DEFAULT_CHANNEL } from "@call-e/core/constants";
-import { requestJson } from "@call-e/core/http";
-import { callMcpTool, listMcpTools } from "@call-e/core/mcp-client";
+import {
+  HttpStatusError,
+  InvalidResponseError,
+  TransportError,
+  causeCodeOf,
+  requestJson,
+} from "@call-e/core/http";
+import { McpHttpError, callMcpTool, listMcpTools } from "@call-e/core/mcp-client";
+import {
+  publicRemoteError,
+  redactSecrets,
+  safeRemoteCode,
+  safeRemoteString,
+  sanitizeRemoteError,
+  stripTerminalControls,
+  type SanitizedRemoteError,
+} from "@call-e/core/sanitize";
 
 const config: BrokerLoginConfig = {
   brokerBaseUrl: "https://example.test",
@@ -61,6 +77,41 @@ async function consumePublicTypes() {
 
   const status = await requestJson<{ ok: boolean }>("GET", "https://example.test/status");
   status.ok.valueOf();
+
+  try {
+    await requestJson("GET", "https://example.test/status");
+  } catch (error) {
+    if (error instanceof BrokerLoginError) {
+      error.code.toUpperCase();
+      error.remoteError?.message?.toUpperCase();
+    }
+    if (error instanceof InvalidResponseError) {
+      error.responseText.toUpperCase();
+      error.statusCode?.toFixed();
+    }
+    if (error instanceof TransportError) {
+      error.phase.toUpperCase();
+      error.timedOut.valueOf();
+      error.code?.toUpperCase();
+      error.url?.toUpperCase();
+    }
+    if (error instanceof HttpStatusError) {
+      error.statusCode?.toFixed();
+      error.url?.toUpperCase();
+    }
+    if (error instanceof McpHttpError) {
+      error.transport.valueOf();
+      error.causeCode?.toUpperCase();
+      error.remoteError?.message?.toUpperCase();
+    }
+    causeCodeOf(error)?.toUpperCase();
+  }
+
+  const shown: SanitizedRemoteError | null = publicRemoteError({ code: -32000, message: "x" });
+  shown?.code?.toUpperCase();
+  sanitizeRemoteError('{"error":"x"}')?.message?.toUpperCase();
+  safeRemoteString(stripTerminalControls(redactSecrets("y")), 100)?.toUpperCase();
+  safeRemoteCode(12)?.toUpperCase();
 }
 
 void consumePublicTypes;
