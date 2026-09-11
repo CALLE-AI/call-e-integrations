@@ -2,4 +2,5 @@
 "@call-e/core": patch
 ---
 
-Reject incomplete broker login session responses before persisting pending authentication state.
+Validate broker session IDs, secrets, and login URLs for their cache, request,
+header, and browser-opening sinks before persisting pending authentication state.

@@ -5,6 +5,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  DEFAULT_BASE_URL,
   INTEGRATION_HEADER,
   MCP_PROTOCOL_VERSION,
   SESSION_SECRET_HEADER,
@@ -27,6 +28,8 @@ import {
 import {
   createBrokerSession,
   ensurePendingLogin,
+  exchangeBrokerSession,
+  getBrokerSessionStatus,
   loginWithBroker,
   normalizePendingSession,
 } from "@call-e/core/broker-client";
@@ -162,7 +165,7 @@ test("broker client sends integration headers and normalizes pending sessions", 
   };
 
   const session = await createBrokerSession(config, { fetchImpl });
-  const pending = normalizePendingSession(session);
+  const pending = normalizePendingSession(session, config);
   assert.equal(pending.session_id, "session-1");
   assert.equal(pending.session_secret, "secret-1");
   assert.equal(pending.status, "PENDING");
@@ -201,6 +204,209 @@ test("broker client rejects a malformed created session before caching it", asyn
       assert.equal(fs.existsSync(pendingPath), false, `${field}=${String(invalidValue)}`);
     }
   }
+});
+
+test("broker client rejects hostile created session values before cache, output, or browser opening", async () => {
+  const cacheRoot = makeTempRoot("calle-core-hostile-created-session");
+  const config = {
+    cacheRoot,
+    brokerBaseUrl: "https://broker.test",
+    serverUrl: "https://broker.test/mcp/openagent_oauth",
+    authBaseUrl: "https://broker.test",
+    channel: "openagent_oauth",
+    scope: "openid email profile",
+    clientName: "calle Login",
+    timeoutSeconds: 15,
+  };
+  const pendingPath = pendingCachePath(cacheRoot, config.serverUrl);
+  const validSession = {
+    session_id: "session-1",
+    session_secret: "secret-1",
+    login_url: "https://broker.test/openagent-auth/sessions/session-1/start",
+  };
+  const hostileValues = {
+    login_url: "javascript:alert(1)",
+    session_id: "../exchange?x=",
+    session_secret: "ok\r\nX-Evil: 1",
+  };
+
+  for (const [field, hostileValue] of Object.entries(hostileValues)) {
+    const printed = [];
+    const opened = [];
+    const stop = new Error("stop after unsafe session handling");
+    await assert.rejects(
+      loginWithBroker(config, {
+        fetchImpl: async () => jsonResponse({ ...validSession, [field]: hostileValue }),
+        stderr: (line) => printed.push(line),
+        openBrowser: async (url) => opened.push(url),
+        sleepImpl: async () => { throw stop; },
+        noBrowserOpen: false,
+      }),
+      /Broker session response has invalid/,
+    );
+    assert.equal(fs.existsSync(pendingPath), false, `${field} was not cached`);
+    assert.deepEqual(printed, [], `${field} was not printed`);
+    assert.deepEqual(opened, [], `${field} was not opened`);
+  }
+});
+
+test("broker client allows HTTP login URLs only for the configured loopback origin", () => {
+  const session = {
+    session_id: "session-1",
+    session_secret: "secret-1",
+    login_url: "http://127.0.0.1:8787/openagent-auth/sessions/session-1/start",
+  };
+  assert.throws(
+    () => normalizePendingSession(session, {
+      brokerBaseUrl: "https://broker.test",
+      authBaseUrl: "https://auth.test",
+    }),
+    /Broker session response has invalid login_url/,
+  );
+  assert.equal(
+    normalizePendingSession(session, {
+      brokerBaseUrl: "http://127.0.0.1:8787",
+      authBaseUrl: "https://auth.test",
+    }).login_url,
+    session.login_url,
+  );
+  assert.equal(
+    normalizePendingSession({
+      ...session,
+      login_url: `${DEFAULT_BASE_URL}/openagent-auth/sessions/session-1/start`,
+    }).login_url,
+    `${DEFAULT_BASE_URL}/openagent-auth/sessions/session-1/start`,
+  );
+  assert.equal(
+    normalizePendingSession({
+      ...session,
+      login_url: "http://[::1]:8787/openagent-auth/sessions/session-1/start",
+    }, {
+      brokerBaseUrl: "http://[::1]:8787",
+      authBaseUrl: "https://auth.test",
+    }).login_url,
+    "http://[::1]:8787/openagent-auth/sessions/session-1/start",
+  );
+});
+
+test("broker client rejects non-header session secrets before caching or requests", async () => {
+  const cacheRoot = makeTempRoot("calle-core-non-header-session-secret");
+  const config = {
+    cacheRoot,
+    brokerBaseUrl: "https://broker.test",
+    serverUrl: "https://broker.test/mcp/openagent_oauth",
+    authBaseUrl: "https://broker.test",
+    channel: "openagent_oauth",
+    scope: "openid email profile",
+    clientName: "calle Login",
+    timeoutSeconds: 15,
+  };
+  const pendingPath = pendingCachePath(cacheRoot, config.serverUrl);
+  for (const sessionSecret of ["ok\u009B", "emoji🔒"]) {
+    await assert.rejects(
+      ensurePendingLogin(config, {
+        fetchImpl: async () => jsonResponse({
+          session_id: "session-1",
+          session_secret: sessionSecret,
+          login_url: "https://broker.test/openagent-auth/sessions/start",
+        }),
+      }),
+      /Broker session response has invalid session_secret/,
+    );
+    assert.equal(fs.existsSync(pendingPath), false, "unsafe header value was not cached");
+  }
+});
+
+test("broker client rejects dot-only session IDs before cache or broker request sinks", async () => {
+  const cacheRoot = makeTempRoot("calle-core-dot-session-id");
+  const config = {
+    cacheRoot,
+    brokerBaseUrl: "https://broker.test",
+    serverUrl: "https://broker.test/mcp/openagent_oauth",
+    authBaseUrl: "https://broker.test",
+    channel: "openagent_oauth",
+    scope: "openid email profile",
+    clientName: "calle Login",
+    timeoutSeconds: 15,
+  };
+  const pendingPath = pendingCachePath(cacheRoot, config.serverUrl);
+  for (const sessionId of [".", ".."]) {
+    await assert.rejects(
+      ensurePendingLogin(config, {
+        fetchImpl: async () => jsonResponse({
+          session_id: sessionId,
+          session_secret: "safe-secret",
+          login_url: "https://broker.test/openagent-auth/sessions/start",
+        }),
+      }),
+      /Broker session response has invalid session_id/,
+    );
+    assert.equal(fs.existsSync(pendingPath), false, `${sessionId} was not cached`);
+    const pending = {
+      session_id: sessionId,
+      session_secret: "safe-secret",
+      login_url: "https://broker.test/openagent-auth/sessions/start",
+    };
+    for (const request of [getBrokerSessionStatus, exchangeBrokerSession]) {
+      await assert.rejects(
+        request(config, pending, { fetchImpl: async () => { throw new Error("network must not run"); } }),
+        /Broker session response has invalid session_id/,
+      );
+    }
+  }
+});
+
+test("broker client removes hostile cached sessions before reuse and encodes opaque path segments", async () => {
+  const cacheRoot = makeTempRoot("calle-core-hostile-cached-session");
+  const config = {
+    cacheRoot,
+    brokerBaseUrl: "https://broker.test",
+    serverUrl: "https://broker.test/mcp/openagent_oauth",
+    authBaseUrl: "https://broker.test",
+    channel: "openagent_oauth",
+    scope: "openid email profile",
+    clientName: "calle Login",
+    timeoutSeconds: 15,
+  };
+  const pendingPath = pendingCachePath(cacheRoot, config.serverUrl);
+  writePrivateJson(pendingPath, {
+    session_id: "../exchange?x=",
+    session_secret: "ok\r\nX-Evil: 1",
+    login_url: "javascript:alert(1)",
+    status: "PENDING",
+    created_at: "2026-01-01T00:00:00.000Z",
+    expires_at: "2030-01-01T00:00:00.000Z",
+  });
+  const requests = [];
+  const freshSession = {
+    session_id: "fresh-session",
+    session_secret: "fresh-secret",
+    login_url: "https://broker.test/openagent-auth/sessions/fresh-session/start",
+  };
+  const result = await ensurePendingLogin(config, {
+    fetchImpl: async (url, init) => {
+      requests.push({ url, headers: init.headers, method: init.method });
+      return jsonResponse(freshSession);
+    },
+  });
+  assert.equal(result.created, true);
+  assert.deepEqual(requests.map(({ method, url }) => `${method} ${url}`), [
+    "POST https://broker.test/api/v1/openagent-auth/sessions",
+  ]);
+  assert.equal(requests[0].headers[SESSION_SECRET_HEADER], undefined);
+
+  const opaquePending = {
+    session_id: "opaque:id",
+    session_secret: "safe-secret",
+    login_url: "https://broker.test/openagent-auth/sessions/opaque/start",
+  };
+  await getBrokerSessionStatus(config, opaquePending, {
+    fetchImpl: async (url, init) => {
+      assert.equal(url, "https://broker.test/api/v1/openagent-auth/sessions/opaque%3Aid");
+      assert.equal(init.headers[SESSION_SECRET_HEADER], "safe-secret");
+      return jsonResponse({ status: "PENDING" });
+    },
+  });
 });
 
 test("broker client refreshes active pending login against broker before reuse", async () => {
