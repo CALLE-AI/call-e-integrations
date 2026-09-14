@@ -358,12 +358,12 @@ For authentication, webhooks, and the full reference, see the [API docs](https:/
 
 Publicly supported: **22 countries**, updated September 14, 2026. Use these country codes with the SDK and API recipient settings.
 
-| Country | Country Code | Calling Code | Languages | Default Line |
+| Country | Country Code | Calling Code | Languages | Line Region |
 | --- | --- | --- | --- | --- |
 | Australia | `AU` | +61 | English | International |
 | Bangladesh | `BD` | +880 | English, Bengali | International |
 | Brazil | `BR` | +55 | English, Portuguese | International |
-| Canada | `CA` | +1 | English | International |
+| Canada | `CA` | +1 | English | Local |
 | Germany | `DE` | +49 | English, German | International |
 | Spain | `ES` | +34 | English, Spanish | International |
 | Finland | `FI` | +358 | English, Finnish | International |
@@ -380,13 +380,14 @@ Publicly supported: **22 countries**, updated September 14, 2026. Use these coun
 | Singapore | `SG` | +65 | English | International |
 | Thailand | `TH` | +66 | English, Thai | International |
 | Turkey | `TR` | +90 | Turkish | International |
-| United States of America | `US` | +1 | English, Indonesian | International |
+| United States of America | `US` | +1 | English, Indonesian | Local |
 | Viet Nam | `VN` | +84 | English, Vietnamese | International |
 
 **Notes**
 
-- **Default Line** describes the destination's default routing. A purchased or assigned phone number can take precedence and determine the actual outbound line and caller ID.
-- **International** means the destination defaults to CALL-E's international phone numbers, primarily intended for testing. For production use with a local phone number, contact the CALL-E team to enable a local line for the destination country.
+- **Line Region** describes the caller ID shown to the recipient. The table reflects the current default +1 caller ID; using a purchased or assigned phone number can change the line region.
+- **Local** means the caller ID is in the destination's country or calling-code region. With the default +1 caller ID, the United States and Canada are Local.
+- **International** means the caller ID is outside the destination's country or calling-code region. These lines are primarily intended for testing. For production use with a local phone number, contact the CALL-E team to enable a local line for the destination country.
 
 ---
 
