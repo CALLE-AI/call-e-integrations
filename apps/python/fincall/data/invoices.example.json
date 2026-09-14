@@ -1,0 +1,32 @@
+[
+  {
+    "invoice_id": "INV-1042",
+    "customer": "ABC Industries",
+    "contact_name": "Rahul",
+    "phone": "+91XXXXXXXXXX",
+    "amount": 125000,
+    "currency": "INR",
+    "due_date": "2026-09-10",
+    "status": "overdue"
+  },
+  {
+    "invoice_id": "INV-1043",
+    "customer": "Zenith Solutions",
+    "contact_name": "Priya",
+    "phone": "+91XXXXXXXXXX",
+    "amount": 78000,
+    "currency": "INR",
+    "due_date": "2026-09-12",
+    "status": "overdue"
+  },
+  {
+    "invoice_id": "INV-1044",
+    "customer": "Nova Systems",
+    "contact_name": "Arjun",
+    "phone": "+91XXXXXXXXXX",
+    "amount": 18000,
+    "currency": "INR",
+    "due_date": "2026-09-13",
+    "status": "overdue"
+  }
+]

@@ -1,0 +1,3 @@
+calle-ai
+python-dotenv
+streamlit
