@@ -356,7 +356,7 @@ For authentication, webhooks, and the full reference, see the [API docs](https:/
 
 ## Supported Regions and Languages
 
-Currently enabled: **23 countries**, updated September 14, 2026. Use these country codes with the SDK and API recipient settings.
+Publicly supported: **22 countries**, updated September 14, 2026. Use these country codes with the SDK and API recipient settings.
 
 | Country | Country Code | Calling Code | Languages | Default Line |
 | --- | --- | --- | --- | --- |
@@ -364,7 +364,6 @@ Currently enabled: **23 countries**, updated September 14, 2026. Use these count
 | Bangladesh | `BD` | +880 | English, Bengali | International |
 | Brazil | `BR` | +55 | English, Portuguese | International |
 | Canada | `CA` | +1 | English | International |
-| China | `CN` | +86 | English, Mandarin Chinese | Local |
 | Germany | `DE` | +49 | English, German | International |
 | Spain | `ES` | +34 | English, Spanish | International |
 | Finland | `FI` | +358 | English, Finnish | International |
@@ -387,7 +386,6 @@ Currently enabled: **23 countries**, updated September 14, 2026. Use these count
 **Notes**
 
 - **Default Line** describes the destination's default routing. A purchased or assigned phone number can take precedence and determine the actual outbound line and caller ID.
-- **Local** means the destination uses a local line by default.
 - **International** means the destination defaults to CALL-E's international phone numbers, primarily intended for testing. For production use with a local phone number, contact the CALL-E team to enable a local line for the destination country.
 
 ---
