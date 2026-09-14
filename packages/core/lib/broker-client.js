@@ -1,5 +1,5 @@
 import { pendingCachePath, pendingIsExpired, readPendingLogin, removeFile, tokenCachePath, tokenIsUsable, writePrivateJson, readJson } from "./cache.js";
-import { DEFAULT_BASE_URL, INTEGRATION_HEADER, SESSION_SECRET_HEADER } from "./constants.js";
+import { INTEGRATION_HEADER, SESSION_SECRET_HEADER } from "./constants.js";
 import { HttpStatusError, requestJson } from "./http.js";
 
 function integrationHeaders(config) {
@@ -55,9 +55,7 @@ function isLoopbackHost(hostname) {
 
 function trustedLoginOrigins(config) {
   const origins = new Set();
-  const configuredOrigins = config === undefined
-    ? [DEFAULT_BASE_URL]
-    : [config.brokerBaseUrl, config.authBaseUrl];
+  const configuredOrigins = [config.brokerBaseUrl, config.authBaseUrl];
   for (const value of configuredOrigins) {
     if (!value) continue;
     try {
@@ -83,11 +81,10 @@ function validateLoginUrl(config, sessionPayload) {
   if (parsed.username || parsed.password) {
     throw sessionValidationError("Broker session response has invalid login_url");
   }
-  const allowedOrigins = trustedLoginOrigins(config);
-  if (parsed.protocol === "http:" && isLoopbackHost(parsed.hostname) && allowedOrigins.has(parsed.origin)) {
-    return parsed.toString();
-  }
-  if (parsed.protocol !== "https:" || !allowedOrigins.has(parsed.origin)) {
+  const safeScheme = parsed.protocol === "https:" || (parsed.protocol === "http:" && isLoopbackHost(parsed.hostname));
+  // Normalization alone has no origin context; every effectful core caller supplies its policy.
+  const allowedOrigins = config === undefined ? null : trustedLoginOrigins(config);
+  if (!safeScheme || (allowedOrigins && !allowedOrigins.has(parsed.origin))) {
     throw sessionValidationError("Broker session response has invalid login_url");
   }
   return parsed.toString();
@@ -95,7 +92,8 @@ function validateLoginUrl(config, sessionPayload) {
 
 function validatePendingSession(config, sessionPayload) {
   const sessionId = requiredSessionString(sessionPayload, "session_id", MAX_SESSION_ID_LENGTH);
-  if (sessionId === "." || sessionId === ".." || !/^[A-Za-z0-9._~:+-]+$/.test(sessionId)) {
+  // Opaque IDs are encoded at request sinks; dot-only segments are normalized by URL parsers.
+  if (sessionId === "." || sessionId === ".." || !sessionId.isWellFormed()) {
     throw sessionValidationError("Broker session response has invalid session_id");
   }
   const sessionSecret = requiredSessionString(sessionPayload, "session_secret", MAX_SESSION_SECRET_LENGTH);

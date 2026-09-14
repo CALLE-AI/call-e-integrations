@@ -94,6 +94,15 @@ only when the URL is a loopback address on that exact configured origin, which
 keeps local development support without letting a remote broker redirect a
 client to an arbitrary local service.
 
+`normalizePendingSession(payload)` remains usable with custom broker origins and
+opaque IDs. Without a policy it checks field structure and safe URL schemes, but
+cannot establish whether an origin is trusted. Before displaying or persisting
+a session yourself, pass a `BrokerOriginPolicy` containing `brokerBaseUrl` and/or
+`authBaseUrl`; this does not require request timeout settings. Core login and
+request helpers always enforce their configured origins. IDs are length-bounded
+and encoded as a single request-path segment rather than restricted to an ASCII
+allowlist.
+
 ## Outbound Call Contract
 
 CALL-E's outbound tools follow this order:

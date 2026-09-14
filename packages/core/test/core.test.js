@@ -206,6 +206,38 @@ test("broker client rejects a malformed created session before caching it", asyn
   }
 });
 
+test("normalization preserves custom origins and opaque IDs while request sinks enforce their policy", async () => {
+  const config = { brokerBaseUrl: "https://custom-broker.test", timeoutSeconds: 15 };
+  for (const sessionId of ["opaque/id?key=value#fragment", "../exchange?x=", "%2e%2e", "session ü 🔑"]) {
+    const session = {
+      session_id: sessionId,
+      session_secret: "safe-secret",
+      login_url: "https://custom-broker.test/login",
+    };
+    const pending = normalizePendingSession(session);
+    assert.equal(pending.login_url, session.login_url);
+    assert.equal(pending.session_id, sessionId);
+    assert.equal(normalizePendingSession(session, { brokerBaseUrl: config.brokerBaseUrl }).session_id, sessionId);
+
+    for (const request of [getBrokerSessionStatus, exchangeBrokerSession]) {
+      await request(config, pending, {
+        fetchImpl: async (url, init) => {
+          const suffix = request === exchangeBrokerSession ? "/exchange" : "";
+          const expectedPath = `/api/v1/openagent-auth/sessions/${encodeURIComponent(sessionId)}${suffix}`;
+          assert.equal(new URL(url).pathname, expectedPath);
+          assert.equal(new URL(url).search, "");
+          assert.equal(new URL(url).hash, "");
+          assert.equal(init.headers[SESSION_SECRET_HEADER], "safe-secret");
+          return jsonResponse({ status: "PENDING" });
+        },
+      });
+      await assert.rejects(request({ brokerBaseUrl: "https://different-broker.test", timeoutSeconds: 15 }, pending, {
+        fetchImpl: async () => { throw new Error("untrusted origin reached a request"); },
+      }), /Broker session response has invalid login_url/);
+    }
+  }
+});
+
 test("broker client rejects hostile created session values before cache, output, or browser opening", async () => {
   const cacheRoot = makeTempRoot("calle-core-hostile-created-session");
   const config = {
@@ -226,7 +258,7 @@ test("broker client rejects hostile created session values before cache, output,
   };
   const hostileValues = {
     login_url: "javascript:alert(1)",
-    session_id: "../exchange?x=",
+    session_id: "session\nunsafe",
     session_secret: "ok\r\nX-Evil: 1",
   };
 
@@ -317,7 +349,7 @@ test("broker client rejects non-header session secrets before caching or request
   }
 });
 
-test("broker client rejects dot-only session IDs before cache or broker request sinks", async () => {
+test("broker client rejects unsafe or oversized session IDs before cache or broker request sinks", async () => {
   const cacheRoot = makeTempRoot("calle-core-dot-session-id");
   const config = {
     cacheRoot,
@@ -330,7 +362,7 @@ test("broker client rejects dot-only session IDs before cache or broker request 
     timeoutSeconds: 15,
   };
   const pendingPath = pendingCachePath(cacheRoot, config.serverUrl);
-  for (const sessionId of [".", ".."]) {
+  for (const sessionId of [".", "..", "id\u009B", "id\uD800", "id\uDC00", "x".repeat(513)]) {
     await assert.rejects(
       ensurePendingLogin(config, {
         fetchImpl: async () => jsonResponse({
