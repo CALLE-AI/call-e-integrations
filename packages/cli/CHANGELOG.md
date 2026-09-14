@@ -1,5 +1,20 @@
 # @call-e/cli
 
+## 0.5.1
+
+### Patch Changes
+
+- [#94](https://github.com/CALLE-AI/call-e-integrations/pull/94) [`a7e5439`](https://github.com/CALLE-AI/call-e-integrations/commit/a7e5439eb2a9e1870b937106c562afd6042161c7) Thanks [@JJasonSun](https://github.com/JJasonSun)! - Normalize JSON object payloads from content-only MCP tool results into
+  `structuredContent` while preserving the raw result envelope, and document the
+  direct MCP and CLI output paths.
+
+- [#119](https://github.com/CALLE-AI/call-e-integrations/pull/119) [`e752bf2`](https://github.com/CALLE-AI/call-e-integrations/commit/e752bf23a0c4732e1740e07302defc49f0aa14ee) Thanks [@JJasonSun](https://github.com/JJasonSun)! - Accept `--source`, `--integration`, and `--integration-version` as per-invocation attribution overrides. Validate values before requests and preserve environment-variable compatibility.
+
+- [#115](https://github.com/CALLE-AI/call-e-integrations/pull/115) [`826905b`](https://github.com/CALLE-AI/call-e-integrations/commit/826905b7ca4cbf185f08c432eeaa2b1bf69e18cc) Thanks [@JJasonSun](https://github.com/JJasonSun)! - Run agent commands through a bundled launcher that verifies the MCP package and help before passing JSON argument arrays without a shell. Preserve structured login, help, and recovery arguments and integration attribution across Bash, PowerShell, and cmd, including installations with SDK releases that also export `calle`.
+
+- Updated dependencies [[`a7e5439`](https://github.com/CALLE-AI/call-e-integrations/commit/a7e5439eb2a9e1870b937106c562afd6042161c7)]:
+  - @call-e/core@0.3.1
+
 ## 0.5.0
 
 ### Minor Changes

@@ -1,5 +1,13 @@
 # @call-e/core
 
+## 0.3.1
+
+### Patch Changes
+
+- [#94](https://github.com/CALLE-AI/call-e-integrations/pull/94) [`a7e5439`](https://github.com/CALLE-AI/call-e-integrations/commit/a7e5439eb2a9e1870b937106c562afd6042161c7) Thanks [@JJasonSun](https://github.com/JJasonSun)! - Normalize JSON object payloads from content-only MCP tool results into
+  `structuredContent` while preserving the raw result envelope, and document the
+  direct MCP and CLI output paths.
+
 ## 0.3.0
 
 ### Minor Changes

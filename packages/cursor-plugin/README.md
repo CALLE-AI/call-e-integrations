@@ -69,7 +69,7 @@ When the Cursor skill falls back to CLI commands, it uses this integration
 attribution:
 
 ```json
-{"integration": {"source": "cursor", "name": "cursor_plugin", "version": "0.1.1"}}
+{"integration": {"source": "cursor", "name": "cursor_plugin", "version": "0.1.2"}}
 ```
 
 The version segment must stay in sync with this package version.

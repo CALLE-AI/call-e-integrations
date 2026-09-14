@@ -47,7 +47,7 @@ to prepare the bundled launcher and its JSON request.
 The skill runs CLI commands with this integration attribution:
 
 ```json
-{"integration": {"source": "claude", "name": "claude_code_plugin", "version": "0.2.2"}}
+{"integration": {"source": "claude", "name": "claude_code_plugin", "version": "0.2.3"}}
 ```
 
 The version segment must stay in sync with this package version.
