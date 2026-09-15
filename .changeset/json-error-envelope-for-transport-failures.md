@@ -40,9 +40,10 @@ failed `auth login` left them with an empty stdout and no `error.code` to branch
   `InvalidResponseError`, and `causeCodeOf`. `McpHttpError` carries `phase` too, so every
   transport failure names where it failed. `requestJson` throws `TransportError` when `fetch`
   rejects, times out, or the body cannot be read, and `InvalidResponseError` when a 2xx body is
-  not a JSON object — `JSON.parse` quotes its input in its own message, so letting a native
-  `SyntaxError` escape would have published remote text as a locally-authored summary. Arrays
-  are no longer accepted as JSON objects. `HttpStatusError` now records `url` and keeps the
+  not a JSON object or array — `JSON.parse` quotes its input in its own message, so letting a
+  native `SyntaxError` escape would have published remote text as a locally-authored summary.
+  Arrays remain accepted, matching the published `T extends object` contract. `HttpStatusError`
+  now records `url` and keeps the
   server-controlled HTTP reason phrase out of its locally authored `message`.
 - `BrokerLoginError` keeps a terminal broker status/error message out of `Error.message` and
   distinguishes a terminal authorization outcome from the overall authorization wait timeout.

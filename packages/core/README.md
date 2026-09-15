@@ -138,7 +138,7 @@ try {
 | --- | --- | --- |
 | `HttpStatusError` | `requestJson` | A non-success HTTP status. `statusCode`, `responseText`, `headers`, `url`. |
 | `TransportError` | `requestJson` | No usable response: `fetch` rejected, the body could not be read, or the timeout fired. `url`, `method`, `timedOut`, `phase` (`connect` or `body`), `code` (`timeout`, or the system code such as `ECONNRESET` for a body-phase failure). |
-| `InvalidResponseError` | `requestJson` | A 2xx whose body was not the expected JSON object. `responseText` holds the raw body; `message` never quotes it, because `JSON.parse` puts its input into its own message. |
+| `InvalidResponseError` | `requestJson` | A 2xx whose body was not the expected JSON object or array. `responseText` holds the raw body; `message` never quotes it, because `JSON.parse` puts its input into its own message. |
 | `McpHttpError` | MCP client | HTTP failure (`code: "http_error"`), JSON-RPC error (`"mcp_error"`), malformed or mismatched successful response (`"invalid_response"`), or transport failure (`"transport_error"`). |
 | `BrokerLoginError` | `loginWithBroker` | A terminal broker outcome (`code: "broker_login_failed"`) or overall authorization wait timeout (`"broker_login_timeout"`). `message` is locally authored; sanitized service detail is in `remoteError`. |
 

@@ -78,6 +78,9 @@ async function consumePublicTypes() {
   const status = await requestJson<{ ok: boolean }>("GET", "https://example.test/status");
   status.ok.valueOf();
 
+  const items = await requestJson<Array<{ id: string }>>("GET", "https://example.test/items");
+  items.map((item) => item.id.toUpperCase());
+
   try {
     await requestJson("GET", "https://example.test/status");
   } catch (error) {

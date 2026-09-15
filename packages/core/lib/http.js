@@ -146,9 +146,9 @@ export async function requestJson(method, url, { headers = {}, json = undefined,
         responseText: text,
       });
     }
-    // Arrays are objects to `typeof`, but not what any caller of this helper wants.
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new InvalidResponseError(`Response body was not a JSON object for ${method} ${url}`, {
+    // Preserve the published `T extends object` contract: both records and arrays are valid.
+    if (!parsed || typeof parsed !== "object") {
+      throw new InvalidResponseError(`Response body was not a JSON object or array for ${method} ${url}`, {
         url,
         method,
         statusCode: response.status,

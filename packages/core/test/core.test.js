@@ -1161,7 +1161,7 @@ test("a body that is not JSON never reaches Error.message", async () => {
   const { requestJson, InvalidResponseError } = await import("@call-e/core/http");
   const marker = "REMOTE-TEXT-MARKER sk_live_ABCDEFGHIJKLMNOP";
 
-  for (const body of [marker, `"${marker}"`, "[1,2,3]", "null"]) {
+  for (const body of [marker, `"${marker}"`, "null"]) {
     await assert.rejects(
       () => requestJson("GET", "https://example.test/thing", {
         fetchImpl: async () => ({
@@ -1176,13 +1176,24 @@ test("a body that is not JSON never reaches Error.message", async () => {
         assert.ok(error instanceof InvalidResponseError, `body ${JSON.stringify(body)}`);
         // JSON.parse quotes its input; this message must not.
         assert.doesNotMatch(error.message, /REMOTE-TEXT-MARKER|sk_live_/u);
-        assert.match(error.message, /^Response body was not (valid JSON|a JSON object) for GET https:\/\/example\.test\/thing$/u);
+        assert.match(error.message, /^Response body was not (valid JSON|a JSON object or array) for GET https:\/\/example\.test\/thing$/u);
         assert.equal(error.statusCode, 200);
         assert.equal(error.responseText, body, "the raw body is retained for sanitizing");
         return true;
       },
     );
   }
+});
+
+test("requestJson preserves JSON array responses allowed by its public type", async () => {
+  const { requestJson } = await import("@call-e/core/http");
+  const body = [{ id: "first" }, { id: "second" }];
+
+  const result = await requestJson("GET", "https://example.test/items", {
+    fetchImpl: async () => jsonResponse(body),
+  });
+
+  assert.deepEqual(result, body);
 });
 
 test("a body stream that fails after headers is transport, and says which phase", async () => {
