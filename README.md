@@ -486,7 +486,10 @@ For layout rules and marketplace naming conventions, see [docs/agent-integration
 
 The `calle` CLI sends best-effort usage telemetry to help diagnose installation, authentication, and tool availability issues.
 
-**What is collected:** anonymous installation ID, CLI version, integration source (e.g. `claude/claude_code_plugin/<version>`), command stage, outcome, error type, and server host hash.
+**What is collected:** anonymous installation ID, CLI version, integration source (e.g. `claude/claude_code_plugin/<version>`), command stage, outcome, error type, readable `base_url_host` and `server_host` (hostname and any non-default port), and `server_url_hash` (SHA-256 of the complete configured server URL).
+
+The URL hash does not conceal the separate readable host fields. See the
+[CLI telemetry field details and example](packages/cli/README.md#telemetry--usage-data).
 
 **What is never collected:** phone numbers, call goals, OAuth tokens, broker login URLs, transcripts, or contact data.
 

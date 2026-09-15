@@ -181,9 +181,23 @@ reaches the server.
 
 Collected fields include an anonymous installation ID stored under the CLI
 cache root, CLI version, integration source, command stage, outcome, error type,
-and server host/hash. The payload does not include phone numbers, call goals,
+and the endpoint metadata below. The payload does not include phone numbers, call goals,
 OAuth tokens, broker login URLs, full argument JSON, transcripts, or contact
 data.
+
+| Field | Value |
+| --- | --- |
+| `base_url_host` | Hostname and any non-default port from the configured base URL, using `new URL(value).host`. |
+| `server_host` | Hostname and any non-default port from the configured server URL, using `new URL(value).host`. |
+| `server_url_hash` | SHA-256 of the complete configured server URL string, including any path, query, and fragment. |
+
+For example, with base URL `https://api.example.com:8443` and server URL
+`https://mcp.example.com:9443/mcp?mode=test`, the readable fields are
+`api.example.com:8443` and `mcp.example.com:9443`. The hash is computed from the
+entire `https://mcp.example.com:9443/mcp?mode=test` string, not just its host.
+Default ports are omitted by URL parsing (for example, `https://api.example.com:443`
+produces `api.example.com`). Hashing the server URL does not conceal the two
+separate readable host fields.
 
 Disable CLI telemetry with `DO_NOT_TRACK=1`, `CALLE_TELEMETRY=0`, or
 `--no-telemetry`:
