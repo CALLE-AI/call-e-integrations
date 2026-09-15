@@ -32,17 +32,7 @@ Install CALL-E for me: https://open.heycall-e.com/document/mcp-archive/CALL-E-in
 
 Your agent handles the rest.
 
-**SDK — five lines to your first call:**
-
-```ts
-import { CalleClient } from "@call-e/calle"; // pnpm add @call-e/calle
-
-const client = new CalleClient({ apiKey: "your_api_key" });
-const call = await client.calls.createAndWait({
-  task: "Call +15550123456 and confirm tomorrow's 9am appointment.",
-});
-console.log(call.status, call.taskCompleted);
-```
+**SDK:** Follow the [TypeScript or Python quickstart](#sdk) with an explicit recipient.
 
 ## Contents
 
@@ -187,19 +177,43 @@ CALL-E server SDKs are available for TypeScript and Python. Use them in trusted 
 
 ```bash
 # TypeScript
-pnpm add @call-e/calle
+pnpm add @call-e/calle@0.7.0
 
 # Python
-pip install calle-ai
+pip install calle-ai==0.7.0
 ```
 
-**Set your API key:**
+**Set your API key, recipient, and workflow key:**
 
 ```bash
 export CALLE_API_KEY="iams_live_example"
+export CALLE_EXAMPLE_PHONE="<AUTHORIZED_E164_PHONE>"
+export CALLE_IDEMPOTENCY_KEY="<UNIQUE_WORKFLOW_KEY>"
 ```
 
-Get your API key from the [CALL-E dashboard](https://dashboard.heycall-e.com/account/api-keys).
+Replace the non-working key placeholder with your key from the [CALL-E dashboard](https://dashboard.heycall-e.com/account/api-keys).
+These examples place a real call. Use a number you own or are authorized to call;
+for integration testing, follow the [official test-hotline instructions](https://discord.com/channels/1493880186826133504/1495622983253889054/1546414916515401788).
+Choose and save a unique workflow key before the first request. Reuse it only for
+the same request; a new key can create another call.
+
+The examples below use the published TypeScript and Python SDKs at **0.7.0**.
+An explicit `recipients` entry uses these API fields:
+
+| Field | Meaning |
+| --- | --- |
+| `phones` | Required, non-empty array of E.164 phone numbers. |
+| `region` | Optional recipient country/region code, such as `US`. |
+| `locale` | Optional conversation language hint, such as `en-US`. |
+
+Set `region` and `locale` for your recipient. `name` is not an accepted recipient
+field in the [API schema](https://docs.heycall-e.com/openapi/calle.openapi.yaml).
+Python SDK 0.7.0 also accepts the singular shorthand `recipient={"phone": "..."}`;
+use `phones` inside a `recipients` list, as shown below.
+
+When explicit recipients are omitted, the service attempts to infer them from
+`task`. It can return `no_recipients` if inference finds none. Use explicit
+recipients when the destination is known; see [recipient errors](https://docs.heycall-e.com/errors#code-specific-guidance).
 
 **TypeScript:**
 
@@ -209,7 +223,8 @@ import { CalleClient } from "@call-e/calle";
 const client = new CalleClient({ apiKey: process.env.CALLE_API_KEY! });
 
 const call = await client.calls.createAndWait({
-  task: "Call <E164_PHONE> and confirm whether they can attend Friday lunch.",
+  task: "Call the recipient and confirm whether they can attend Friday lunch.",
+  recipients: [{ phones: [process.env.CALLE_EXAMPLE_PHONE!], region: "US", locale: "en-US" }],
   resultSchema: {
     type: "object",
     required: ["can_attend"],
@@ -217,7 +232,7 @@ const call = await client.calls.createAndWait({
       can_attend: { type: "string", enum: ["yes", "no", "unknown"] },
     },
   },
-});
+}, { idempotencyKey: process.env.CALLE_IDEMPOTENCY_KEY! });
 
 console.log(call.status);
 console.log(call.taskCompleted);
@@ -235,7 +250,9 @@ from calle import CalleClient
 client = CalleClient(api_key=os.environ["CALLE_API_KEY"])
 
 call = client.calls.create_and_wait(
-    task="Call <E164_PHONE> and confirm whether they can attend Friday lunch.",
+    task="Call the recipient and confirm whether they can attend Friday lunch.",
+    recipients=[{"phones": [os.environ["CALLE_EXAMPLE_PHONE"]], "region": "US", "locale": "en-US"}],
+    idempotency_key=os.environ["CALLE_IDEMPOTENCY_KEY"],
     result_schema={
         "type": "object",
         "required": ["can_attend"],
@@ -250,6 +267,35 @@ print(call["task_completed"])
 print(call["structured_result"])
 print(call["evidence"])
 ```
+
+**Python exceptions:**
+
+Import the exported exception classes directly from `calle`:
+
+```python
+from calle import (
+    CalleAPIError,
+    CalleAuthenticationError,
+    CalleConnectionError,
+    CalleRateLimitError,
+    CalleTimeoutError,
+    CalleWebhookSignatureError,
+)
+```
+
+| Exception | When to handle it |
+| --- | --- |
+| `CalleAPIError` | API error responses, including HTTP 422. Inspect `status_code` and `code`. |
+| `CalleAuthenticationError` | HTTP 401/403; a subclass of `CalleAPIError`. |
+| `CalleRateLimitError` | HTTP 429; a subclass of `CalleAPIError`. |
+| `CalleConnectionError` | Transport failures; separate from `CalleAPIError`. |
+| `CalleTimeoutError` | Request or polling timeout; separate from `CalleAPIError`. |
+| `CalleWebhookSignatureError` | Legacy signed-webhook verification only; current webhooks are unsigned. |
+
+Catch authentication/rate-limit subclasses before `CalleAPIError` when handling
+them separately. A polling timeout does not cancel an accepted call. For a
+complete example that saves the Call ID and resumes polling, see the
+[Calls example and recovery guide](https://docs.heycall-e.com/quickstart#run-a-complete-example).
 
 ### API
 
