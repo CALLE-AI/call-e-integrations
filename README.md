@@ -173,7 +173,7 @@ the [MCP guide](https://github.com/CALLE-AI/call-e-integrations/blob/main/docs/m
 
 CALL-E server SDKs are available for TypeScript and Python. Use them in trusted backend services, workers, and automation systems.
 
-**Install:**
+**Install:** Python requires version 3.11 or later.
 
 ```bash
 # TypeScript
@@ -186,7 +186,7 @@ pip install calle-ai==0.7.0
 **Set your API key, recipient, and workflow key:**
 
 ```bash
-export CALLE_API_KEY="iams_live_example"
+export CALLE_API_KEY="<YOUR_CALLE_API_KEY>"
 export CALLE_EXAMPLE_PHONE="<AUTHORIZED_E164_PHONE>"
 export CALLE_IDEMPOTENCY_KEY="<UNIQUE_WORKFLOW_KEY>"
 ```
@@ -301,10 +301,10 @@ complete example that saves the Call ID and resumes polling, see the
 
 The CALL-E Developer API provides direct HTTP access for any trusted backend, worker, or workflow system.
 
-**Set credentials:**
+**Set credentials:** Replace `<YOUR_CALLE_API_KEY>` with the complete key from the [CALL-E dashboard](https://dashboard.heycall-e.com/account/api-keys).
 
 ```bash
-export CALLE_API_KEY="iams_live_example"
+export CALLE_API_KEY="<YOUR_CALLE_API_KEY>"
 export CALLE_BASE_URL="https://api.heycall-e.com"
 ```
 
