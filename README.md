@@ -414,7 +414,7 @@ Publicly supported: **22 countries**, updated September 14, 2026. Use these coun
 | Spain | `ES` | +34 | English, Spanish | International |
 | Finland | `FI` | +358 | English, Finnish | International |
 | United Kingdom of Great Britain and Northern Ireland | `GB` | +44 | English | International |
-| Indonesia | `ID` | +62 | English | International |
+| Indonesia | `ID` | +62 | English, Indonesian | International |
 | India | `IN` | +91 | English, Hindi, Tamil | International |
 | Japan | `JP` | +81 | English, Japanese | International |
 | Mexico | `MX` | +52 | English, Spanish | International |
@@ -426,7 +426,7 @@ Publicly supported: **22 countries**, updated September 14, 2026. Use these coun
 | Singapore | `SG` | +65 | English | International |
 | Thailand | `TH` | +66 | English, Thai | International |
 | Turkey | `TR` | +90 | Turkish | International |
-| United States of America | `US` | +1 | English, Indonesian | Local |
+| United States of America | `US` | +1 | English | Local |
 | Viet Nam | `VN` | +84 | English, Vietnamese | International |
 
 **Notes**
