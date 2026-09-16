@@ -197,6 +197,20 @@ The Codex, Claude Code, Cursor plugin, OpenClaw, and skills.sh skills reuse the
 verified absolute entry point. The skills.sh skill requires an already
 installed CLI and does not download remote npm packages.
 
+### First-Time Users: Create The Account
+
+`calle auth login` uses the same flow for new and existing accounts:
+
+1. `calle auth login` opens the brokered dashboard sign-in.
+2. On the sign-in page choose **Continue with Google**. For a new Google
+   identity this registers the account; for an existing account it signs in.
+3. The dashboard shows that it is preparing your workspace. The Google flow
+   preserves the broker/MCP return parameters from the sign-in.
+
+The Google sign-in route and the preserved broker/MCP return parameters are
+confirmed on the deployed dashboard. If any step fails, see
+[Troubleshooting](./troubleshooting.md).
+
 ## Safety
 
 CALL-E can place real outbound phone calls. Integrations must plan first,
