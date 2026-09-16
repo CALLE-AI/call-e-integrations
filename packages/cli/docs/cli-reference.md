@@ -114,6 +114,19 @@ The CLI preserves the raw MCP `content` array. When the server omits
 that parsed object at `result.structuredContent` as a compatibility fallback.
 Plain text, invalid JSON, arrays, and scalar JSON remain content only.
 
+A JSON-RPC HTTP 200 is not tool success. If the MCP tool result has
+`isError: true`, `calle mcp call` exits `1` and prints `ok: false` with a
+CLI-owned `error.code` of `mcp_tool_error`. The trusted `error.message` is
+always `The MCP tool returned an error.` Remote text, if shown at all, is
+control-stripped, credential-redacted, and bounded under `error.untrusted`.
+Do not treat transport success as a successful tool result.
+
+`plan_call` and `get_call_run` default to `call_started: false` and
+`retry_safe: true` when the tool omits those flags. `run_call` and any
+unknown tool default to `call_started: "unknown"` and `retry_safe: false`
+unless trusted structured metadata proves otherwise. A successful status
+lookup also does not mean the telephone call succeeded.
+
 `call start`, `call run`, and `call recover` return workflow envelopes. Read
 the latest `get_call_run` object from `status_result.structuredContent`. When
 `run_result` is present, it is the initial `run_call` acknowledgement rather
