@@ -38,6 +38,7 @@ export interface CallMcpToolOptions extends McpRequestOptions {
   toolName: string;
   toolArguments?: JsonObject;
   requestMeta?: JsonObject | null;
+  timeoutSeconds?: number;
 }
 
 export class AuthRequiredError extends Error {

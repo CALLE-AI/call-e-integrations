@@ -122,6 +122,57 @@ function nonEmptyMetaObject(value) {
   return Object.keys(value).length > 0 ? value : null;
 }
 
+function objectRecord(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value;
+}
+
+function jsonObjectFromTextContent(content) {
+  if (!Array.isArray(content)) {
+    return null;
+  }
+
+  for (const item of content) {
+    if (item?.type !== "text" || typeof item.text !== "string" || !item.text.trim()) {
+      continue;
+    }
+    try {
+      const parsed = objectRecord(JSON.parse(item.text));
+      if (parsed) {
+        return parsed;
+      }
+    } catch {
+      // Text content is not required to contain JSON.
+    }
+  }
+
+  return null;
+}
+
+function normalizeMcpToolResult(result) {
+  const envelope = objectRecord(result);
+  if (!envelope) {
+    return {};
+  }
+
+  if (objectRecord(envelope.structuredContent)) {
+    return envelope;
+  }
+
+  const structuredContent = objectRecord(envelope.structured_content)
+    || jsonObjectFromTextContent(envelope.content);
+  if (!structuredContent) {
+    return envelope;
+  }
+
+  return {
+    ...envelope,
+    structuredContent,
+  };
+}
+
 export function currentTokenDocument(config) {
   const cacheDocument = readJson(tokenCachePath(config.cacheRoot, config.serverUrl));
   if (!tokenIsUsable(cacheDocument, config.minTtlSeconds)) {
@@ -142,7 +193,7 @@ function accessTokenFromCache(config) {
 async function openMcpSession({ config, fetchImpl }) {
   requireFetch(fetchImpl);
   const accessToken = accessTokenFromCache(config);
-  const timeoutMs = Math.max(Math.ceil(config.timeoutSeconds * 1000), 1000);
+  const timeoutMs = Math.max(Math.ceil(Number(config.timeoutSeconds || 15) * 1000), 1000);
   const commonHeaders = {
     Accept: "application/json, text/event-stream",
     "Content-Type": "application/json",
@@ -199,6 +250,7 @@ export async function callMcpTool({
   toolName,
   toolArguments = {},
   requestMeta = null,
+  timeoutSeconds = null,
   fetchImpl = globalThis.fetch,
 } = {}) {
   const { rpcHeaders, timeoutMs } = await openMcpSession({ config, fetchImpl });
@@ -210,6 +262,9 @@ export async function callMcpTool({
   if (normalizedRequestMeta) {
     toolCallParams._meta = normalizedRequestMeta;
   }
+  const toolCallTimeoutMs = timeoutSeconds === null
+    ? timeoutMs
+    : Math.max(Math.ceil(Number(timeoutSeconds) * 1000), 1000);
   const response = await requestJsonRpc(fetchImpl, config.serverUrl, {
     headers: rpcHeaders,
     payload: buildJsonRpcPayload({
@@ -217,7 +272,7 @@ export async function callMcpTool({
       method: "tools/call",
       params: toolCallParams,
     }),
-    timeoutMs,
+    timeoutMs: toolCallTimeoutMs,
   });
-  return response.body?.result ?? {};
+  return normalizeMcpToolResult(response.body?.result);
 }

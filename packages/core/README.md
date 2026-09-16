@@ -42,6 +42,37 @@ if (!currentTokenDocument(config)) {
 `tokenIsUsable` is also available from `@call-e/core` and
 `@call-e/core/cache` for callers that already hold a token document.
 
+## Per-Request Tool Timeout
+
+`callMcpTool` accepts an optional `timeoutSeconds` override for the `tools/call`
+request:
+
+```js
+await callMcpTool({
+  config,
+  toolName: "plan_call",
+  toolArguments: { to_phones: ["+15551234567"], goal: "Confirm the appointment" },
+  timeoutSeconds: 150,
+});
+```
+
+The override applies only to the tool call. MCP session initialization keeps
+using `config.timeoutSeconds`; when the override is omitted, the tool call uses
+that configured timeout too.
+
+## Tool Result Payloads
+
+`callMcpTool` returns the MCP `CallToolResult` envelope and preserves its raw
+`content`, `isError`, and metadata fields. When `structuredContent` is absent
+but a text content block contains a JSON object, the client also exposes that
+object as `structuredContent`. Non-JSON text, arrays, and scalar JSON remain
+unchanged.
+
+See the
+[MCP tool result envelope](https://github.com/CALLE-AI/call-e-integrations/blob/main/docs/mcp/openagent-oauth.md#tool-result-envelope)
+for the direct wire shape, compatibility fallback, and Python SDK field-name
+differences.
+
 ## Broker Login Lifetime
 
 Broker session timing is server-directed:

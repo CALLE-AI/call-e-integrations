@@ -55,6 +55,7 @@ async function consumePublicTypes() {
     config,
     toolName: "plan_call",
     toolArguments: { goal: "Confirm the appointment" },
+    timeoutSeconds: 150,
   });
   result.plan_id.toUpperCase();
 

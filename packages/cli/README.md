@@ -10,22 +10,103 @@ shortcuts for terminal-based agents.
 For install and authentication steps, see
 [docs/install/cli.md](../../docs/install/cli.md).
 
+## Quick Start
+
+<!-- sync-with: docs/install/cli.md#plan-a-call -->
+
+First follow [CLI entry point selection](./docs/cli-reference.md#selecting-the-cli-entry-point)
+to prepare the launcher and `request.json`. Use each array below as the request's
+`argv`, then run `node run-agent-command.mjs request.json` to authenticate,
+inspect parameters, or plan a call:
+
+```json
+["auth", "login"]
+```
+
+```json
+["call", "plan", "--help"]
+```
+
+```json
+["call", "plan", "--to-phone", "+15551234567", "--goal", "Confirm the appointment"]
+```
+
+Help is available at every command level:
+
+```json
+["--help"]
+```
+
+```json
+["call", "--help"]
+```
+
+```json
+["call", "plan", "--help"]
+```
+
 ## Commands
 
 <!-- sync-with: docs/cli-reference.md#commands -->
 
-```bash
-calle auth login
-calle auth login --start-only --no-browser-open
-calle auth status
-calle auth logout
-calle mcp config
-calle mcp tools
-calle mcp call plan_call --args-json '{"to_phones":["+15551234567"],"goal":"Confirm the appointment"}'
-calle call plan --to-phone +15551234567 --goal "Confirm the appointment"
-calle call start --to-phone +15551234567 --goal "Confirm the appointment"
-calle call run --plan-id <plan_id> --confirm-token <confirm_token>
-calle call status --run-id <run_id>
+```json
+["--version"]
+```
+
+```json
+["auth", "login"]
+```
+
+```json
+["auth", "login", "--start-only", "--no-browser-open"]
+```
+
+```json
+["auth", "status"]
+```
+
+```json
+["auth", "logout"]
+```
+
+```json
+["mcp", "config"]
+```
+
+```json
+["mcp", "tools"]
+```
+
+```json
+["mcp", "call", "plan_call", "--args-json", "{\"to_phones\":[\"+15551234567\"],\"goal\":\"Confirm the appointment\"}"]
+```
+
+```json
+["call", "plan", "--help"]
+```
+
+```json
+["call", "plan", "--to-phone", "+15551234567", "--goal", "Confirm the appointment"]
+```
+
+```json
+["call", "start", "--to-phone", "+15551234567", "--goal", "Confirm the appointment"]
+```
+
+```json
+["call", "run", "--plan-id", "<plan_id>", "--confirm-token", "<confirm_token>"]
+```
+
+```json
+["call", "recover", "--recovery-id", "<recovery_id>"]
+```
+
+```json
+["call", "status", "--run-id", "<run_id>"]
+```
+
+```json
+["regions", "list"]
 ```
 
 Defaults:
@@ -47,8 +128,8 @@ need to show the authorization link before continuing.
 
 `calle mcp config` prints a JSON MCP client config:
 
-```bash
-calle mcp config --base-url https://seleven-mcp-sg.airudder.com
+```json
+["mcp", "config", "--base-url", "https://seleven-mcp-sg.airudder.com"]
 ```
 
 Example output:
@@ -73,9 +154,17 @@ For agent-facing outbound calls, prefer `calle call start`. It performs
 planning and execution inside one CLI invocation and does not print execution
 confirmation data.
 
-Successful command stdout is JSON except `--help`. Some top-level or local
-failures may print plain stderr. Access tokens are read from the local cache and
-are never printed.
+If execution may have been accepted but no `run_id` was received, the CLI
+returns `retry_safe: false` with an opaque `recovery_id` and `next_argv`.
+Use that array as the next request's `argv` instead of repeating `call start`;
+it reuses the original confirmation context without printing it.
+If only the initial status
+query fails, the command still returns the accepted `run_id` and a `call status`
+`next_argv` array. Use the same launcher for that status request.
+
+Successful command stdout is JSON except help and version output. Some
+top-level or local failures may print plain stderr. Access tokens are read from
+the local cache and are never printed.
 
 ## Options
 
@@ -92,16 +181,33 @@ reaches the server.
 
 Collected fields include an anonymous installation ID stored under the CLI
 cache root, CLI version, integration source, command stage, outcome, error type,
-and server host/hash. The payload does not include phone numbers, call goals,
+and the endpoint metadata below. The payload does not include phone numbers, call goals,
 OAuth tokens, broker login URLs, full argument JSON, transcripts, or contact
 data.
+
+| Field | Value |
+| --- | --- |
+| `base_url_host` | Hostname and any non-default port from the configured base URL, using `new URL(value).host`. |
+| `server_host` | Hostname and any non-default port from the configured server URL, using `new URL(value).host`. |
+| `server_url_hash` | SHA-256 of the complete configured server URL string, including any path, query, and fragment. |
+
+For example, with base URL `https://api.example.com:8443` and server URL
+`https://mcp.example.com:9443/mcp?mode=test`, the readable fields are
+`api.example.com:8443` and `mcp.example.com:9443`. The hash is computed from the
+entire `https://mcp.example.com:9443/mcp?mode=test` string, not just its host.
+Default ports are omitted by URL parsing (for example, `https://api.example.com:443`
+produces `api.example.com`). Hashing the server URL does not conceal the two
+separate readable host fields.
 
 Disable CLI telemetry with `DO_NOT_TRACK=1`, `CALLE_TELEMETRY=0`, or
 `--no-telemetry`:
 
-```bash
-CALLE_TELEMETRY=0 calle auth status
-calle mcp tools --no-telemetry
+```json
+["auth", "status", "--no-telemetry"]
+```
+
+```json
+["mcp", "tools", "--no-telemetry"]
 ```
 
 Broker and MCP requests still create service-side security, audit, and business

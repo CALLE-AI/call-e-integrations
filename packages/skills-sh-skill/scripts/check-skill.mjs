@@ -16,8 +16,19 @@ const DEFAULT_REPO_ROOT = path.resolve(DEFAULT_PACKAGE_ROOT, "../..");
 const EXPECTED_PACKAGE_NAME = "@call-e/skills-sh-skill";
 const EXPECTED_SKILL_DIR = "calle";
 const EXPECTED_SKILL_NAME = "calle";
-const EXPECTED_SOURCE = "CALLE_SOURCE=skills_sh";
-const EXPECTED_INTEGRATION = "CALLE_INTEGRATION=skills_sh_skill";
+const EXPECTED_SOURCE = "\"source\": \"skills_sh\"";
+const EXPECTED_INTEGRATION = "\"name\": \"skills_sh_skill\"";
+
+const REQUIRED_RECOVERY_GUIDANCE = [
+  'call_started: "unknown"',
+  "retry_safe: false",
+  "recovery_id",
+  "next_argv",
+  "call recover --recovery-id",
+  "Do not create a new plan or repeat `call start` or `call run`.",
+  "Do not loop `call recover`.",
+  "Keep `recovery_id` and the recovery command out of user-visible replies and shared logs.",
+];
 
 function readJson(filePath, failures) {
   if (!fs.existsSync(filePath)) {
@@ -54,18 +65,47 @@ function frontmatterKeys(frontmatter) {
 }
 
 function assertRequiredSnippets({ source, filePath, snippets, failures }) {
+  const normalizedSource = source.replace(/\s+/gu, " ");
   for (const snippet of snippets) {
     if (!snippet) {
       continue;
     }
 
-    assert(source.includes(snippet), failures, `${displayPath(filePath)} must include ${snippet}.`);
+    assert(normalizedSource.includes(snippet), failures, `${displayPath(filePath)} must include ${snippet}.`);
   }
+}
+
+function assertCliSelectionGuidance({ source, filePath, failures }) {
+  assertRequiredSnippets({
+    source,
+    filePath,
+    failures,
+    snippets: [
+      "Do not run bare `calle` or use `npx` to select the CLI.",
+      "Stop before authentication if either check fails.",
+      "Reuse the verified entry point for every command.",
+      'scripts/run-agent-command.mjs',
+      ...(path.basename(filePath) === "commands.md" ? [
+        "`package.json`: `name` must be `@call-e/cli` and `bin.calle` must name `bin/calle.js`",
+        "to an absolute path",
+        "without credentials or call arguments",
+        "auth login --help",
+        "call plan --help",
+        "call run --help",
+        "call recover --help",
+      ] : ["references/commands.md#verify-the-cli-entry-point"]),
+    ],
+  });
+  assert(
+    !/(?:^|[\s`])(?:calle[ \t]+(?:auth|mcp|call|--[\w-]+)\b|npx[ \t]+[^\r\n`]*@call-e\/cli\b)/u.test(source),
+    failures,
+    `${displayPath(filePath)} must not invoke bare calle or npx to select the CLI.`,
+  );
 }
 
 function integrationVersionSnippet(packageJson) {
   return typeof packageJson?.version === "string" && packageJson.version.length > 0
-    ? `CALLE_INTEGRATION_VERSION=${packageJson.version}`
+    ? `"version": "${packageJson.version}"`
     : null;
 }
 
@@ -108,7 +148,7 @@ function checkSkill({ repoRoot, packageJson, failures }) {
   const frontmatter = extractFrontmatter(source);
   assert(frontmatter, failures, `${displayPath(skillFile)} must start with YAML frontmatter.`);
   assert(!source.includes("[TODO:"), failures, `${displayPath(skillFile)} must not contain template TODO markers.`);
-  assert(!source.includes("npx -y @call-e/cli@"), failures, `${displayPath(skillFile)} must not run remote npm packages from the skill.`);
+  assertCliSelectionGuidance({ source, filePath: skillFile, failures });
   assert(!source.includes("confirm_token"), failures, `${displayPath(skillFile)} must not expose or instruct handling of execution confirmation tokens.`);
 
   assertRequiredSnippets({
@@ -116,6 +156,7 @@ function checkSkill({ repoRoot, packageJson, failures }) {
     filePath: skillFile,
     failures,
     snippets: [
+      ...REQUIRED_RECOVERY_GUIDANCE,
       EXPECTED_SOURCE,
       EXPECTED_INTEGRATION,
       expectedVersion,
@@ -157,13 +198,14 @@ function checkSkill({ repoRoot, packageJson, failures }) {
   }
 
   const referenceSource = fs.readFileSync(referenceFile, "utf8");
-  assert(!referenceSource.includes("npx -y @call-e/cli@"), failures, `${displayPath(referenceFile)} must not run remote npm packages from the skill.`);
+  assertCliSelectionGuidance({ source: referenceSource, filePath: referenceFile, failures });
   assert(!referenceSource.includes("confirm_token"), failures, `${displayPath(referenceFile)} must not expose or instruct handling of execution confirmation tokens.`);
   assertRequiredSnippets({
     source: referenceSource,
     filePath: referenceFile,
     failures,
     snippets: [
+      ...REQUIRED_RECOVERY_GUIDANCE,
       EXPECTED_SOURCE,
       EXPECTED_INTEGRATION,
       expectedVersion,

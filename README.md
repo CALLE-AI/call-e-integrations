@@ -32,17 +32,7 @@ Install CALL-E for me: https://open.heycall-e.com/document/mcp-archive/CALL-E-in
 
 Your agent handles the rest.
 
-**SDK — five lines to your first call:**
-
-```ts
-import { CalleClient } from "@call-e/calle"; // pnpm add @call-e/calle
-
-const client = new CalleClient({ apiKey: "your_api_key" });
-const call = await client.calls.createAndWait({
-  task: "Call +15550123456 and confirm tomorrow's 9am appointment.",
-});
-console.log(call.status, call.taskCompleted);
-```
+**SDK:** Follow the [TypeScript or Python quickstart](#sdk) with an explicit recipient.
 
 ## Contents
 
@@ -98,6 +88,7 @@ flowchart LR
 | **Scheduled and Batch Calling** | Schedule individual calls or send a batch task to multiple recipients |
 | **In-Task Optimization** | Adapts call strategy based on prior attempts within the same task |
 | **Real-World Voice Handling** | Manages live pickup, voicemail, call screening, hold, transfers, silence, and interruptions |
+| **IVR Navigation** | Detects and navigates IVR menus during outbound calls, using DTMF keypad input when needed to reach the requested department, queue, automated service, or person |
 | **Multiple Integration Paths** | Agent plugins, MCP, SDKs, APIs, and enterprise systems |
 | **Safety and Governance** | Number governance, rate limits, concurrency controls, blocklists, kill switches, redacted logs, and audit trails |
 
@@ -169,29 +160,60 @@ sequenceDiagram
 | `run_call` | Starts the planned call. Requires the exact `plan_id` and `confirm_token` from the preceding `plan_call`. **Can place a real phone call.** |
 | `get_call_run` | Reads run status, activity, summary, and transcript. Read-only. After a call starts, wait ~60 seconds before the first poll, then every 5–10 seconds until terminal. |
 
-For OAuth details, tool details, and MCP setup, see the [MCP guide](https://github.com/CALLE-AI/call-e-integrations/blob/main/docs/mcp/openagent-oauth.md).
+<!-- sync-with: docs/mcp/openagent-oauth.md#reliable-terminal-state-workflow -->
+The ~60-second delay is a polling recommendation, not a completion deadline.
+Persist the returned `run_id` and resume `get_call_run` after a local timeout
+or restart; do not call `run_call` again. MCP `run_call` does not accept a
+`webhook_url`, so MCP clients should poll `get_call_run` for completion.
+
+For OAuth details, tool contracts, setup, and the completion workflow, see
+the [MCP guide](https://github.com/CALLE-AI/call-e-integrations/blob/main/docs/mcp/openagent-oauth.md#reliable-terminal-state-workflow).
 
 ### SDK
 
 CALL-E server SDKs are available for TypeScript and Python. Use them in trusted backend services, workers, and automation systems.
 
-**Install:**
+**Install:** Python requires version 3.11 or later.
 
 ```bash
 # TypeScript
-pnpm add @call-e/calle
+pnpm add @call-e/calle@0.7.0
 
 # Python
-pip install calle-ai
+pip install calle-ai==0.7.0
 ```
 
-**Set your API key:**
+**Set your API key, recipient, and workflow key:**
 
 ```bash
-export CALLE_API_KEY="calle_live_key"
+export CALLE_API_KEY="<YOUR_CALLE_API_KEY>"
+export CALLE_EXAMPLE_PHONE="<AUTHORIZED_E164_PHONE>"
+export CALLE_IDEMPOTENCY_KEY="<UNIQUE_WORKFLOW_KEY>"
 ```
 
-Get your API key from the [CALL-E dashboard](https://dashboard.heycall-e.com/account/api-keys).
+Replace the non-working key placeholder with your key from the [CALL-E dashboard](https://dashboard.heycall-e.com/account/api-keys).
+These examples place a real call. Use a number you own or are authorized to call;
+for integration testing, follow the [official test-hotline instructions](https://discord.com/channels/1493880186826133504/1495622983253889054/1546414916515401788).
+Choose and save a unique workflow key before the first request. Reuse it only for
+the same request; a new key can create another call.
+
+The examples below use the published TypeScript and Python SDKs at **0.7.0**.
+An explicit `recipients` entry uses these API fields:
+
+| Field | Meaning |
+| --- | --- |
+| `phones` | Required, non-empty array of E.164 phone numbers. |
+| `region` | Optional recipient country/region code, such as `US`. |
+| `locale` | Optional conversation language hint, such as `en-US`. |
+
+Set `region` and `locale` for your recipient. `name` is not an accepted recipient
+field in the [API schema](https://docs.heycall-e.com/openapi/calle.openapi.yaml).
+Python SDK 0.7.0 also accepts the singular shorthand `recipient={"phone": "..."}`;
+use `phones` inside a `recipients` list, as shown below.
+
+When explicit recipients are omitted, the service attempts to infer them from
+`task`. It can return `no_recipients` if inference finds none. Use explicit
+recipients when the destination is known; see [recipient errors](https://docs.heycall-e.com/errors#code-specific-guidance).
 
 **TypeScript:**
 
@@ -201,7 +223,8 @@ import { CalleClient } from "@call-e/calle";
 const client = new CalleClient({ apiKey: process.env.CALLE_API_KEY! });
 
 const call = await client.calls.createAndWait({
-  task: "Call <E164_PHONE> and confirm whether they can attend Friday lunch.",
+  task: "Call the recipient and confirm whether they can attend Friday lunch.",
+  recipients: [{ phones: [process.env.CALLE_EXAMPLE_PHONE!], region: "US", locale: "en-US" }],
   resultSchema: {
     type: "object",
     required: ["can_attend"],
@@ -209,7 +232,7 @@ const call = await client.calls.createAndWait({
       can_attend: { type: "string", enum: ["yes", "no", "unknown"] },
     },
   },
-});
+}, { idempotencyKey: process.env.CALLE_IDEMPOTENCY_KEY! });
 
 console.log(call.status);
 console.log(call.taskCompleted);
@@ -227,7 +250,9 @@ from calle import CalleClient
 client = CalleClient(api_key=os.environ["CALLE_API_KEY"])
 
 call = client.calls.create_and_wait(
-    task="Call <E164_PHONE> and confirm whether they can attend Friday lunch.",
+    task="Call the recipient and confirm whether they can attend Friday lunch.",
+    recipients=[{"phones": [os.environ["CALLE_EXAMPLE_PHONE"]], "region": "US", "locale": "en-US"}],
+    idempotency_key=os.environ["CALLE_IDEMPOTENCY_KEY"],
     result_schema={
         "type": "object",
         "required": ["can_attend"],
@@ -243,14 +268,43 @@ print(call["structured_result"])
 print(call["evidence"])
 ```
 
+**Python exceptions:**
+
+Import the exported exception classes directly from `calle`:
+
+```python
+from calle import (
+    CalleAPIError,
+    CalleAuthenticationError,
+    CalleConnectionError,
+    CalleRateLimitError,
+    CalleTimeoutError,
+    CalleWebhookSignatureError,
+)
+```
+
+| Exception | When to handle it |
+| --- | --- |
+| `CalleAPIError` | API error responses, including HTTP 422. Inspect `status_code` and `code`. |
+| `CalleAuthenticationError` | HTTP 401/403; a subclass of `CalleAPIError`. |
+| `CalleRateLimitError` | HTTP 429; a subclass of `CalleAPIError`. |
+| `CalleConnectionError` | Transport failures; separate from `CalleAPIError`. |
+| `CalleTimeoutError` | Request or polling timeout; separate from `CalleAPIError`. |
+| `CalleWebhookSignatureError` | Legacy signed-webhook verification only; current webhooks are unsigned. |
+
+Catch authentication/rate-limit subclasses before `CalleAPIError` when handling
+them separately. A polling timeout does not cancel an accepted call. For a
+complete example that saves the Call ID and resumes polling, see the
+[Calls example and recovery guide](https://docs.heycall-e.com/quickstart#run-a-complete-example).
+
 ### API
 
 The CALL-E Developer API provides direct HTTP access for any trusted backend, worker, or workflow system.
 
-**Set credentials:**
+**Set credentials:** Replace `<YOUR_CALLE_API_KEY>` with the complete key from the [CALL-E dashboard](https://dashboard.heycall-e.com/account/api-keys).
 
 ```bash
-export CALLE_API_KEY="calle_live_key"
+export CALLE_API_KEY="<YOUR_CALLE_API_KEY>"
 export CALLE_BASE_URL="https://api.heycall-e.com"
 ```
 
@@ -348,27 +402,38 @@ For authentication, webhooks, and the full reference, see the [API docs](https:/
 
 ## Supported Regions and Languages
 
-Use these region codes with the SDK and API.
+Publicly supported: **22 countries**, updated September 14, 2026. Use these country codes with the SDK and API recipient settings.
 
-| Country | Code | Languages |
-| --- | --- | --- |
-| United States | `US` | English |
-| Singapore | `SG` | English |
-| Malaysia | `MY` | English |
-| India | `IN` | English, Hindi |
-| United Arab Emirates | `AE` | English, Arabic |
-| Australia | `AU` | English |
-| Canada | `CA` | English |
-| United Kingdom | `GB` | English |
-| Vietnam | `VN` | Vietnamese |
-| Germany | `DE` | English, German |
-| Japan | `JP` | Japanese |
-| France | `FR` | French |
-| Mexico | `MX` | Spanish |
-| Brazil | `BR` | Portuguese |
-| Indonesia | `ID` | English |
-| Philippines | `PH` | English |
-| Kenya | `KE` | English |
+| Country | Country Code | Calling Code | Languages | Line Region |
+| --- | --- | --- | --- | --- |
+| Australia | `AU` | +61 | English | International |
+| Bangladesh | `BD` | +880 | English, Bengali | International |
+| Brazil | `BR` | +55 | English, Portuguese | International |
+| Canada | `CA` | +1 | English | Local |
+| Germany | `DE` | +49 | English, German | International |
+| Spain | `ES` | +34 | English, Spanish | International |
+| Finland | `FI` | +358 | English, Finnish | International |
+| United Kingdom of Great Britain and Northern Ireland | `GB` | +44 | English | International |
+| Indonesia | `ID` | +62 | English | International |
+| India | `IN` | +91 | English, Hindi, Tamil | International |
+| Japan | `JP` | +81 | English, Japanese | International |
+| Mexico | `MX` | +52 | English, Spanish | International |
+| Malaysia | `MY` | +60 | English, Malay, Mandarin Chinese | International |
+| Netherlands | `NL` | +31 | English | International |
+| Philippines | `PH` | +63 | English | International |
+| Pakistan | `PK` | +92 | English, Urdu | International |
+| Poland | `PL` | +48 | English, Polish | International |
+| Singapore | `SG` | +65 | English | International |
+| Thailand | `TH` | +66 | English, Thai | International |
+| Turkey | `TR` | +90 | Turkish | International |
+| United States of America | `US` | +1 | English, Indonesian | Local |
+| Viet Nam | `VN` | +84 | English, Vietnamese | International |
+
+**Notes**
+
+- **Line Region** describes the caller ID shown to the recipient. The table reflects the current default +1 caller ID; using a purchased or assigned phone number can change the line region.
+- **Local** means the caller ID is in the destination's country or calling-code region. With the default +1 caller ID, the United States and Canada are Local.
+- **International** means the caller ID is outside the destination's country or calling-code region. These lines are primarily intended for testing. For production use with a local phone number, contact the CALL-E team to enable a local line for the destination country.
 
 ---
 
@@ -421,16 +486,19 @@ For layout rules and marketplace naming conventions, see [docs/agent-integration
 
 The `calle` CLI sends best-effort usage telemetry to help diagnose installation, authentication, and tool availability issues.
 
-**What is collected:** anonymous installation ID, CLI version, integration source (e.g. `claude/claude_code_plugin/<version>`), command stage, outcome, error type, and server host hash.
+**What is collected:** anonymous installation ID, CLI version, integration source (e.g. `claude/claude_code_plugin/<version>`), command stage, outcome, error type, readable `base_url_host` and `server_host` (hostname and any non-default port), and `server_url_hash` (SHA-256 of the complete configured server URL).
+
+The URL hash does not conceal the separate readable host fields. See the
+[CLI telemetry field details and example](packages/cli/README.md#telemetry--usage-data).
 
 **What is never collected:** phone numbers, call goals, OAuth tokens, broker login URLs, transcripts, or contact data.
 
-**Opt out** with any of:
+**Opt out** with `--no-telemetry`. First follow
+[CLI entry point selection](packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
+to prepare the launcher and a JSON request. Add `--no-telemetry` to its `argv`:
 
-```bash
-DO_NOT_TRACK=1 calle auth status
-CALLE_TELEMETRY=0 calle auth status
-calle auth status --no-telemetry
+```json
+["auth", "status", "--no-telemetry"]
 ```
 
 Broker and MCP requests still create service-side security, audit, and operational logs required to run calls.
