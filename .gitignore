@@ -36,3 +36,6 @@ logs/
 .vscode/
 .cursorignore
 .cursorindexingignore
+
+# Local notes
+run.md

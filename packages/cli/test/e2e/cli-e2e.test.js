@@ -1002,7 +1002,8 @@ test("agent requests preserve opaque values and recover once with the old SDK an
   const oldHelp = await runAgentRequest({ package_dir: mcp, argv: ["auth", "status"] }, root);
   assert.equal(oldHelp.code, 1, "old MCP help must fail the argv-capability check");
   assert.match(oldHelp.stderr, /MCP command help check failed/);
-  // ponytail: dependency fixtures are CLI 0.5.0; install a candidate tarball when runtime dependencies change.
+  const packedCore = JSON.parse((await runNpm(["pack", "--json", "--pack-destination", root], path.resolve(packageRoot, "../core"))).stdout)[0].filename;
+  await runNpm(["install", "--ignore-scripts", "--no-audit", "--no-fund", "--no-package-lock", path.join(root, packedCore)], installation);
   for (const dir of ["bin", "lib", "scripts"]) fs.cpSync(path.join(packageRoot, dir), path.join(mcp, dir), { recursive: true });
 
   const fakeBin = path.join(root, "fake bin");
