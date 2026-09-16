@@ -1242,7 +1242,7 @@ async function fetchCallStatus({ config, deps, runId }) {
     deps,
     stage: "get_call_run",
     toolArguments: { run_id: runId },
-    callStarted: true,
+    callStarted: "unknown",
     retrySafe: true,
   });
 }
@@ -1508,7 +1508,7 @@ async function handleCallCommand({ command, positional, options, config, deps, s
         deps,
         stage: toolName,
         toolArguments: buildStatusArguments(options),
-        callStarted: true,
+        callStarted: "unknown",
         retrySafe: true,
       });
       localizeCallStatusResultTimestamps(result, options, deps.env || process.env);
