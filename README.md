@@ -315,7 +315,8 @@ export CALLE_BASE_URL="https://api.heycall-e.com"
 | `POST` | `/v1/calls` | Create a one-recipient or batch call task. |
 | `GET` | `/v1/calls/{call_id}` | Read status, summaries, structured results, and transcripts. |
 | `GET` | `/v1/calls/{call_id}/events` | List developer-facing call events. |
-| `POST` | `/calle/webhook` | Receive terminal call result webhooks. |
+
+The webhook URL is yours. Pass it as `webhook_url` when creating a call. See the [webhooks guide](https://docs.heycall-e.com/webhooks).
 
 **Create a call:**
 
