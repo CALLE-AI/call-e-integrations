@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1254" height="1254" viewBox="0 0 1254 1254">
+  <title>Chat and GitHub icon</title>
+  <defs>
+    <radialGradient id="bubble" cx="48%" cy="42%" r="62%">
+      <stop offset="0" stop-color="#ffd633"/>
+      <stop offset="0.7" stop-color="#ffc118"/>
+      <stop offset="1" stop-color="#ffad00"/>
+    </radialGradient>
+    <radialGradient id="mark" cx="48%" cy="43%" r="70%">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset="1" stop-color="#f7f7f7"/>
+    </radialGradient>
+  </defs>
+  <rect width="1254" height="1254" fill="#faf3e5"/>
+  <path d="M403 207c-190 0-300 75-300 238 0 194 85 277 300 277l8 71c4 34 20 36 44 20l57-39c70-5 124-21 162-50 38-29 58-80 58-153V445c0-157-101-238-269-238z" fill="url(#bubble)" stroke="#000" stroke-width="31" stroke-linejoin="round"/>
+  <path d="M353 359l-10 84M472 364l-10 84" fill="none" stroke="#000" stroke-width="34" stroke-linecap="round"/>
+  <path d="M320 540c37 30 76 35 125 35" fill="none" stroke="#000" stroke-width="32" stroke-linecap="round"/>
+  <circle cx="752" cy="748" r="295" fill="url(#mark)" stroke="#000" stroke-width="26"/>
+  <circle cx="752" cy="748" r="253" fill="#000"/>
+  <path d="M624 659c-10-34-8-55 2-66 24 0 44 10 65 28 19-6 39-9 61-9 22 0 42 3 61 9 21-18 41-28 65-28 10 12 12 34 2 67 18 20 27 44 27 74 0 63-38 103-110 113 14 12 21 31 21 57v85c0 10 9 13 24 8 78-27 140-91 159-173a253 253 0 0 1-498 0c20 83 82 147 160 174 15 5 23 1 23-9v-63c-45 15-78 7-98-24-9-15-17-32-28-44-10-11-7-19 8-17 22 5 34 19 44 38 14 28 37 34 74 21 2-22 9-39 22-52-72-10-110-50-110-113 0-30 9-55 27-75z" fill="url(#mark)"/>
+  <circle cx="568" cy="856" r="8" fill="#000"/>
+  <circle cx="581" cy="881" r="8" fill="#000"/>
+  <circle cx="602" cy="900" r="8" fill="#000"/>
+  <circle cx="626" cy="912" r="8" fill="#000"/>
+</svg>

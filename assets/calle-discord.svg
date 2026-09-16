@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Chat and Discord icon</title>
+  <rect width="1024" height="1024" fill="#f8f1e3"/>
+  <path d="M386 659c-78-5-142-27-185-72-43-45-64-111-64-198 0-132 86-210 235-210 145 0 242 76 277 196-128 5-224 76-246 185-7 35-8 69-3 99l-14 0z" fill="#ffe000" stroke="#000" stroke-width="41" stroke-linejoin="round"/>
+  <path d="M397 650l3 84c2 54 26 67 48 54l50-29" fill="#ffe000" stroke="#000" stroke-width="41" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M362 355l-9 63M484 355l-9 63" fill="none" stroke="#000" stroke-width="38" stroke-linecap="round"/>
+  <path d="M324 514c29 23 61 35 100 35" fill="none" stroke="#000" stroke-width="36" stroke-linecap="round"/>
+  <circle cx="657" cy="616" r="240" fill="#fafafa" stroke="#000" stroke-width="20"/>
+  <circle cx="657" cy="616" r="209" fill="#000"/>
+  <path d="M552 522c21-10 41-16 61-19l8 16c23-3 46-3 67 0l8-16c21 4 41 10 61 19 35 51 49 106 45 168-24 18-49 30-76 38l-17-27c14-5 25-11 34-17-54 24-119 24-173 0 9 7 20 12 34 17l-17 27c-27-8-52-20-79-38-4-62 10-117 44-168z" fill="#fafafa"/>
+  <ellipse cx="605" cy="627" rx="27" ry="30" fill="#000"/>
+  <ellipse cx="704" cy="627" rx="27" ry="30" fill="#000"/>
+  <path d="M576 688c47 24 108 24 156 0" fill="none" stroke="#000" stroke-width="8"/>
+</svg>

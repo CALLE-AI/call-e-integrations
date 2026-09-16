@@ -1,5 +1,73 @@
 # @call-e/cli
 
+## 0.5.1
+
+### Patch Changes
+
+- [#94](https://github.com/CALLE-AI/call-e-integrations/pull/94) [`a7e5439`](https://github.com/CALLE-AI/call-e-integrations/commit/a7e5439eb2a9e1870b937106c562afd6042161c7) Thanks [@JJasonSun](https://github.com/JJasonSun)! - Normalize JSON object payloads from content-only MCP tool results into
+  `structuredContent` while preserving the raw result envelope, and document the
+  direct MCP and CLI output paths.
+
+- [#119](https://github.com/CALLE-AI/call-e-integrations/pull/119) [`e752bf2`](https://github.com/CALLE-AI/call-e-integrations/commit/e752bf23a0c4732e1740e07302defc49f0aa14ee) Thanks [@JJasonSun](https://github.com/JJasonSun)! - Accept `--source`, `--integration`, and `--integration-version` as per-invocation attribution overrides. Validate values before requests and preserve environment-variable compatibility.
+
+- [#115](https://github.com/CALLE-AI/call-e-integrations/pull/115) [`826905b`](https://github.com/CALLE-AI/call-e-integrations/commit/826905b7ca4cbf185f08c432eeaa2b1bf69e18cc) Thanks [@JJasonSun](https://github.com/JJasonSun)! - Run agent commands through a bundled launcher that verifies the MCP package and help before passing JSON argument arrays without a shell. Preserve structured login, help, and recovery arguments and integration attribution across Bash, PowerShell, and cmd, including installations with SDK releases that also export `calle`.
+
+- Updated dependencies [[`a7e5439`](https://github.com/CALLE-AI/call-e-integrations/commit/a7e5439eb2a9e1870b937106c562afd6042161c7)]:
+  - @call-e/core@0.3.1
+
+## 0.5.0
+
+### Minor Changes
+
+- [`4dabb17`](https://github.com/CALLE-AI/call-e-integrations/commit/4dabb176aba07111f5823c65e0fe46507ef2e78e) - Add CLI version output flags and a command that links to the supported regions and languages.
+
+## 0.4.0
+
+### Minor Changes
+
+- [`64227fe`](https://github.com/CALLE-AI/call-e-integrations/commit/64227fe79fec27d01afc8992ed422e0f75be34ec) - Add hierarchical command help and direct help-command recommendations for
+  invalid CLI arguments.
+
+- [`d5bf6c1`](https://github.com/CALLE-AI/call-e-integrations/commit/d5bf6c1578f51d35f51d1e4b610a35df88275b8e) - Report staged call workflow failures, retain stable run IDs when status lookup fails, and add private recovery for uncertain call submissions.
+
+### Patch Changes
+
+- [`e966ea7`](https://github.com/CALLE-AI/call-e-integrations/commit/e966ea7c7b63e591e8952452a7bba8eda67e9871) - Give `plan_call` requests a 150-second CLI default timeout while preserving the
+  15-second default for other MCP requests and explicit `--timeout-seconds`
+  overrides.
+- Updated dependencies [[`e966ea7`](https://github.com/CALLE-AI/call-e-integrations/commit/e966ea7c7b63e591e8952452a7bba8eda67e9871)]:
+  - @call-e/core@0.3.0
+
+## 0.3.9
+
+### Patch Changes
+
+- [#73](https://github.com/CALLE-AI/call-e-integrations/pull/73) [`89a5237`](https://github.com/CALLE-AI/call-e-integrations/commit/89a5237f9b0a8d82a79752c4f09dde2a8c9f9ba9) Thanks [@EazyHood](https://github.com/EazyHood)! - Reject duration flags that are not plain numbers, and bound the ones backed by a timer.
+
+  `--timeout-seconds 30s` used to resolve to `NaN`, which reached the MCP timeout arithmetic where `Math.max(NaN, 1000)` stays `NaN` and `setTimeout` substitutes 1ms, so every call aborted before it left. Durations are now validated where they are read, with the offending flag named in the error.
+
+  The constraints are per option rather than shared: `--min-ttl-seconds 0` keeps working, since zero disables the minimum remaining-lifetime window, while the timeout flags stay strictly positive. Timer-backed values are also capped at 2147483 seconds, because `setTimeout` collapses any longer delay to 1ms and would reproduce the same immediate abort.
+
+- Updated dependencies [[`89a5237`](https://github.com/CALLE-AI/call-e-integrations/commit/89a5237f9b0a8d82a79752c4f09dde2a8c9f9ba9)]:
+  - @call-e/core@0.2.5
+
+## 0.3.8
+
+### Patch Changes
+
+- [#71](https://github.com/CALLE-AI/call-e-integrations/pull/71) [`bc70f48`](https://github.com/CALLE-AI/call-e-integrations/commit/bc70f486e996b7aff845c11242838d4e11e5e079) Thanks [@EazyHood](https://github.com/EazyHood)! - Open the browser without cmd.exe on Windows during `auth login`.
+
+  `cmd /c start "" <url>` let cmd parse the OAuth URL, and `&` is a command separator there, so the URL was truncated at the first `&` (losing `redirect_uri`, `state` and `scope`) and the rest of the query string was run as shell commands. The opener is now `rundll32`, which takes the URL as a single argument, named by its fully qualified `%SystemRoot%\System32` path so the executable is not resolved through the current working directory.
+
+- Updated dependencies [[`566008b`](https://github.com/CALLE-AI/call-e-integrations/commit/566008bab86008bc9019c45478122beeaffa5f60)]:
+  - @call-e/core@0.2.4
+
+## 0.3.7
+
+### Patch Changes
+
+- [#58](https://github.com/CALLE-AI/call-e-integrations/pull/58) [`14ba3d3`](https://github.com/CALLE-AI/call-e-integrations/commit/14ba3d3ffa7e33f3064e00fbe3376a1d5429dbba) Thanks [@Ray-56](https://github.com/Ray-56)! - Stop `calle call start` before execution when call planning requires clarification.
+
 ## 0.3.6
 
 ### Patch Changes

@@ -64,6 +64,8 @@ pnpm test:e2e
 
 ## Python
 
+The Python example uses MCP Python SDK 2.x and `httpx2`.
+
 ```bash
 cd examples/mcp-oauth-client/python
 uv sync

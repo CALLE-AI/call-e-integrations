@@ -1,14 +1,29 @@
 import {
+  isCallRecoveryId,
   pendingCachePath,
   pendingIsExpired,
+  readCallRecovery,
   readJson,
   readPendingLogin,
+  removeCallRecoveries,
+  removeCallRecovery,
   removeFile,
   removeTokenCache,
   tokenCachePath,
   tokenIsUsable,
+  writeCallRecovery,
 } from "./cache.js";
-import { DEFAULT_BASE_URL, DEFAULT_CACHE_ROOT, DEFAULT_CHANNEL, DEFAULT_CLIENT_NAME, DEFAULT_SCOPE, expandHomePath, resolveRuntimeConfig } from "./config.js";
+import {
+  DEFAULT_BASE_URL,
+  DEFAULT_CACHE_ROOT,
+  expandHomePath,
+  DEFAULT_CHANNEL,
+  DEFAULT_CLIENT_NAME,
+  DEFAULT_PLAN_CALL_TIMEOUT_SECONDS,
+  DEFAULT_SCOPE,
+  CLI_VERSION,
+  resolveRuntimeConfig,
+} from "./config.js";
 import { ensurePendingLogin, isSafeBrokerLoginUrl, loginWithBroker, sanitizeBrokerLoginUrl } from "./broker-client.js";
 import {
   AuthRequiredError,
@@ -26,6 +41,35 @@ class InvalidArgumentsError extends Error {
   }
 }
 
+function resolveCliRuntimeConfig(options, env) {
+  try {
+    return resolveRuntimeConfig(options, env);
+  } catch (error) {
+    throw new InvalidArgumentsError(error?.message || String(error));
+  }
+}
+
+class CallStageError extends McpHttpError {
+  constructor(message, {
+    stage,
+    code,
+    statusCode = null,
+    callStarted,
+    retrySafe,
+    recoveryId = null,
+    nextCommand = null,
+    remoteError = null,
+  }) {
+    super(message, { code, statusCode });
+    this.name = "CallStageError";
+    this.stage = stage;
+    this.callStarted = callStarted;
+    this.retrySafe = retrySafe;
+    this.recoveryId = recoveryId;
+    this.nextCommand = nextCommand;
+    this.remoteError = remoteError;
+  }
+}
 export function preAuthHelpMessage(loginUrl) {
   const safeUrl = sanitizeBrokerLoginUrl(loginUrl) ?? "[authorization URL unavailable]";
   return `Hi, I'm CALL-E 👋
@@ -50,23 +94,183 @@ I'll keep you updated on the phone status, call content, and summary.`;
 
 const POST_AUTH_HELP_HINT_TYPE = "post_auth_help";
 const PRE_AUTH_HELP_HINT_TYPE = "pre_auth_help";
+const SUPPORTED_REGIONS_AND_LANGUAGES_URL = "https://github.com/CALLE-AI/call-e-integrations#supported-regions-and-languages";
 
-function printHelp(stdout) {
-  stdout(`Usage: calle <command> [options]
+const COMMAND_GROUPS = {
+  auth: {
+    summary: "Manage brokered login and the local token cache",
+    commands: {
+      login: {
+        summary: "Start brokered login and cache the token locally",
+        usage: "calle auth login [options]",
+        options: [
+          "  --force-login                 Start a new login even when cached state exists",
+          "  --start-only                  Return the login URL without polling",
+          "  --no-browser-open             Do not open the login URL in a browser",
+        ],
+        examples: ["calle auth login", "calle auth login --start-only --no-browser-open"],
+      },
+      status: {
+        summary: "Show local token cache status",
+        usage: "calle auth status [options]",
+        examples: ["calle auth status"],
+      },
+      logout: {
+        summary: "Remove local token, login, and call recovery cache",
+        usage: "calle auth logout [options]",
+        examples: ["calle auth logout"],
+      },
+    },
+  },
+  mcp: {
+    summary: "Configure and call the CALL-E MCP server",
+    commands: {
+      config: {
+        summary: "Print MCP client configuration JSON",
+        usage: "calle mcp config [options]",
+        examples: ["calle mcp config"],
+      },
+      tools: {
+        summary: "List tools from the configured MCP server",
+        usage: "calle mcp tools [options]",
+        examples: ["calle mcp tools"],
+      },
+      call: {
+        summary: "Call an arbitrary MCP tool",
+        usage: "calle mcp call <tool-name> [options]",
+        options: [
+          "  --args-json <json>            JSON object passed as tool arguments",
+          "  --timezone <iana>             Planning timezone metadata for plan_call",
+        ],
+        examples: [
+          `calle mcp call plan_call --args-json '{"user_input":"Call Alex"}'`,
+        ],
+      },
+    },
+  },
+  call: {
+    summary: "Plan, start, run, and inspect phone calls",
+    commands: {
+      plan: {
+        summary: "Plan a phone call via plan_call",
+        usage: "calle call plan --to-phone <phone> --goal <text> [options]",
+        options: [
+          "  --to-phone <phone>            Required; repeat once per destination phone number",
+          "  --goal <text>                 Required; call goal or instruction",
+          "  --language <language>         Optional language hint",
+          "  --region <region>             Optional region hint",
+          "  --timezone <iana>             Optional planning timezone metadata",
+        ],
+        examples: [
+          `calle call plan --to-phone +15551234567 --goal "Confirm the appointment"`,
+        ],
+      },
+      start: {
+        summary: "Plan and run a phone call without printing confirmation data",
+        usage: "calle call start --to-phone <phone> --goal <text> [options]",
+        options: [
+          "  --to-phone <phone>            Required; repeat once per destination phone number",
+          "  --goal <text>                 Required; call goal or instruction",
+          "  --language <language>         Optional language hint",
+          "  --region <region>             Optional region hint",
+          "  --timezone <iana>             Optional planning timezone metadata",
+        ],
+        examples: [
+          `calle call start --to-phone +15551234567 --goal "Confirm the appointment"`,
+        ],
+      },
+      run: {
+        summary: "Run a planned phone call, then fetch status once",
+        usage: "calle call run --plan-id <id> --confirm-token <token> [options]",
+        options: [
+          "  --plan-id <id>                Required; plan ID returned by plan_call",
+          "  --confirm-token <token>       Required; confirmation token returned by plan_call",
+          "  --timezone <iana>             Local timezone for returned call timestamps",
+        ],
+        examples: ["calle call run --plan-id plan_123 --confirm-token token_123"],
+      },
+      recover: {
+        summary: "Safely recover an uncertain run_call submission",
+        usage: "calle call recover --recovery-id <id> [options]",
+        options: [
+          "  --recovery-id <id>            Required; opaque recovery ID returned by call start/run",
+          "  --timezone <iana>             Local timezone for returned call timestamps",
+        ],
+        examples: ["calle call recover --recovery-id <recovery_id>"],
+      },
+      status: {
+        summary: "Query a call run via get_call_run",
+        usage: "calle call status --run-id <id> [options]",
+        options: [
+          "  --run-id <id>                 Required; call run ID",
+          "  --cursor <cursor>             Optional activity pagination cursor",
+          "  --limit <number>              Optional positive activity page size",
+          "  --timezone <iana>             Local timezone for returned call timestamps",
+        ],
+        examples: ["calle call status --run-id run_123"],
+      },
+    },
+  },
+  regions: {
+    summary: "Find supported CALL-E regions and languages",
+    commands: {
+      list: {
+        summary: "Print the supported regions and languages documentation URL",
+        usage: "calle regions list [options]",
+        examples: ["calle regions list"],
+      },
+    },
+  },
+};
 
-Commands:
-  auth login     Start brokered login and cache the token locally
-  auth status    Show local token cache status
-  auth logout    Remove local token and pending login cache
-  mcp config     Print MCP client configuration JSON
-  mcp tools      List tools from the configured MCP server
-  mcp call       Call an arbitrary MCP tool with --args-json
-  call plan      Plan a phone call via plan_call
-  call start     Plan and run a phone call without printing confirmation data
-  call run       Run a planned phone call, then fetch status once
-  call status    Query a call run via get_call_run
+const COMMON_OPTION_NAMES = new Set([
+  "source",
+  "integration",
+  "integration-version",
+  "base-url",
+  "broker-base-url",
+  "server-url",
+  "auth-base-url",
+  "channel",
+  "client-name",
+  "scope",
+  "cache-root",
+  "min-ttl-seconds",
+  "timeout-seconds",
+  "poll-timeout-seconds",
+  "server-name",
+  "json",
+  "no-telemetry",
+  "telemetry",
+  "telemetry-url",
+  "telemetry-timeout-seconds",
+]);
 
-Common options:
+const COMMAND_OPTION_NAMES = {
+  "auth login": new Set(["force-login", "start-only", "no-browser-open"]),
+  "auth status": new Set(),
+  "auth logout": new Set(),
+  "mcp config": new Set(),
+  "mcp tools": new Set(),
+  "mcp call": new Set(["args-json", "timezone"]),
+  "call plan": new Set(["to-phone", "goal", "language", "region", "timezone"]),
+  "call start": new Set(["to-phone", "goal", "language", "region", "timezone"]),
+  "call run": new Set(["plan-id", "confirm-token", "timezone"]),
+  "call recover": new Set(["recovery-id", "timezone"]),
+  "call status": new Set(["run-id", "cursor", "limit", "timezone"]),
+  "regions list": new Set(),
+};
+
+const KNOWN_OPTION_NAMES = new Set([
+  ...COMMON_OPTION_NAMES,
+  ...Object.values(COMMAND_OPTION_NAMES).flatMap((names) => [...names]),
+  "help",
+]);
+
+const COMMON_HELP = `Global options (accepted by every command):
+  --source <name>              Override CALLE_SOURCE attribution
+  --integration <name>         Override CALLE_INTEGRATION attribution
+  --integration-version <ver>  Override CALLE_INTEGRATION_VERSION attribution
   --base-url <url>             Default: ${DEFAULT_BASE_URL}
   --broker-base-url <url>      Default: --base-url
   --server-url <url>           Default: <base-url>/mcp/<channel>
@@ -75,28 +279,95 @@ Common options:
   --client-name <name>         Default: ${DEFAULT_CLIENT_NAME}
   --scope <scope>              Default: ${DEFAULT_SCOPE}
   --cache-root <path>
-  --timeout-seconds <seconds>
+  --min-ttl-seconds <seconds>
+  --timeout-seconds <seconds>  Default: 15; plan_call: 150
   --poll-timeout-seconds <seconds>
-  --server-name <name>          Default: calle
-  --force-login
-  --start-only
-  --no-browser-open
-  --no-telemetry
+  --server-name <name>         Default: calle
   --json
+  --no-telemetry
+  --telemetry[=true|false]
+  --telemetry-url <url>
+  --telemetry-timeout-seconds <seconds>
+  --help, -h                   Show help for the current command
+  --version, -V                Show the CLI version`;
 
-MCP/call options:
-  --args-json <json>           Arguments for calle mcp call
-  --to-phone <phone>           Repeatable for calle call plan
-  --goal <text>
-  --language <language>
-  --region <region>
-  --timezone <iana>            Timezone for call planning and local call timestamp display
-  --plan-id <id>
-  --confirm-token <token>
-  --run-id <id>
-  --cursor <cursor>
-  --limit <number>
+function helpCommandFor(group, command) {
+  if (COMMAND_GROUPS[group]?.commands?.[command]) {
+    return [group, command, "--help"];
+  }
+  if (COMMAND_GROUPS[group]) {
+    return [group, "--help"];
+  }
+  return ["--help"];
+}
+
+function printRootHelp(stdout) {
+  const commands = Object.entries(COMMAND_GROUPS)
+    .flatMap(([group, details]) => Object.entries(details.commands)
+      .map(([command, commandDetails]) => [
+        `${group} ${command}`,
+        commandDetails.summary,
+      ]))
+    .map(([name, summary]) => `  ${name.padEnd(13)} ${summary}`)
+    .join("\n");
+  stdout(`Usage: calle <command> [options]
+
+Commands:
+${commands}
+
+Run 'calle <command> --help' to list a group's subcommands.
+Run 'calle <command> <subcommand> --help' to view all supported parameters.
+Example: calle call plan --help
+Agent follow-ups: login_argv, help_argv, next_argv contain JSON argument arrays.
+
+${COMMON_HELP}
 `);
+}
+
+function printGroupHelp(stdout, group) {
+  const details = COMMAND_GROUPS[group];
+  const commands = Object.entries(details.commands)
+    .map(([name, command]) => `  ${name.padEnd(8)} ${command.summary}`)
+    .join("\n");
+  stdout(`Usage: calle ${group} <command> [options]
+
+${details.summary}.
+
+Commands:
+${commands}
+
+Run 'calle ${group} <command> --help' to view all supported parameters.
+`);
+}
+
+function printCommandHelp(stdout, group, command) {
+  const details = COMMAND_GROUPS[group].commands[command];
+  const commandOptions = details.options?.length
+    ? `\nCommand options:\n${details.options.join("\n")}\n`
+    : "";
+  const examples = details.examples.map((example) => `  ${example}`).join("\n");
+  stdout(`Usage: ${details.usage}
+
+${details.summary}.
+${commandOptions}
+${COMMON_HELP}
+
+Examples:
+${examples}
+`);
+}
+
+function printHelp(stdout, argv = []) {
+  const [group, command] = argv;
+  if (COMMAND_GROUPS[group]?.commands?.[command]) {
+    printCommandHelp(stdout, group, command);
+    return;
+  }
+  if (COMMAND_GROUPS[group]) {
+    printGroupHelp(stdout, group);
+    return;
+  }
+  printRootHelp(stdout);
 }
 
 function toCamelCase(optionName) {
@@ -106,6 +377,7 @@ function toCamelCase(optionName) {
 function parseOptions(argv) {
   const options = {};
   const positional = [];
+  const optionNames = [];
   const booleanOptions = new Set([
     "force-login",
     "start-only",
@@ -125,6 +397,10 @@ function parseOptions(argv) {
     const withoutPrefix = arg.slice(2);
     const eqIndex = withoutPrefix.indexOf("=");
     const optionName = eqIndex >= 0 ? withoutPrefix.slice(0, eqIndex) : withoutPrefix;
+    if (!KNOWN_OPTION_NAMES.has(optionName)) {
+      throw new InvalidArgumentsError(`Unknown option: --${optionName}`);
+    }
+    optionNames.push(optionName);
     const key = toCamelCase(optionName);
     const setOption = (value) => {
       if (options[key] === undefined) {
@@ -145,11 +421,11 @@ function parseOptions(argv) {
     }
     index += 1;
     if (index >= argv.length) {
-      throw new Error(`Missing value for --${optionName}`);
+      throw new InvalidArgumentsError(`Missing value for --${optionName}`);
     }
     setOption(argv[index]);
   }
-  return { options, positional };
+  return { options, positional, optionNames };
 }
 
 function firstOptionValue(value) {
@@ -374,6 +650,21 @@ function assertNoUnexpectedPositional(positional) {
   }
 }
 
+function assertSupportedOptions(group, command, optionNames) {
+  const commandOptions = COMMAND_OPTION_NAMES[commandName(group, command)];
+  if (!commandOptions) {
+    return;
+  }
+  const unsupported = optionNames.find(
+    (optionName) => !COMMON_OPTION_NAMES.has(optionName) && !commandOptions.has(optionName),
+  );
+  if (unsupported) {
+    throw new InvalidArgumentsError(
+      `Option --${unsupported} is not supported by calle ${group} ${command}`,
+    );
+  }
+}
+
 function postAuthAssistantHint(status) {
   if (status !== "logged_in" && status !== "cached") {
     return null;
@@ -460,9 +751,15 @@ function shellQuote(value) {
   return `'${text.replaceAll("'", "'\\''")}'`;
 }
 
+function commandFields(name, argv) {
+  return {
+    [`${name}_command`]: ["calle", ...argv].map(shellQuote).join(" "),
+    [`${name}_argv`]: argv,
+  };
+}
+
 function loginCommand(config) {
-  const parts = [
-    "calle",
+  return commandFields("login", [
     "auth",
     "login",
     "--server-url",
@@ -473,18 +770,12 @@ function loginCommand(config) {
     config.authBaseUrl,
     "--channel",
     config.channel,
-  ];
-  // Only include --cache-root when it differs from the default to avoid leaking home directory paths
-  const defaultCacheRoot = expandHomePath(DEFAULT_CACHE_ROOT);
-  if (config.cacheRoot !== defaultCacheRoot) {
-    parts.push("--cache-root", config.cacheRoot);
-  }
-  return parts.map(shellQuote).join(" ");
+    ...(config.cacheRoot !== expandHomePath(DEFAULT_CACHE_ROOT) ? ["--cache-root", config.cacheRoot] : []),
+  ]);
 }
 
 function callStatusCommand(config, runId, timezone = null) {
-  const parts = [
-    "calle",
+  return commandFields("next", [
     "call",
     "status",
     "--run-id",
@@ -492,13 +783,21 @@ function callStatusCommand(config, runId, timezone = null) {
     ...(timezone ? ["--timezone", timezone] : []),
     "--server-url",
     config.serverUrl,
-  ];
-  // Only include --cache-root when it differs from the default to avoid leaking home directory paths
-  const defaultCacheRoot = expandHomePath(DEFAULT_CACHE_ROOT);
-  if (config.cacheRoot !== defaultCacheRoot) {
-    parts.push("--cache-root", config.cacheRoot);
-  }
-  return parts.map(shellQuote).join(" ");
+    ...(config.cacheRoot !== expandHomePath(DEFAULT_CACHE_ROOT) ? ["--cache-root", config.cacheRoot] : []),
+  ]);
+}
+
+function callRecoveryCommand(config, recoveryId, timezone = null) {
+  return commandFields("next", [
+    "call",
+    "recover",
+    "--recovery-id",
+    recoveryId,
+    ...(timezone ? ["--timezone", timezone] : []),
+    "--server-url",
+    config.serverUrl,
+    ...(config.cacheRoot !== expandHomePath(DEFAULT_CACHE_ROOT) ? ["--cache-root", config.cacheRoot] : []),
+  ]);
 }
 
 function isActivePendingLogin(pending) {
@@ -518,7 +817,7 @@ function authRequiredPayload(config, message = "A usable CALL-E auth token is re
       code: "auth_required",
       message,
     },
-    login_command: loginCommand(config),
+    ...loginCommand(config),
     ...(loginUrl ? { login_url: loginUrl } : {}),
     ...(assistantHint ? { assistant_hint: assistantHint } : {}),
   };
@@ -536,7 +835,7 @@ async function verifyCachedTokenWithMcp({ config, fetchImpl }) {
   await listMcpTools({ config, fetchImpl });
 }
 
-function errorPayload(error, config) {
+function errorPayload(error, config, helpCommand = null) {
   if (error instanceof InvalidArgumentsError) {
     return {
       exitCode: 2,
@@ -547,27 +846,50 @@ function errorPayload(error, config) {
           code: "invalid_arguments",
           message: error.message,
         },
+        ...(helpCommand ? commandFields("help", helpCommand) : {}),
       },
     };
   }
 
   if (error instanceof AuthRequiredError || isUnauthorizedMcpError(error)) {
+    const stageContext = error?.stage ? {
+      stage: error.stage,
+      call_started: error.callStarted,
+      retry_safe: error.retrySafe,
+      ...(error.recoveryId ? { recovery_id: error.recoveryId } : {}),
+      ...(error.nextCommand ?? {}),
+    } : {};
     return {
       exitCode: 1,
-      body: authRequiredPayload(config, error.message),
+      body: {
+        ...authRequiredPayload(config, error.message),
+        ...stageContext,
+      },
     };
   }
 
   if (error instanceof McpHttpError) {
+    const remoteError = error instanceof CallStageError && error.remoteError
+      ? error.remoteError
+      : null;
     return {
       exitCode: 1,
       body: {
         ok: false,
         server_url: config?.serverUrl ?? null,
+        ...(error instanceof CallStageError ? {
+          stage: error.stage,
+          call_started: error.callStarted,
+          retry_safe: error.retrySafe,
+          ...(error.recoveryId ? { recovery_id: error.recoveryId } : {}),
+          ...(error.nextCommand ?? {}),
+        } : {}),
         error: {
           code: error.code || "mcp_error",
           message: error.message,
           status_code: error.statusCode,
+          ...(remoteError?.error_code !== undefined ? { error_code: remoteError.error_code } : {}),
+          ...(remoteError?.status !== undefined ? { status: remoteError.status } : {}),
         },
       },
     };
@@ -586,10 +908,13 @@ function errorPayload(error, config) {
   };
 }
 
-function writeCommandError(stdout, stderr, error, config) {
-  const formatted = errorPayload(error, config);
+function writeCommandError(stdout, stderr, error, config, helpCommand = null) {
+  const formatted = errorPayload(error, config, helpCommand);
   writeJson(stdout, formatted.body);
-  stderr(formatted.body.error.message);
+  stderr([
+    formatted.body.error.message,
+    ...(formatted.body.help_command ? [`Run '${formatted.body.help_command}' for usage.`] : []),
+  ].join("\n"));
   return formatted.exitCode;
 }
 
@@ -714,11 +1039,132 @@ function structuredPayload(result) {
   return result?.structuredContent || result?.structured_content || result || {};
 }
 
+function safeRemoteString(value, maxLength = 1000) {
+  if (typeof value !== "string" || !value.trim()) {
+    return undefined;
+  }
+  return value.trim().slice(0, maxLength);
+}
+
+function safeRemoteCallError(result) {
+  const structured = recordObject(structuredPayload(result)) || {};
+  const nestedError = recordObject(structured.error) || {};
+  const field = (name) => nestedError[name] ?? structured[name];
+  const errorCodeValue = field("error_code") ?? field("code");
+  const errorCode = typeof errorCodeValue === "number"
+    ? errorCodeValue
+    : safeRemoteString(errorCodeValue, 200);
+  const statusValue = field("status");
+  const status = typeof statusValue === "number"
+    ? statusValue
+    : safeRemoteString(statusValue, 200);
+  const message = safeRemoteString(field("message"));
+  const retrySafe = typeof field("retry_safe") === "boolean" ? field("retry_safe") : undefined;
+  const callStartedValue = field("call_started");
+  const callStarted = typeof callStartedValue === "boolean" || callStartedValue === "unknown"
+    ? callStartedValue
+    : undefined;
+  return {
+    ...(errorCode !== undefined ? { error_code: errorCode } : {}),
+    ...(status !== undefined ? { status } : {}),
+    ...(message !== undefined ? { message } : {}),
+    ...(retrySafe !== undefined ? { retry_safe: retrySafe } : {}),
+    ...(callStarted !== undefined ? { call_started: callStarted } : {}),
+  };
+}
+
+function callStageErrorFrom(error, {
+  stage,
+  callStarted,
+  retrySafe,
+  recoveryId = null,
+  nextCommand = null,
+}) {
+  if (error instanceof CallStageError) {
+    return error;
+  }
+  const timedOut = error instanceof McpHttpError && /timed out/iu.test(error.message);
+  const remoteError = error instanceof McpHttpError && error.payload
+    ? safeRemoteCallError(error.payload)
+    : null;
+  return new CallStageError(
+    timedOut
+      ? `${stage} timed out before the CLI received a response.`
+      : remoteError?.message || `${stage} failed: ${error?.message || String(error)}`,
+    {
+      stage,
+      code: timedOut ? `${stage}_timeout` : `${stage}_error`,
+      statusCode: error instanceof McpHttpError ? error.statusCode : null,
+      callStarted: remoteError?.call_started ?? callStarted,
+      retrySafe: remoteError?.retry_safe ?? retrySafe,
+      recoveryId,
+      nextCommand,
+      remoteError,
+    }
+  );
+}
+
+async function callCallStage({
+  config,
+  deps,
+  stage,
+  toolArguments,
+  requestMeta = null,
+  timeoutSeconds = null,
+  callStarted,
+  retrySafe,
+  recoveryId = null,
+  nextCommand = null,
+}) {
+  try {
+    const result = await callMcpTool({
+      config,
+      toolName: stage,
+      toolArguments,
+      requestMeta,
+      timeoutSeconds,
+      fetchImpl: deps.fetchImpl || globalThis.fetch,
+    });
+    if (result?.isError === true) {
+      const remoteError = safeRemoteCallError(result);
+      throw new CallStageError(remoteError.message || `${stage} returned an error.`, {
+        stage,
+        code: `${stage}_error`,
+        callStarted: remoteError.call_started ?? callStarted,
+        retrySafe: remoteError.retry_safe ?? retrySafe,
+        recoveryId,
+        nextCommand,
+        remoteError,
+      });
+    }
+    return result;
+  } catch (error) {
+    if (error instanceof AuthRequiredError || isUnauthorizedMcpError(error)) {
+      error.stage = stage;
+      error.callStarted = callStarted;
+      error.retrySafe = retrySafe;
+      error.recoveryId = recoveryId;
+      error.nextCommand = nextCommand;
+      throw error;
+    }
+    throw callStageErrorFrom(error, {
+      stage,
+      callStarted,
+      retrySafe,
+      recoveryId,
+      nextCommand,
+    });
+  }
+}
+
 function extractRequiredStructuredString(result, fieldName, context) {
   const structured = structuredPayload(result);
   const value = structured?.[fieldName];
   if (typeof value === "string" && value.trim()) {
     return value.trim();
+  }
+  if (Object.hasOwn(structured, fieldName)) {
+    throw new McpHttpError(`${context} did not return ${fieldName}`, { code: "mcp_error", payload: result });
   }
   const text = Array.isArray(result?.content)
     ? result.content.map((item) => (typeof item?.text === "string" ? item.text : "")).join("\n")
@@ -757,24 +1203,130 @@ function extractRunId(result) {
   return match?.[1] ?? null;
 }
 
-async function runPlannedCallAndFetchStatus({ config, deps, planId, confirmToken }) {
-  const runResult = await callMcpTool({
+function mcpToolTimeoutSeconds({ config, options, toolName }) {
+  if (toolName === "plan_call" && options.timeoutSeconds === undefined) {
+    return DEFAULT_PLAN_CALL_TIMEOUT_SECONDS;
+  }
+  return config.timeoutSeconds;
+}
+
+async function runPlannedCall({ config, deps, planId, confirmToken, timezone = null, recoveryId = null }) {
+  let activeRecoveryId = recoveryId;
+  if (!activeRecoveryId) {
+    try {
+      activeRecoveryId = writeCallRecovery(config, { planId, confirmToken, timezone });
+    } catch {
+      throw new CallStageError("Could not save a private recovery record; run_call was not submitted.", {
+        stage: "run_call",
+        code: "recovery_storage_error",
+        callStarted: false,
+        retrySafe: true,
+      });
+    }
+  }
+  const nextCommand = callRecoveryCommand(config, activeRecoveryId, timezone);
+  const runResult = await callCallStage({
     config,
-    toolName: "run_call",
+    deps,
+    stage: "run_call",
     toolArguments: { plan_id: planId, confirm_token: confirmToken },
-    fetchImpl: deps.fetchImpl || globalThis.fetch,
+    callStarted: "unknown",
+    retrySafe: false,
+    recoveryId: activeRecoveryId,
+    nextCommand,
   });
   const runId = extractRunId(runResult);
   if (!runId) {
-    throw new McpHttpError("run_call did not return a run_id", { code: "mcp_error", payload: runResult });
+    const remoteError = safeRemoteCallError(runResult);
+    throw new CallStageError(remoteError.message || "run_call did not return a run_id.", {
+      stage: "run_call",
+      code: "run_call_missing_run_id",
+      callStarted: remoteError.call_started ?? "unknown",
+      retrySafe: remoteError.retry_safe ?? false,
+      recoveryId: activeRecoveryId,
+      nextCommand,
+      remoteError,
+    });
   }
-  const statusResult = await callMcpTool({
+  removeCallRecovery(config, activeRecoveryId);
+  return { runResult, runId };
+}
+
+async function fetchCallStatus({ config, deps, runId }) {
+  return callCallStage({
     config,
-    toolName: "get_call_run",
+    deps,
+    stage: "get_call_run",
     toolArguments: { run_id: runId },
-    fetchImpl: deps.fetchImpl || globalThis.fetch,
+    callStarted: true,
+    retrySafe: true,
   });
-  return { runResult, runId, statusResult };
+}
+
+async function fetchCallStatusBestEffort({ config, deps, runId }) {
+  try {
+    return {
+      statusResult: await fetchCallStatus({ config, deps, runId }),
+      statusError: null,
+    };
+  } catch (error) {
+    invalidateTokenIfMcpRejected(error, config);
+    const formatted = errorPayload(error, config).body;
+    return {
+      statusResult: null,
+      statusError: {
+        stage: error instanceof CallStageError ? error.stage : "get_call_run",
+        ...formatted.error,
+        retry_safe: error instanceof CallStageError ? error.retrySafe : true,
+      },
+    };
+  }
+}
+
+function safeRunAcknowledgement(runResult, runId) {
+  const structured = recordObject(structuredPayload(runResult)) || {};
+  const status = typeof structured.status === "number"
+    ? structured.status
+    : safeRemoteString(structured.status, 200);
+  const message = safeRemoteString(structured.message);
+  return {
+    structuredContent: {
+      run_id: runId,
+      ...(status !== undefined ? { status } : {}),
+      ...(message !== undefined ? { message } : {}),
+    },
+  };
+}
+
+async function writeRunCallSuccess({
+  config,
+  deps,
+  stdout,
+  options,
+  runResult,
+  runId,
+  statusTimezone,
+  includeRunResult,
+}) {
+  const { statusResult, statusError } = await fetchCallStatusBestEffort({ config, deps, runId });
+  if (statusResult) {
+    localizeCallStatusResultTimestamps(statusResult, options, deps.env || process.env);
+  }
+  const exposeRunResult = includeRunResult && statusError === null;
+  const publicRunResult = exposeRunResult ? runResult : safeRunAcknowledgement(runResult, runId);
+  writeJson(stdout, {
+    ok: true,
+    server_url: config.serverUrl,
+    tool_name: "run_call",
+    call_started: true,
+    result: statusResult || publicRunResult,
+    run_id: runId,
+    ...(exposeRunResult ? { run_result: runResult } : {}),
+    status_query_succeeded: statusError === null,
+    status_result: statusResult,
+    ...(statusError ? { status_error: statusError } : {}),
+    ...callStatusCommand(config, runId, statusTimezone),
+  });
 }
 
 async function handleMcpCommand({ command, positional, options, config, deps, stdout, stderr, captureTelemetry }) {
@@ -801,6 +1353,7 @@ async function handleMcpCommand({ command, positional, options, config, deps, st
         toolName,
         toolArguments,
         requestMeta: toolName === "plan_call" ? buildPlanRequestMeta(options, deps.env || process.env) : null,
+        timeoutSeconds: mcpToolTimeoutSeconds({ config, options, toolName }),
         fetchImpl: deps.fetchImpl || globalThis.fetch,
       });
       writeJson(stdout, mcpSuccessPayload({ config, toolName, result }));
@@ -821,7 +1374,7 @@ async function handleMcpCommand({ command, positional, options, config, deps, st
         await captureTelemetry("cli_local_error", errorTelemetryProperties(error));
       }
     }
-    return writeCommandError(stdout, stderr, error, config);
+    return writeCommandError(stdout, stderr, error, config, helpCommandFor("mcp", command));
   }
 }
 
@@ -831,12 +1384,15 @@ async function handleCallCommand({ command, positional, options, config, deps, s
 
     if (command === "plan") {
       const toolName = "plan_call";
-      const result = await callMcpTool({
+      const result = await callCallStage({
         config,
-        toolName,
+        deps,
+        stage: toolName,
         toolArguments: buildPlanArguments(options),
         requestMeta: buildPlanRequestMeta(options, deps.env || process.env),
-        fetchImpl: deps.fetchImpl || globalThis.fetch,
+        timeoutSeconds: mcpToolTimeoutSeconds({ config, options, toolName }),
+        callStarted: false,
+        retrySafe: true,
       });
       writeJson(stdout, mcpSuccessPayload({ config, toolName, result }));
       return 0;
@@ -844,30 +1400,60 @@ async function handleCallCommand({ command, positional, options, config, deps, s
 
     if (command === "start") {
       const statusTimezone = resolvePlanTimezone(options, deps.env || process.env);
-      const planResult = await callMcpTool({
+      const planResult = await callCallStage({
         config,
-        toolName: "plan_call",
+        deps,
+        stage: "plan_call",
         toolArguments: buildPlanArguments(options),
         requestMeta: buildPlanRequestMeta(options, deps.env || process.env),
-        fetchImpl: deps.fetchImpl || globalThis.fetch,
+        timeoutSeconds: mcpToolTimeoutSeconds({ config, options, toolName: "plan_call" }),
+        callStarted: false,
+        retrySafe: true,
       });
-      const planId = extractRequiredStructuredString(planResult, "plan_id", "plan_call");
-      const confirmToken = extractRequiredStructuredString(planResult, "confirm_token", "plan_call");
-      const { runId, statusResult } = await runPlannedCallAndFetchStatus({
+      const structuredPlan = structuredPayload(planResult);
+      if (structuredPlan.ready_to_run === false) {
+        const question = Array.isArray(structuredPlan.clarifying_questions)
+          ? structuredPlan.clarifying_questions.find((item) => typeof item === "string" && item.trim())?.trim()
+          : null;
+        throw new CallStageError(
+          `Call plan needs more information before it can run${question ? `: ${question}` : "."}`,
+          {
+            stage: "plan_call",
+            code: "plan_not_ready",
+            callStarted: false,
+            retrySafe: true,
+          }
+        );
+      }
+      let planId;
+      let confirmToken;
+      try {
+        planId = extractRequiredStructuredString(planResult, "plan_id", "plan_call");
+        confirmToken = extractRequiredStructuredString(planResult, "confirm_token", "plan_call");
+      } catch (error) {
+        throw new CallStageError(error.message, {
+          stage: "plan_call",
+          code: "plan_call_invalid_response",
+          callStarted: false,
+          retrySafe: true,
+        });
+      }
+      const { runResult, runId } = await runPlannedCall({
         config,
         deps,
         planId,
         confirmToken,
+        timezone: statusTimezone,
       });
-      localizeCallStatusResultTimestamps(statusResult, options, deps.env || process.env);
-      writeJson(stdout, {
-        ok: true,
-        server_url: config.serverUrl,
-        tool_name: "run_call",
-        result: statusResult,
-        run_id: runId,
-        status_result: statusResult,
-        next_command: callStatusCommand(config, runId, statusTimezone),
+      await writeRunCallSuccess({
+        config,
+        deps,
+        stdout,
+        options,
+        runResult,
+        runId,
+        statusTimezone,
+        includeRunResult: false,
       });
       return 0;
     }
@@ -875,33 +1461,71 @@ async function handleCallCommand({ command, positional, options, config, deps, s
     if (command === "run") {
       const statusTimezone = resolvePlanTimezone(options, deps.env || process.env);
       const runArguments = buildRunArguments(options);
-      const { runResult, runId, statusResult } = await runPlannedCallAndFetchStatus({
+      const { runResult, runId } = await runPlannedCall({
         config,
         deps,
         planId: runArguments.plan_id,
         confirmToken: runArguments.confirm_token,
+        timezone: statusTimezone,
       });
-      localizeCallStatusResultTimestamps(statusResult, options, deps.env || process.env);
-      writeJson(stdout, {
-        ok: true,
-        server_url: config.serverUrl,
-        tool_name: "run_call",
-        result: statusResult,
-        run_id: runId,
-        run_result: runResult,
-        status_result: statusResult,
-        next_command: callStatusCommand(config, runId, statusTimezone),
+      await writeRunCallSuccess({
+        config,
+        deps,
+        stdout,
+        options,
+        runResult,
+        runId,
+        statusTimezone,
+        includeRunResult: true,
+      });
+      return 0;
+    }
+
+    if (command === "recover") {
+      const recoveryId = requireStringOption(options, "recoveryId", "--recovery-id");
+      if (!isCallRecoveryId(recoveryId)) {
+        throw new InvalidArgumentsError("--recovery-id is invalid");
+      }
+      const recovery = readCallRecovery(config, recoveryId);
+      if (!recovery) {
+        throw new McpHttpError("No private recovery record exists for this recovery ID.", {
+          code: "recovery_not_found",
+        });
+      }
+      const recoveryOptions = optionalStringOption(options, "timezone") || !recovery.timezone
+        ? options
+        : { ...options, timezone: recovery.timezone };
+      const statusTimezone = resolvePlanTimezone(recoveryOptions, deps.env || process.env);
+      const { runResult, runId } = await runPlannedCall({
+        config,
+        deps,
+        planId: recovery.planId,
+        confirmToken: recovery.confirmToken,
+        timezone: statusTimezone,
+        recoveryId,
+      });
+      await writeRunCallSuccess({
+        config,
+        deps,
+        stdout,
+        options: recoveryOptions,
+        runResult,
+        runId,
+        statusTimezone,
+        includeRunResult: false,
       });
       return 0;
     }
 
     if (command === "status") {
       const toolName = "get_call_run";
-      const result = await callMcpTool({
+      const result = await callCallStage({
         config,
-        toolName,
+        deps,
+        stage: toolName,
         toolArguments: buildStatusArguments(options),
-        fetchImpl: deps.fetchImpl || globalThis.fetch,
+        callStarted: true,
+        retrySafe: true,
       });
       localizeCallStatusResultTimestamps(result, options, deps.env || process.env);
       writeJson(stdout, mcpSuccessPayload({ config, toolName, result }));
@@ -918,11 +1542,35 @@ async function handleCallCommand({ command, positional, options, config, deps, s
         await captureTelemetry("cli_local_error", errorTelemetryProperties(error));
       }
     }
-    return writeCommandError(stdout, stderr, error, config);
+    return writeCommandError(stdout, stderr, error, config, helpCommandFor("call", command));
   }
 }
 
-export async function runCli(argv, deps = {}) {
+// Picks the program that opens a URL in the user's browser.
+//
+// Windows is handled without cmd.exe on purpose. `cmd /c start "" <url>` lets cmd
+// parse the URL, and `&` is a command separator there -- an OAuth URL is truncated
+// at the first `&` (losing redirect_uri, state and scope) and the remaining query
+// fragments are run as shell commands. rundll32 takes the URL as a single argument
+// and never parses it.
+//
+// The Windows opener is named by its fully qualified path. An unqualified
+// "rundll32" would be looked up with the CreateProcess search order, which checks
+// the current directory before System32, so running `calle auth login` from an
+// untrusted checkout holding a planted rundll32.exe would execute it.
+// https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessa
+//
+// Exported so the tests can assert the exact executable and argv the CLI uses.
+export function browserOpenCommand(url, platform = process.platform, env = process.env) {
+  if (platform === "darwin") return ["open", [url]];
+  if (platform !== "win32") return ["xdg-open", [url]];
+
+  const systemRoot = env.SystemRoot || env.SYSTEMROOT || env.windir || "C:\\Windows";
+  const rundll32 = `${systemRoot.replace(/[\\/]+$/, "")}\\System32\\rundll32.exe`;
+  return [rundll32, ["url.dll,FileProtocolHandler", url]];
+}
+
+async function runCliCommand(argv, deps = {}) {
   const stdout = deps.stdout || ((text) => process.stdout.write(text));
   const stderr = deps.stderr || ((text) => process.stderr.write(`${text}\n`));
   const openBrowser = deps.openBrowser || (async (url) => {
@@ -930,32 +1578,29 @@ export async function runCli(argv, deps = {}) {
       throw new Error(`Refusing to open unsafe URL: expected https: or http: loopback`);
     }
     const { spawn } = await import("node:child_process");
-    let command;
-    let args;
-    if (process.platform === "darwin") {
-      command = "open";
-      args = [url];
-    } else if (process.platform === "win32") {
-      // Use rundll32 to avoid cmd.exe shell processing of URL special chars (& etc.)
-      command = "rundll32.exe";
-      args = ["url.dll,FileProtocolHandler", url];
-    } else {
-      command = "xdg-open";
-      args = [url];
-    }
-    const child = spawn(command, args, { shell: false, detached: true, stdio: "ignore" });
+    const [command, args] = browserOpenCommand(url, process.platform, process.env);
+    const child = spawn(command, args, { detached: true, stdio: "ignore" });
+    // Without a listener an 'error' event (a missing opener, say) becomes an
+    // uncaught exception. Failing to open a browser should not take the CLI
+    // down -- the URL is printed for the user either way.
+    child.on("error", () => {});
     child.unref();
   });
 
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
-    printHelp(stdout);
+    printHelp(stdout, argv);
+    return 0;
+  }
+  if (argv.includes("--version") || argv.includes("-V")) {
+    stdout(`${CLI_VERSION}\n`);
     return 0;
   }
 
   const [group, command, ...rest] = argv;
-  const { options, positional } = parseOptions(rest);
+  const { options, positional, optionNames } = parseOptions(rest);
+  assertSupportedOptions(group, command, optionNames);
 
-  const config = resolveRuntimeConfig(options, deps.env || process.env);
+  const config = resolveCliRuntimeConfig(options, deps.env || process.env);
   config._onProtocolVersionMismatch = (serverVersion, clientVersion) => {
     process.stderr.write(`[calle] Warning: MCP protocol version mismatch — server reports ${serverVersion}, client expects ${clientVersion}.\n`);
   };
@@ -1057,10 +1702,12 @@ export async function runCli(argv, deps = {}) {
     const pendingDocument = readJson(pendingPath);
     removeFile(cachePath);
     removeFile(pendingPath);
+    const removedRecoveries = removeCallRecoveries(config);
     writeJson(stdout, {
       server_url: config.serverUrl,
       removed_cache: cacheDocument !== null,
       removed_pending: pendingDocument !== null,
+      removed_call_recoveries: removedRecoveries,
     });
     return 0;
   }
@@ -1079,7 +1726,37 @@ export async function runCli(argv, deps = {}) {
     return handleCallCommand({ command, positional, options, config, deps, stdout, stderr, captureTelemetry });
   }
 
-  throw new Error(`Unknown command: ${[group, command].filter(Boolean).join(" ")}`);
+  if (group === "regions" && command === "list") {
+    assertNoUnexpectedPositional(positional);
+    writeJson(stdout, {
+      supported_regions_and_languages_url: SUPPORTED_REGIONS_AND_LANGUAGES_URL,
+    });
+    return 0;
+  }
+
+  throw new InvalidArgumentsError(`Unknown command: ${[group, command].filter(Boolean).join(" ")}`);
+}
+
+export async function runCli(argv, deps = {}) {
+  try {
+    return await runCliCommand(argv, deps);
+  } catch (error) {
+    if (!(error instanceof InvalidArgumentsError)) {
+      throw error;
+    }
+
+    const stdout = deps.stdout || ((text) => process.stdout.write(text));
+    const stderr = deps.stderr || ((text) => process.stderr.write(`${text}\n`));
+    const [group, command, ...rest] = argv;
+    let config = null;
+    try {
+      const { options } = parseOptions(rest);
+      config = resolveRuntimeConfig(options, deps.env || process.env);
+    } catch {
+      // Invalid option syntax may prevent runtime configuration from being resolved.
+    }
+    return writeCommandError(stdout, stderr, error, config, helpCommandFor(group, command));
+  }
 }
 
 export async function main(argv = process.argv.slice(2), deps = {}) {

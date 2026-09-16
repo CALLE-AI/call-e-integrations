@@ -1,67 +1,101 @@
-/**
- * Returns true if rawUrl is a safe URL that can be opened in a browser:
- * - any https: URL, or
- * - an http: URL whose hostname is a loopback address (localhost, 127.0.0.1, ::1).
- */
-export function isSafeBrokerLoginUrl(rawUrl: unknown): boolean;
+import type { JsonObject, PendingLoginDocument, TokenDocument } from "./cache.js";
 
-/**
- * Returns the canonicalised href of rawUrl when isSafeBrokerLoginUrl returns
- * true, or null otherwise.  Use this instead of rawUrl wherever the URL will
- * be displayed or opened to ensure only safe URLs reach the caller.
- */
-export function sanitizeBrokerLoginUrl(rawUrl: unknown): string | null;
+export interface BrokerRequestConfig {
+  brokerBaseUrl: string;
+  timeoutSeconds: number;
+  integrationHeader?: string;
+}
 
-export interface BrokerSessionPayload {
+export interface CreateBrokerSessionConfig extends BrokerRequestConfig {
+  serverUrl: string;
+  authBaseUrl: string;
+  channel: string;
+  scope: string;
+  clientName: string;
+}
+
+export interface BrokerLoginConfig extends CreateBrokerSessionConfig {
+  cacheRoot: string;
+  minTtlSeconds?: number;
+  pollTimeoutSeconds?: number;
+}
+
+export interface BrokerSessionPayload extends JsonObject {
   session_id: string;
   session_secret: string;
   login_url: string;
-  status: string;
-  created_at: string;
-  expires_at: string | null;
-  error_message: string | null;
-  poll_after_ms: number | null;
+  status?: string;
+  expires_at?: string | null;
+  poll_after_ms?: number | null;
+}
+
+export interface BrokerStatusPayload extends JsonObject {
+  session_id?: string;
+  session_secret?: string;
+  login_url?: string;
+  auth_url?: string;
+  verification_url?: string;
+  status?: string;
+  expires_at?: string | null;
+  error_message?: string | null;
+  poll_after_ms?: number | null;
+}
+
+export interface BrokerRequestOptions {
+  fetchImpl?: typeof globalThis.fetch;
+}
+
+export interface EnsurePendingLoginOptions extends BrokerRequestOptions {
+  forceLogin?: boolean;
+}
+
+export interface LoginWithBrokerOptions extends EnsurePendingLoginOptions {
+  openBrowser?: (loginUrl: string) => void | Promise<void>;
+  sleepImpl?: (milliseconds: number) => void | Promise<void>;
+  noBrowserOpen?: boolean;
+  stderr?: (message: string) => void;
+}
+
+export interface PendingLoginResult {
+  pending: PendingLoginDocument;
+  created: boolean;
 }
 
 export interface BrokerLoginResult {
   status: "cached" | "logged_in";
   cachePath: string;
   pendingPath: string;
-  tokenDocument: Record<string, unknown>;
+  tokenDocument: TokenDocument;
 }
 
 export function createBrokerSession(
-  config: Record<string, unknown>,
-  options?: { fetchImpl?: typeof fetch }
-): Promise<Record<string, unknown>>;
+  config: CreateBrokerSessionConfig,
+  options?: BrokerRequestOptions,
+): Promise<BrokerSessionPayload>;
 
 export function getBrokerSessionStatus(
-  config: Record<string, unknown>,
-  pending: BrokerSessionPayload,
-  options?: { fetchImpl?: typeof fetch }
-): Promise<Record<string, unknown>>;
+  config: BrokerRequestConfig,
+  pending: PendingLoginDocument,
+  options?: BrokerRequestOptions,
+): Promise<BrokerStatusPayload>;
 
 export function exchangeBrokerSession(
-  config: Record<string, unknown>,
-  pending: BrokerSessionPayload,
-  options?: { fetchImpl?: typeof fetch }
-): Promise<Record<string, unknown>>;
+  config: BrokerRequestConfig,
+  pending: PendingLoginDocument,
+  options?: BrokerRequestOptions,
+): Promise<TokenDocument>;
 
-export function normalizePendingSession(sessionPayload: Record<string, unknown>): BrokerSessionPayload;
+export function normalizePendingSession(sessionPayload: BrokerSessionPayload): PendingLoginDocument;
 
 export function ensurePendingLogin(
-  config: Record<string, unknown>,
-  options?: { fetchImpl?: typeof fetch; forceLogin?: boolean }
-): Promise<{ pending: BrokerSessionPayload; created: boolean }>;
+  config: BrokerLoginConfig,
+  options?: EnsurePendingLoginOptions,
+): Promise<PendingLoginResult>;
 
 export function loginWithBroker(
-  config: Record<string, unknown>,
-  options?: {
-    fetchImpl?: typeof fetch;
-    openBrowser?: (url: string) => Promise<void>;
-    sleepImpl?: (ms: number) => Promise<void>;
-    forceLogin?: boolean;
-    noBrowserOpen?: boolean;
-    stderr?: (msg: string) => void;
-  }
+  config: BrokerLoginConfig,
+  options?: LoginWithBrokerOptions,
 ): Promise<BrokerLoginResult>;
+
+export function isSafeBrokerLoginUrl(rawUrl: unknown): boolean;
+export function sanitizeBrokerLoginUrl(rawUrl: unknown): string | null;
