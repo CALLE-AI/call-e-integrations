@@ -15,6 +15,8 @@ import {
 } from "./cache.js";
 import {
   DEFAULT_BASE_URL,
+  DEFAULT_CACHE_ROOT,
+  expandHomePath,
   DEFAULT_CHANNEL,
   DEFAULT_CLIENT_NAME,
   DEFAULT_PLAN_CALL_TIMEOUT_SECONDS,
@@ -22,7 +24,7 @@ import {
   CLI_VERSION,
   resolveRuntimeConfig,
 } from "./config.js";
-import { ensurePendingLogin, loginWithBroker } from "./broker-client.js";
+import { ensurePendingLogin, isSafeBrokerLoginUrl, loginWithBroker, sanitizeBrokerLoginUrl } from "./broker-client.js";
 import {
   AuthRequiredError,
   McpHttpError,
@@ -69,13 +71,14 @@ class CallStageError extends McpHttpError {
   }
 }
 export function preAuthHelpMessage(loginUrl) {
+  const safeUrl = sanitizeBrokerLoginUrl(loginUrl) ?? "[authorization URL unavailable]";
   return `Hi, I'm CALL-E 👋
 
 I can help you make phone calls, ask for information, and handle phone-related tasks. I'll also keep you updated on the call status, what was discussed, and the key points.
 Before we officially begin, I'll send you the call goal for confirmation.
 
 Before we start, please complete authorization here:
-${loginUrl}`;
+${safeUrl}`;
 }
 
 export const POST_AUTH_HELP_MESSAGE = `Great, authorization is complete ✨
@@ -616,18 +619,27 @@ function parsePositiveInteger(value, optionName) {
   return parsed;
 }
 
+const ARGS_JSON_MAX_BYTES = 64 * 1024; // 64 KB
+
 function parseJsonObject(value, optionName) {
   const raw = firstOptionValue(value);
   if (raw === undefined) {
     return {};
   }
+  const rawStr = String(raw);
+  if (Buffer.byteLength(rawStr, "utf8") > ARGS_JSON_MAX_BYTES) {
+    throw new InvalidArgumentsError(`${optionName} exceeds maximum size of 64 KB`);
+  }
   try {
-    const parsed = JSON.parse(String(raw));
+    const parsed = JSON.parse(rawStr);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       throw new Error("not object");
     }
     return parsed;
-  } catch {
+  } catch (err) {
+    if (err instanceof InvalidArgumentsError) {
+      throw err;
+    }
     throw new InvalidArgumentsError(`${optionName} must be a JSON object`);
   }
 }
@@ -664,26 +676,26 @@ function postAuthAssistantHint(status) {
 }
 
 function preAuthAssistantHint(loginUrl) {
-  if (typeof loginUrl !== "string" || !loginUrl.trim()) {
+  const safeLoginUrl = sanitizeBrokerLoginUrl(loginUrl);
+  if (!safeLoginUrl) {
     return null;
   }
   return {
     type: PRE_AUTH_HELP_HINT_TYPE,
-    message: preAuthHelpMessage(loginUrl.trim()),
+    message: preAuthHelpMessage(safeLoginUrl),
   };
 }
 
 function publicPendingLoginPayload({ config, cachePath, pendingPath, pending, created }) {
-  const assistantHint = preAuthAssistantHint(pending.login_url);
+  const loginUrl = sanitizeBrokerLoginUrl(pending.login_url);
+  const assistantHint = preAuthAssistantHint(loginUrl);
   return {
     status: "login_required",
     broker_base_url: config.brokerBaseUrl,
     server_url: config.serverUrl,
-    cache_path: cachePath,
-    pending_cache_path: pendingPath,
     pending_status: pending.status,
     pending_created: created,
-    login_url: pending.login_url,
+    ...(loginUrl ? { login_url: loginUrl } : {}),
     ...(assistantHint ? { assistant_hint: assistantHint } : {}),
   };
 }
@@ -694,8 +706,6 @@ function publicLoginPayload({ config, cachePath, pendingPath, tokenDocument, sta
     status,
     broker_base_url: config.brokerBaseUrl,
     server_url: config.serverUrl,
-    cache_path: cachePath,
-    pending_cache_path: pendingPath,
     expires_at: tokenDocument?.expires_at ?? null,
     ...(assistantHint ? { assistant_hint: assistantHint } : {}),
   };
@@ -706,16 +716,15 @@ function statusPayload(config) {
   const pendingPath = pendingCachePath(config.cacheRoot, config.serverUrl);
   const cacheDocument = readJson(cachePath);
   const pendingDocument = readJson(pendingPath);
+  const pendingLoginUrl = sanitizeBrokerLoginUrl(typeof pendingDocument?.login_url === "string" ? pendingDocument.login_url : null);
   return {
     server_url: config.serverUrl,
-    cache_path: cachePath,
-    pending_cache_path: pendingPath,
     cache_exists: cacheDocument !== null,
     pending_exists: pendingDocument !== null,
     usable: tokenIsUsable(cacheDocument, config.minTtlSeconds),
     expires_at: cacheDocument?.expires_at ?? null,
     pending_status: pendingDocument?.status ?? null,
-    pending_login_url: pendingDocument?.login_url ?? null,
+    ...(pendingLoginUrl ? { pending_login_url: pendingLoginUrl } : {}),
   };
 }
 
@@ -761,8 +770,7 @@ function loginCommand(config) {
     config.authBaseUrl,
     "--channel",
     config.channel,
-    "--cache-root",
-    config.cacheRoot,
+    ...(config.cacheRoot !== expandHomePath(DEFAULT_CACHE_ROOT) ? ["--cache-root", config.cacheRoot] : []),
   ]);
 }
 
@@ -775,8 +783,7 @@ function callStatusCommand(config, runId, timezone = null) {
     ...(timezone ? ["--timezone", timezone] : []),
     "--server-url",
     config.serverUrl,
-    "--cache-root",
-    config.cacheRoot,
+    ...(config.cacheRoot !== expandHomePath(DEFAULT_CACHE_ROOT) ? ["--cache-root", config.cacheRoot] : []),
   ]);
 }
 
@@ -789,8 +796,7 @@ function callRecoveryCommand(config, recoveryId, timezone = null) {
     ...(timezone ? ["--timezone", timezone] : []),
     "--server-url",
     config.serverUrl,
-    "--cache-root",
-    config.cacheRoot,
+    ...(config.cacheRoot !== expandHomePath(DEFAULT_CACHE_ROOT) ? ["--cache-root", config.cacheRoot] : []),
   ]);
 }
 
@@ -1558,6 +1564,9 @@ async function runCliCommand(argv, deps = {}) {
   const stdout = deps.stdout || ((text) => process.stdout.write(text));
   const stderr = deps.stderr || ((text) => process.stderr.write(`${text}\n`));
   const openBrowser = deps.openBrowser || (async (url) => {
+    if (!isSafeBrokerLoginUrl(url)) {
+      throw new Error(`Refusing to open unsafe URL: expected https: or http: loopback`);
+    }
     const { spawn } = await import("node:child_process");
     const [command, args] = browserOpenCommand(url, process.platform, process.env);
     const child = spawn(command, args, { detached: true, stdio: "ignore" });
@@ -1683,8 +1692,6 @@ async function runCliCommand(argv, deps = {}) {
     const removedRecoveries = removeCallRecoveries(config);
     writeJson(stdout, {
       server_url: config.serverUrl,
-      cache_path: cachePath,
-      pending_cache_path: pendingPath,
       removed_cache: cacheDocument !== null,
       removed_pending: pendingDocument !== null,
       removed_call_recoveries: removedRecoveries,
