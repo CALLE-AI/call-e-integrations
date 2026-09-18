@@ -1,5 +1,11 @@
 # @call-e/cli
 
+## 0.5.2
+
+### Patch Changes
+
+- [#141](https://github.com/CALLE-AI/call-e-integrations/pull/141) [`165323c`](https://github.com/CALLE-AI/call-e-integrations/commit/165323c4f030d6e8958e268e593188ca27537278) Thanks [@JJasonSun](https://github.com/JJasonSun)! - Clarify readable telemetry host fields and hashing of the complete server URL in the packaged README.
+
 ## 0.5.1
 
 ### Patch Changes
