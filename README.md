@@ -297,6 +297,10 @@ them separately. A polling timeout does not cancel an accepted call. For a
 complete example that saves the Call ID and resumes polling, see the
 [Calls example and recovery guide](https://docs.heycall-e.com/quickstart#run-a-complete-example).
 
+#### Community SDKs
+
+- [Kotlin / Android SDK](https://github.com/Baklolman69/calle-android-sdk) — Community-maintained Kotlin SDK for integrating CALL-E voice agents into Android and Wear OS apps.
+
 ### API
 
 The CALL-E Developer API provides direct HTTP access for any trusted backend, worker, or workflow system.
