@@ -160,6 +160,11 @@ subcommand are rejected instead of being silently ignored.
 | `calle call status` | Query a call run through `get_call_run`. | `--run-id` |
 | `calle regions list` | Print the supported regions and languages documentation URL. | None |
 
+`calle auth status` reports `pending_status` and `pending_login_url` as `null`
+when the cached session fails validation against the configured broker/auth
+origins. Authorization errors also omit untrusted cached login URLs and their
+assistant hints. These read-only commands do not remove the cache file.
+
 `calle regions list` is local and does not require authentication or call
 `plan_call`. It returns:
 

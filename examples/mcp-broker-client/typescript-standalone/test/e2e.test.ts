@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,7 +11,7 @@ import test from "node:test";
 import { startFakeServer } from "../../../shared/fake-mcp-broker-server.mjs";
 
 const exampleRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const tsxBin = path.join(exampleRoot, "node_modules", ".bin", process.platform === "win32" ? "tsx.cmd" : "tsx");
+const tsxLoader = import.meta.resolve("tsx");
 
 function cacheDir(cacheRoot: string, serverUrl: string) {
   const hash = crypto.createHash("md5").update(serverUrl, "utf8").digest("hex");
@@ -53,8 +54,8 @@ function writePending(cacheRoot: string, serverUrl: string, baseUrl: string) {
 function runClient(env: Record<string, string>): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
     execFile(
-      tsxBin,
-      ["src/client.ts"],
+      process.execPath,
+      ["--import", tsxLoader, "src/client.ts"],
       {
         cwd: exampleRoot,
         env: {
@@ -93,6 +94,31 @@ function assertNoSecrets(output: string) {
 
 function tempCacheRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "calle-broker-standalone-ts-"));
+}
+
+async function startBrokerProbe(session: Record<string, unknown>) {
+  const paths: string[] = [];
+  const server = http.createServer((request, response) => {
+    paths.push(request.url || "");
+    const send = (body: Record<string, unknown>, status = 200) => {
+      const text = JSON.stringify(body);
+      response.writeHead(status, { "content-type": "application/json", "content-length": Buffer.byteLength(text) });
+      response.end(text);
+    };
+    if (request.method === "POST" && request.url === "/api/v1/openagent-auth/sessions") return send(session, 201);
+    if (request.method === "GET") return send({ status: "AUTHORIZED" });
+    if (request.method === "POST" && request.url?.endsWith("/exchange")) return send({ token: { access_token: "probe-token" } });
+    return send({ error: "unexpected" }, 404);
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("Broker probe did not bind a TCP port.");
+  return {
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    paths,
+    session,
+    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
+  };
 }
 
 test("standalone broker example logs in, calls tool, reads resource, then reuses cache", async (t) => {
@@ -216,4 +242,80 @@ test("standalone broker example clears stale cached token rejected by MCP server
   assert.equal(state.broker_exchange_count, 1);
   assert.equal(state.mcp_requests.some((request: { has_bearer_token: boolean }) => !request.has_bearer_token), true);
   assert.equal(state.mcp_requests.some((request: { has_bearer_token: boolean }) => request.has_bearer_token), true);
+});
+
+test("standalone broker example discards hostile cached login data before output or broker requests", async (t) => {
+  const fake = await startFakeServer();
+  t.after(() => fake.close());
+  const cacheRoot = tempCacheRoot();
+  writeCacheFile(cacheRoot, fake.serverUrl, "pending_login.json", {
+    session_id: "../exchange?unsafe=true",
+    session_secret: "safe\r\nX-Evil: 1",
+    login_url: "javascript:alert('unsafe')",
+    status: "PENDING",
+    created_at: "2026-01-01T00:00:00Z",
+    expires_at: "2030-01-01T00:00:00Z",
+  });
+
+  const result = await runClient({
+    MCP_BASE_URL: fake.baseUrl,
+    MCP_SERVER_URL: fake.serverUrl,
+    MCP_CACHE_ROOT: cacheRoot,
+  });
+
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(`${result.stdout}\n${result.stderr}`.includes("javascript:alert"), false);
+  assert.equal(`${result.stdout}\n${result.stderr}`.includes("X-Evil"), false);
+  const state = await readState(fake.stateUrl);
+  assert.equal(state.broker_creates.length, 1);
+  assert.equal(state.broker_exchange_count, 1);
+});
+
+test("standalone broker example rejects hostile broker responses before caching or output", async (t) => {
+  const cases: Array<[string, (session: Record<string, unknown>) => void]> = [
+    ["foreign origin", (session) => { session.login_url = "https://untrusted.example/login"; }],
+    ["javascript URL", (session) => { session.login_url = "javascript:alert(1)"; }],
+    ["CRLF secret", (session) => { session.session_secret = "safe\r\nX-Evil: 1"; }],
+    ["Unicode secret", (session) => { session.session_secret = "safe✓"; }],
+    ["control ID", (session) => { session.session_id = "safe\u0000id"; }],
+    ["trailing high surrogate ID", (session) => { session.session_id = "safe\uD800"; }],
+    ["overlong ID", (session) => { session.session_id = "a".repeat(513); }],
+    ["missing ID", (session) => { delete session.session_id; }],
+    ["null secret", (session) => { session.session_secret = null; }],
+    ["numeric URL", (session) => { session.login_url = 1; }],
+  ];
+  for (const [name, override] of cases) {
+    await t.test(name, async () => {
+      const session: Record<string, unknown> = { session_id: "safe-id", session_secret: "safe-secret", login_url: "pending", status: "PENDING" };
+      const probe = await startBrokerProbe(session);
+      try {
+        session.login_url = `${probe.baseUrl}/login`;
+        override(session);
+        const cacheRoot = tempCacheRoot();
+        const result = await runClient({ MCP_BASE_URL: probe.baseUrl, MCP_SERVER_URL: `${probe.baseUrl}/mcp`, MCP_CACHE_ROOT: cacheRoot });
+        assert.notEqual(result.code, 0);
+        assert.doesNotMatch(`${result.stdout}\n${result.stderr}`, /"status":"(?:login_required|pending)"/);
+        assert.equal(fs.existsSync(path.join(cacheDir(cacheRoot, `${probe.baseUrl}/mcp`), "pending_login.json")), false);
+        assert.deepEqual(probe.paths, ["/api/v1/openagent-auth/sessions"]);
+      } finally { await probe.close(); }
+    });
+  }
+});
+
+test("standalone broker example encodes opaque session IDs at request paths", async (t) => {
+  const sessionId = "../exchange?x=✓";
+  const probe = await startBrokerProbe({ session_id: sessionId, session_secret: "safe-secret", login_url: "pending", status: "PENDING" });
+  t.after(() => probe.close());
+  probe.session.login_url = `${probe.baseUrl}/login`;
+  const result = await runClient({
+    MCP_BASE_URL: probe.baseUrl,
+    MCP_SERVER_URL: `${probe.baseUrl}/mcp`,
+    MCP_CACHE_ROOT: tempCacheRoot(),
+    MCP_AUTH_BASE_URL: probe.baseUrl,
+  });
+
+  assert.notEqual(result.code, 0);
+  const encoded = encodeURIComponent(sessionId);
+  assert.equal(probe.paths.includes(`/api/v1/openagent-auth/sessions/${encoded}`), true);
+  assert.equal(probe.paths.includes(`/api/v1/openagent-auth/sessions/${encoded}/exchange`), true);
 });

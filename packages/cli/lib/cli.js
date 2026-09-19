@@ -22,7 +22,7 @@ import {
   CLI_VERSION,
   resolveRuntimeConfig,
 } from "./config.js";
-import { ensurePendingLogin, loginWithBroker } from "./broker-client.js";
+import { ensurePendingLogin, loginWithBroker, normalizePendingSession } from "./broker-client.js";
 import {
   AuthRequiredError,
   McpHttpError,
@@ -701,11 +701,22 @@ function publicLoginPayload({ config, cachePath, pendingPath, tokenDocument, sta
   };
 }
 
+function trustedPendingLogin(config, pending) {
+  if (!pending) return null;
+  try {
+    return normalizePendingSession(pending, config);
+  } catch (error) {
+    if (error?.code === "INVALID_BROKER_SESSION") return null;
+    throw error;
+  }
+}
+
 function statusPayload(config) {
   const cachePath = tokenCachePath(config.cacheRoot, config.serverUrl);
   const pendingPath = pendingCachePath(config.cacheRoot, config.serverUrl);
   const cacheDocument = readJson(cachePath);
   const pendingDocument = readJson(pendingPath);
+  const safePending = trustedPendingLogin(config, pendingDocument);
   return {
     server_url: config.serverUrl,
     cache_path: cachePath,
@@ -714,8 +725,8 @@ function statusPayload(config) {
     pending_exists: pendingDocument !== null,
     usable: tokenIsUsable(cacheDocument, config.minTtlSeconds),
     expires_at: cacheDocument?.expires_at ?? null,
-    pending_status: pendingDocument?.status ?? null,
-    pending_login_url: pendingDocument?.login_url ?? null,
+    pending_status: safePending?.status ?? null,
+    pending_login_url: safePending?.login_url ?? null,
   };
 }
 
@@ -799,7 +810,7 @@ function isActivePendingLogin(pending) {
 }
 
 function authRequiredPayload(config, message = "A usable CALL-E auth token is required.") {
-  const pendingDocument = readPendingLogin(pendingCachePath(config.cacheRoot, config.serverUrl));
+  const pendingDocument = trustedPendingLogin(config, readPendingLogin(pendingCachePath(config.cacheRoot, config.serverUrl)));
   const loginUrl = isActivePendingLogin(pendingDocument) ? pendingDocument.login_url : null;
   const assistantHint = preAuthAssistantHint(loginUrl);
   return {

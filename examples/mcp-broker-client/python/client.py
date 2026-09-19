@@ -1,10 +1,12 @@
 import asyncio
 import hashlib
+import ipaddress
 import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote, urlparse
 
 import httpx
 
@@ -14,6 +16,9 @@ DEFAULT_CHANNEL = "openagent_oauth"
 DEFAULT_SCOPE = "openid email profile"
 DEFAULT_CLIENT_NAME = "calle Login"
 MCP_PROTOCOL_VERSION = "2025-11-25"
+MAX_LOGIN_URL_LENGTH = 2048
+MAX_SESSION_ID_LENGTH = 512
+MAX_SESSION_SECRET_LENGTH = 1024
 
 
 class McpHttpError(Exception):
@@ -168,13 +173,108 @@ def token_is_usable(document: dict[str, Any] | None, min_ttl_seconds: float) -> 
     return (expires_at - datetime.now(timezone.utc)).total_seconds() > min_ttl_seconds
 
 
-def pending_is_valid(document: dict[str, Any] | None) -> bool:
-    if not document:
+def contains_controls(value: str) -> bool:
+    return any(ord(character) <= 0x1F or 0x7F <= ord(character) <= 0x9F for character in value)
+
+
+def required_session_string(document: dict[str, Any], field: str, max_length: int) -> str:
+    value = document.get(field)
+    if not isinstance(value, str) or not value.strip() or len(value) > max_length or contains_controls(value):
+        raise ValueError(f"Broker session has invalid {field}")
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError as error:
+        raise ValueError(f"Broker session has invalid {field}") from error
+    return value
+
+
+def is_loopback_host(hostname: str | None) -> bool:
+    if hostname == "localhost":
+        return True
+    if not hostname:
         return False
-    for field in ("session_id", "session_secret", "login_url", "status", "created_at"):
-        if not isinstance(document.get(field), str) or not document[field]:
-            return False
-    expires_at = parse_iso_date(document.get("expires_at"))
+    try:
+        return ipaddress.ip_address(hostname).is_loopback
+    except ValueError:
+        pass
+    parts = hostname.split(".")
+    return len(parts) == 4 and parts[0] == "127" and all(part.isdigit() and 0 <= int(part) <= 255 for part in parts)
+
+
+def canonical_host(value: str) -> str:
+    try:
+        raw_host = httpx.URL(value).raw_host.decode("ascii")
+    except (httpx.InvalidURL, UnicodeError, ValueError) as error:
+        raise ValueError("Broker URL has an invalid host") from error
+    try:
+        return ipaddress.ip_address(raw_host).compressed
+    except ValueError:
+        return raw_host
+
+
+def configured_origin(value: str) -> tuple[str, str, int | None]:
+    parsed = urlparse(value)
+    try:
+        port = parsed.port
+    except ValueError as error:
+        raise ValueError("Broker configuration has an invalid trusted origin") from error
+    if parsed.username or parsed.password or not parsed.hostname or (parsed.scheme != "https" and not (parsed.scheme == "http" and is_loopback_host(parsed.hostname))):
+        raise ValueError("Broker configuration has an invalid trusted origin")
+    normalized_port = port if port is not None else (443 if parsed.scheme == "https" else 80)
+    return (parsed.scheme, canonical_host(value), normalized_port)
+
+
+def validate_broker_configuration(config: dict[str, Any]) -> None:
+    configured_origin(config["broker_base_url"])
+    configured_origin(config["auth_base_url"])
+
+
+def validate_login_url(config: dict[str, Any], document: dict[str, Any]) -> str:
+    login_url = required_session_string(document, "login_url", MAX_LOGIN_URL_LENGTH)
+    parsed = urlparse(login_url)
+    try:
+        port = parsed.port
+    except ValueError as error:
+        raise ValueError("Broker session has invalid login_url") from error
+    trusted_origins = {configured_origin(config["broker_base_url"]), configured_origin(config["auth_base_url"])}
+    normalized_port = port if port is not None else (443 if parsed.scheme == "https" else 80)
+    origin = (parsed.scheme, canonical_host(login_url), normalized_port)
+    if parsed.username or parsed.password or not parsed.hostname or origin not in trusted_origins or (parsed.scheme != "https" and not (parsed.scheme == "http" and is_loopback_host(parsed.hostname))):
+        raise ValueError("Broker session has invalid login_url")
+    return login_url
+
+
+def normalize_pending_login(document: dict[str, Any] | None, config: dict[str, Any]) -> dict[str, Any] | None:
+    if not document:
+        return None
+    try:
+        session_id = required_session_string(document, "session_id", MAX_SESSION_ID_LENGTH)
+        if session_id in {".", ".."}:
+            raise ValueError("Broker session has invalid session_id")
+        session_secret = required_session_string(document, "session_secret", MAX_SESSION_SECRET_LENGTH)
+        if not all(0x21 <= ord(character) <= 0x7E for character in session_secret):
+            raise ValueError("Broker session has invalid session_secret")
+        status = required_session_string(document, "status", 128)
+        created_at = required_session_string(document, "created_at", 256)
+        return {
+            "session_id": session_id,
+            "session_secret": session_secret,
+            "login_url": validate_login_url(config, document),
+            "status": status.upper(),
+            "created_at": created_at,
+            "expires_at": document.get("expires_at") if isinstance(document.get("expires_at"), str) else None,
+            "error_message": document.get("error_message") if isinstance(document.get("error_message"), str) else None,
+            "poll_after_ms": int(document.get("poll_after_ms") or 0) or None,
+        }
+    except (TypeError, ValueError):
+        return None
+
+
+def pending_is_valid(document: dict[str, Any] | None, config: dict[str, Any]) -> bool:
+    pending = normalize_pending_login(document, config)
+    if not pending:
+        return False
+    expires_at = parse_iso_date(pending.get("expires_at"))
     if expires_at is None:
         return True
     if expires_at.tzinfo is None:
@@ -183,6 +283,7 @@ def pending_is_valid(document: dict[str, Any] | None) -> bool:
 
 
 async def create_broker_session(client: httpx.AsyncClient, config: dict[str, Any]) -> dict[str, Any]:
+    validate_broker_configuration(config)
     response = await client.post(
         f"{config['broker_base_url']}/api/v1/openagent-auth/sessions",
         headers={"X-Call-E-Integration": config["integration_header"]},
@@ -196,23 +297,32 @@ async def create_broker_session(client: httpx.AsyncClient, config: dict[str, Any
     )
     response.raise_for_status()
     payload = response.json()
-    return {
-        "session_id": str(payload["session_id"]),
-        "session_secret": str(payload["session_secret"]),
-        "login_url": str(payload["login_url"]),
-        "status": str(payload.get("status", "PENDING")).upper(),
+    if not isinstance(payload, dict):
+        raise RuntimeError("Broker response has an invalid session")
+    pending = normalize_pending_login({
+        "session_id": payload.get("session_id"),
+        "session_secret": payload.get("session_secret"),
+        "login_url": payload.get("login_url"),
+        "status": payload.get("status", "PENDING"),
         "created_at": datetime.now(timezone.utc).isoformat(),
         "expires_at": payload.get("expires_at"),
         "error_message": None,
         "poll_after_ms": int(payload.get("poll_after_ms") or 0) or None,
-    }
+    }, config)
+    if not pending:
+        raise RuntimeError("Broker response has an invalid session")
+    return pending
 
 
 async def get_broker_status(client: httpx.AsyncClient, config: dict[str, Any], pending: dict[str, Any]) -> dict[str, Any]:
+    validate_broker_configuration(config)
+    safe_pending = normalize_pending_login(pending, config)
+    if not safe_pending:
+        raise RuntimeError("Broker session has invalid cached data")
     response = await client.get(
-        f"{config['broker_base_url']}/api/v1/openagent-auth/sessions/{pending['session_id']}",
+        f"{config['broker_base_url']}/api/v1/openagent-auth/sessions/{quote(safe_pending['session_id'], safe='')}",
         headers={
-            "X-OpenAgent-Session-Secret": pending["session_secret"],
+            "X-OpenAgent-Session-Secret": safe_pending["session_secret"],
             "X-Call-E-Integration": config["integration_header"],
         },
     )
@@ -221,10 +331,14 @@ async def get_broker_status(client: httpx.AsyncClient, config: dict[str, Any], p
 
 
 async def exchange_broker_session(client: httpx.AsyncClient, config: dict[str, Any], pending: dict[str, Any]) -> dict[str, Any]:
+    validate_broker_configuration(config)
+    safe_pending = normalize_pending_login(pending, config)
+    if not safe_pending:
+        raise RuntimeError("Broker session has invalid cached data")
     response = await client.post(
-        f"{config['broker_base_url']}/api/v1/openagent-auth/sessions/{pending['session_id']}/exchange",
+        f"{config['broker_base_url']}/api/v1/openagent-auth/sessions/{quote(safe_pending['session_id'], safe='')}/exchange",
         headers={
-            "X-OpenAgent-Session-Secret": pending["session_secret"],
+            "X-OpenAgent-Session-Secret": safe_pending["session_secret"],
             "X-Call-E-Integration": config["integration_header"],
         },
     )
@@ -245,9 +359,10 @@ async def ensure_broker_token(config: dict[str, Any]) -> dict[str, Any]:
 
     timeout = httpx.Timeout(config["timeout_seconds"])
     async with httpx.AsyncClient(timeout=timeout) as client:
-        pending = read_json(pending_path)
-        if not pending_is_valid(pending):
-            if pending:
+        cached_pending = read_json(pending_path)
+        pending = normalize_pending_login(cached_pending, config)
+        if not pending_is_valid(pending, config):
+            if cached_pending:
                 remove_file(pending_path)
             pending = await create_broker_session(client, config)
             write_private_json(pending_path, pending)
@@ -258,13 +373,17 @@ async def ensure_broker_token(config: dict[str, Any]) -> dict[str, Any]:
         deadline = asyncio.get_running_loop().time() + config["poll_timeout_seconds"]
         while asyncio.get_running_loop().time() < deadline:
             status_payload = await get_broker_status(client, config, pending)
-            pending = {
+            pending = normalize_pending_login({
                 **pending,
+                **status_payload,
                 "status": str(status_payload.get("status", pending.get("status", "PENDING"))).upper(),
                 "expires_at": status_payload.get("expires_at", pending.get("expires_at")),
                 "error_message": status_payload.get("error_message"),
                 "poll_after_ms": int(status_payload.get("poll_after_ms") or pending.get("poll_after_ms") or 1),
-            }
+            }, config)
+            if not pending:
+                remove_file(pending_path)
+                raise RuntimeError("Broker response has an invalid session")
             write_private_json(pending_path, pending)
             emit("auth_poll", pending_status=pending["status"])
 

@@ -1,6 +1,11 @@
 import type { JsonObject, PendingLoginDocument, TokenDocument } from "./cache.js";
 
-export interface BrokerRequestConfig {
+export interface BrokerOriginPolicy {
+  brokerBaseUrl?: string;
+  authBaseUrl?: string;
+}
+
+export interface BrokerRequestConfig extends BrokerOriginPolicy {
   brokerBaseUrl: string;
   timeoutSeconds: number;
   integrationHeader?: string;
@@ -85,7 +90,10 @@ export function exchangeBrokerSession(
   options?: BrokerRequestOptions,
 ): Promise<TokenDocument>;
 
-export function normalizePendingSession(sessionPayload: BrokerSessionPayload): PendingLoginDocument;
+export function normalizePendingSession(
+  sessionPayload: BrokerSessionPayload,
+  originPolicy?: BrokerOriginPolicy,
+): PendingLoginDocument;
 
 export function ensurePendingLogin(
   config: BrokerLoginConfig,
