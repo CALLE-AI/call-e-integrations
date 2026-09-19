@@ -4,8 +4,10 @@ This is the canonical reference for `calle` commands, options, defaults, and
 parameter examples. When changing CLI commands or options, update this document
 and any synchronized command guidance in the same change.
 
-Successful command stdout is JSON except `--help`, `-h`, `--version`, and `-V`.
-Some top-level or local failures may print plain stderr.
+Command stdout is JSON except `--help`, `-h`, `--version`, and `-V`. This holds
+for failures too: every error leaves through the same JSON envelope on stdout,
+with a one-line summary on stderr and a non-zero exit code. See
+[Error Envelopes](#error-envelopes).
 
 ## Selecting the CLI Entry Point
 
@@ -120,6 +122,95 @@ the latest `get_call_run` object from `status_result.structuredContent`. When
 than the latest call state. See the
 [MCP tool result envelope](../../../docs/mcp/openagent-oauth.md#tool-result-envelope)
 for the direct protocol shape and SDK field-name differences.
+
+## Error Envelopes
+
+Every failure, including argument errors, transport failures, and upstream HTTP
+errors, writes one JSON object to stdout and exits non-zero:
+
+```json
+{
+  "ok": false,
+  "server_url": "https://example.test/mcp/openagent_oauth",
+  "error": {
+    "code": "broker_unavailable",
+    "message": "HTTP 502 from https://example.test/api/v1/openagent-auth/sessions. The CALL-E login service is unavailable. This is not a local configuration problem, so reinstalling the CLI will not help. Retry later, or use the Developer API with a dashboard API key, which does not depend on brokered login.",
+    "status_code": 502,
+    "remote_error": {
+      "code": "oauth_register_failed",
+      "message": "Failed to register an OAuth client."
+    }
+  }
+}
+```
+
+`error.message` is composed entirely by the CLI — the status code, our own request
+URL, and a fixed hint. The service's wording appears only under `remote_error`.
+
+Follow-ups are arrays. `login_argv`, `help_argv` and `next_argv` are the only
+executable forms; the matching `*_command` strings exist for display and must
+never be executed, split, or evaluated.
+
+Stable fields:
+
+| Field | Always present | Meaning |
+| --- | --- | --- |
+| `ok` | yes | `false` for every error envelope. |
+| `server_url` | yes | Configured MCP server URL, or `null` when configuration could not be resolved. |
+| `error.code` | yes | A code owned by the CLI, from the table below. Branch on this. |
+| `error.message` | yes | A summary **authored by the CLI**. Never contains upstream text. The same text is written to stderr. |
+| `error.status_code` | HTTP and MCP errors | Upstream HTTP status, or `null`. |
+| `error.transport` | `true` only when no usable response was received | The request failed at the network layer: DNS, connection, TLS, a timeout, or a body stream that failed after the headers arrived. Absent otherwise — an unrelated local error is never described as a network condition. |
+| `error.phase` | transport errors | `connect` when nothing arrived, `body` when the response was cut off while being read. The two call for different retry decisions. Present on both plain and `call`-stage transport failures. |
+| `error.cause_code` | transport errors, when known | `timeout`, or the Node.js error code such as `ENOTFOUND` or `ECONNREFUSED`. |
+| `error.remote_error` | when the service said something readable | Exactly `{ code?, message? }` and never any other key, from the remote response — an HTTP body, a JSON-RPC error, a call-stage result, or a clarifying question — after sanitization. **Untrusted, informational only.** |
+| `error.error_code`, `error.status` | `call` stage failures | Sanitized remote call-outcome fields (for example `EXECUTION_ACK_LOST`). |
+| `stage`, `call_started`, `retry_safe`, `recovery_id`, `next_argv` | `call` stage failures | Which stage failed and whether it is safe to retry. When `retry_safe` is `false`, use the returned `next_argv` array as the next request's `argv` instead of starting a new call. The paired `next_command` string is display-only; see [Selecting the CLI Entry Point](#selecting-the-cli-entry-point). |
+| `help_argv` | `invalid_arguments` only | The `--help` argv array for the command that failed. The paired `help_command` string is display-only and must never be executed. |
+
+`error.code` values — this table is the complete set, and the test suite fails
+if the CLI can emit a code that is not listed here:
+
+| Code | Exit | When |
+| --- | --- | --- |
+| `invalid_arguments` | 2 | Unknown command, missing or invalid option. `help_argv` is set. |
+| `auth_required` | 1 | No usable token, or the server rejected the token. Run `auth login`. |
+| `broker_unavailable` | 1 | The brokered-login service returned a 5xx. Not a local problem. |
+| `http_error` | 1 | Any other non-success HTTP status from a CLI-side request. |
+| `transport_error` | 1 | No usable response: DNS, connection, TLS, a reset while reading the body, or a timeout outside a call stage. `transport: true`, with `phase` naming where it failed. Inside a `call` stage it also carries `stage`, `call_started`, and `retry_safe`. |
+| `invalid_response` | 1 | A successful HTTP or MCP status whose body was not the expected JSON object or a JSON-RPC 2.0 response correlated to the exact request with exactly one valid outcome. The body is remote text, so it appears only under `remote_error`. |
+| `broker_login_failed` | 1 | Brokered authorization reached a terminal failed/expired/exchanged state. Sanitized service detail is under `remote_error`. |
+| `broker_login_timeout` | 1 | The overall brokered-authorization wait expired while the broker was still pending. This is not a network transport error. |
+| `mcp_error` | 1 | The MCP server returned a JSON-RPC error. Its message is under `remote_error`. |
+| `plan_not_ready` | 1 | `call start`: the plan needs more information. The clarifying question is under `remote_error.message`. |
+| `plan_call_invalid_response` | 1 | `call start`: `plan_call` succeeded but returned no usable `plan_id` / `confirm_token`. |
+| `run_call_missing_run_id` | 1 | `call start` / `call run`: execution may have been accepted without a stable `run_id`; a `recovery_id` and `next_argv` are returned. |
+| `recovery_not_found` | 1 | `call recover`: no local recovery record for that id. |
+| `recovery_storage_error` | 1 | `call recover`: the local recovery record could not be read or written. |
+| `plan_call_error` | 1 | The `plan_call` stage failed with a non-transport error. |
+| `plan_call_timeout` | 1 | The `plan_call` stage received no response in time. `transport: true`. |
+| `run_call_error` | 1 | The `run_call` stage failed with a non-transport error. |
+| `run_call_timeout` | 1 | The `run_call` stage received no response in time. `transport: true`. |
+| `get_call_run_error` | 1 | The `get_call_run` stage failed with a non-transport error. |
+| `get_call_run_timeout` | 1 | The `get_call_run` stage received no response in time. `transport: true`. |
+| `internal_error` | 1 | An unexpected local exception inside the CLI. Not a network condition. |
+
+`error.code` is never taken from a remote response, and `error.message` never
+contains remote text. Remote text — HTTP bodies, broker terminal messages,
+JSON-RPC error messages, clarifying questions, call-outcome fields — appears only under
+`error.remote_error` (and the sanitized `error_code` / `status` stage fields),
+after one shared sanitizer: only `code` and `message` are read, every other
+field is dropped unread; terminal control sequences, embedded string-control
+payloads, and Unicode line/paragraph separators are removed *before*
+credential detection so a control code cannot split a secret into two
+innocent-looking halves; credential-shaped substrings are redacted; codes must
+match `-?[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}` (numeric codes only as safe integers)
+or are dropped. If terminal-accurate sequence removal and control-byte removal
+produce different text, the ambiguous remote message is withheld as `[redacted]`;
+mixed sequences therefore cannot evade both global readings. Messages are limited
+to 500 characters. Telemetry reports the
+same `error.code` as the envelope, and `transport` is a property of the code, so
+the two cannot disagree.
 
 ## Finding Command Help
 

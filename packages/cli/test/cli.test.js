@@ -370,6 +370,913 @@ test("auth login start-only returns authorization hint without polling", async (
   assert.doesNotMatch(result.stdout, /secret-1/);
 });
 
+test("auth login surfaces the upstream error body when brokered login registration fails", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-broker-5xx");
+  const fetchImpl = async (url, init) => {
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+      return new Response(
+        JSON.stringify({
+          error: "oauth_register_failed",
+          message: "Failed to register an OAuth client. err_type=HTTPStatusError",
+        }),
+        { status: 502, headers: { "content-type": "application/json" } }
+      );
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+
+  const result = await run(
+    [
+      "auth",
+      "login",
+      "--start-only",
+      "--no-browser-open",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.status_code, 502);
+  assert.equal(payload.error.code, "broker_unavailable", "top-level code stays CLI-owned");
+  assert.deepEqual(payload.error.remote_error, {
+    code: "oauth_register_failed",
+    message: "Failed to register an OAuth client. err_type=HTTPStatusError",
+  });
+  // The upstream wording is available, but only under remote_error. The summary and stderr
+  // are authored by the CLI.
+  assert.match(payload.error.remote_error.message, /Failed to register an OAuth client/);
+  assert.doesNotMatch(payload.error.message, /Failed to register an OAuth client/);
+  assert.match(payload.error.message, /^HTTP 502 from https:\/\/mcp\.example\/api\/v1\/openagent-auth\/sessions\./);
+  assert.match(payload.error.message, /login service is unavailable/);
+  assert.match(payload.error.message, /dashboard API key/);
+  assert.doesNotMatch(result.stderr, /Failed to register an OAuth client/);
+  assert.match(result.stderr, /login service is unavailable/);
+});
+
+test("auth login keeps a non-JSON upstream error body readable and bounded", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-broker-html");
+  const body = `<html><body>${"gateway ".repeat(200)}</body></html>`;
+  const fetchImpl = async (url, init) => {
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+      return new Response(body, { status: 503, headers: { "content-type": "text/html" } });
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+
+  const result = await run(
+    [
+      "auth",
+      "login",
+      "--start-only",
+      "--no-browser-open",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.status_code, 503);
+  assert.equal(payload.error.code, "broker_unavailable");
+  assert.ok(payload.error.remote_error.message.length <= 500);
+  assert.equal(payload.error.remote_error.code, undefined);
+});
+
+function brokerFailure(status, body, contentType = "application/json") {
+  return async (url, init) => {
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+      return new Response(typeof body === "string" ? body : JSON.stringify(body), {
+        status,
+        headers: { "content-type": contentType },
+      });
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+}
+
+const LOGIN_ARGS = [
+  "auth",
+  "login",
+  "--start-only",
+  "--no-browser-open",
+  "--base-url",
+  "https://mcp.example",
+];
+
+const CONTROL_CHARS = /[\u0000-\u001f\u007f-\u009f]/u;
+
+test("auth login never lets an upstream body impersonate a local error code", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-forged-code");
+  const result = await run(
+    [...LOGIN_ARGS, "--cache-root", cacheRoot],
+    { fetchImpl: brokerFailure(502, { error: "auth_required", message: "please log in again" }) }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "broker_unavailable");
+  assert.equal(payload.status, undefined, "must not look like a login_required response");
+  assert.equal(payload.assistant_hint, undefined);
+  assert.equal(payload.login_url, undefined);
+  assert.equal(payload.error.remote_error.code, "auth_required");
+  assert.equal(payload.error.remote_error.message, "please log in again");
+});
+
+test("auth login bounds and sanitizes hostile upstream JSON", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-hostile");
+  const longMessage = "x".repeat(20_000);
+  const hostile = {
+    error: {
+      code: "bad code\u001b[31m",
+      message: `line one\r\ninjected line\u001b[2J\u001b[H${longMessage}`,
+      access_token: "sk_live_SUPERSECRET_DO_NOT_PRINT",
+    },
+    token: "tok_ALSO_SECRET",
+    refresh_token: "rt_SECRET_TOO",
+  };
+  const result = await run(
+    [...LOGIN_ARGS, "--cache-root", cacheRoot],
+    { fetchImpl: brokerFailure(502, hostile) }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "broker_unavailable");
+  assert.equal(payload.error.remote_error.code, undefined, "unsafe code is dropped, not sanitized into something plausible");
+  assert.ok(payload.error.remote_error.message.length <= 500);
+  assert.ok(payload.error.message.length < 1200);
+  assert.doesNotMatch(payload.error.remote_error.message, CONTROL_CHARS);
+  assert.doesNotMatch(payload.error.message, CONTROL_CHARS);
+  assert.doesNotMatch(result.stderr, /\u001b|\r/u);
+  for (const secret of ["SUPERSECRET", "tok_ALSO_SECRET", "rt_SECRET_TOO", "access_token", "refresh_token"]) {
+    assert.doesNotMatch(result.stdout, new RegExp(secret));
+    assert.doesNotMatch(result.stderr, new RegExp(secret));
+  }
+});
+
+test("auth login keeps a terminal broker failure out of the trusted summary", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-terminal-failure");
+  const marker = `REMOTE-TEXT-MARKER access_token=abcd1234${String.fromCharCode(27)}[31mefgh5678`;
+  const fetchImpl = async (url, init) => {
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+      return jsonResponse({
+        session_id: "session-failed",
+        session_secret: "secret-failed",
+        login_url: "https://mcp.example/start",
+        status: "PENDING",
+        poll_after_ms: 1,
+      });
+    }
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-failed") && init?.method === "GET") {
+      return jsonResponse({ status: "FAILED", error_message: marker });
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+
+  const result = await run(
+    ["auth", "login", "--no-browser-open", "--base-url", "https://mcp.example", "--cache-root", cacheRoot],
+    { fetchImpl },
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "broker_login_failed");
+  assert.equal(payload.error.message, "Brokered login failed.");
+  assert.equal(payload.error.remote_error.code, "FAILED");
+  assert.equal(payload.error.remote_error.message, "[redacted]");
+  assert.doesNotMatch(payload.error.message, /REMOTE-TEXT-MARKER|abcd1234|efgh5678/u);
+  assert.doesNotMatch(result.stderr, /REMOTE-TEXT-MARKER|abcd1234|efgh5678/u);
+});
+
+test("auth login reports the overall authorization wait as a non-transport timeout", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-wait-timeout");
+  const fetchImpl = async (url, init) => {
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+      return jsonResponse({
+        session_id: "session-pending",
+        session_secret: "secret-pending",
+        login_url: "https://mcp.example/start",
+        status: "PENDING",
+        poll_after_ms: 1,
+      });
+    }
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-pending") && init?.method === "GET") {
+      return jsonResponse({ status: "PENDING", poll_after_ms: 1 });
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+
+  const result = await run(
+    [
+      "auth", "login", "--no-browser-open", "--poll-timeout-seconds", "0.0001",
+      "--base-url", "https://mcp.example", "--cache-root", cacheRoot,
+    ],
+    { fetchImpl, sleepImpl: async () => {} },
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "broker_login_timeout");
+  assert.equal(payload.error.message, "Timed out waiting for brokered login authorization.");
+  assert.equal(payload.error.transport, undefined, "the broker kept answering; this is not a network failure");
+  assert.equal(payload.error.remote_error, undefined);
+});
+
+test("auth login reads a nested upstream error object and drops everything else", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-nested");
+  const result = await run(
+    [...LOGIN_ARGS, "--cache-root", cacheRoot],
+    {
+      fetchImpl: brokerFailure(500, {
+        error: { code: "nested.code-1", message: "nested message", details: { internal: "trace-abc" } },
+        request_id: "req_123",
+      }),
+    }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.deepEqual(payload.error.remote_error, { code: "nested.code-1", message: "nested message" });
+  assert.doesNotMatch(result.stdout, /trace-abc|req_123|details|request_id/u);
+});
+
+test("auth login returns a transport_error envelope when fetch rejects", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-fetch-rejected");
+  const fetchImpl = async () => {
+    const error = new TypeError("fetch failed");
+    error.cause = { code: "ENOTFOUND", syscall: "getaddrinfo", hostname: "mcp.example" };
+    throw error;
+  };
+  const result = await run([...LOGIN_ARGS, "--cache-root", cacheRoot], { fetchImpl });
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "transport_error");
+  assert.equal(payload.error.transport, true);
+  assert.equal(payload.error.cause_code, "ENOTFOUND");
+  assert.equal(payload.help_command, undefined);
+  // Locally authored: names our request and the system error code, never the runtime's text.
+  assert.equal(payload.error.phase, "connect", "nothing arrived at all");
+  assert.match(
+    payload.error.message,
+    /^Request failed before a response was received from https:\/\/mcp\.example\/api\/v1\/openagent-auth\/sessions\. \(ENOTFOUND\)$/u
+  );
+  assert.ok(result.stderr.length < 500);
+  // The test harness terminates each stderr write with a newline; everything else must be clean.
+  assert.doesNotMatch(result.stderr.trimEnd(), CONTROL_CHARS);
+});
+
+test("auth login classifies a request timeout as a transport_error", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-timeout");
+  const fetchImpl = async () => {
+    const aborted = new Error("aborted");
+    aborted.name = "AbortError";
+    throw aborted;
+  };
+  const result = await run([...LOGIN_ARGS, "--cache-root", cacheRoot], { fetchImpl });
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "transport_error");
+  assert.equal(payload.error.transport, true);
+  assert.equal(payload.error.cause_code, "timeout");
+  assert.match(payload.error.message, /^Request timed out waiting for https:\/\/mcp\.example\/api\/v1\/openagent-auth\/sessions\./u);
+});
+
+test("an unrelated local TypeError is internal_error, never transport_error", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-login-local-typeerror");
+  const fetchImpl = async (url, init) => {
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+      return jsonResponse(
+        {
+          session_id: "session-1",
+          session_secret: "secret-1",
+          login_url: "https://mcp.example/openagent-auth/sessions/session-1/start",
+          status: "PENDING",
+          poll_after_ms: 1,
+          expires_at: "2030-01-01T00:00:00Z",
+        },
+        { status: 201 }
+      );
+    }
+    if (String(url).endsWith("/api/v1/openagent-auth/sessions/session-1") && init?.method === "GET") {
+      return jsonResponse({ status: "PENDING", expires_at: "2030-01-01T00:00:00Z" });
+    }
+    throw new Error(`unexpected request: ${init?.method} ${url}`);
+  };
+  // A bug inside the CLI's own polling loop, not a network condition.
+  const sleepImpl = async () => {
+    throw new TypeError("Cannot read properties of undefined (reading 'x')");
+  };
+
+  const result = await run(
+    ["auth", "login", "--no-browser-open", "--base-url", "https://mcp.example", "--cache-root", cacheRoot],
+    { fetchImpl, sleepImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "internal_error");
+  assert.equal(payload.error.transport, undefined);
+  assert.equal(payload.error.cause_code, undefined);
+  assert.match(payload.error.message, /Cannot read properties/u);
+});
+
+function mcpFixture({ serverUrl, onToolsList, onToolsCall }) {
+  return async (url, init) => {
+    assert.equal(String(url), serverUrl);
+    const payload = JSON.parse(init.body);
+    if (payload.method === "initialize") {
+      return jsonRpcResponse({ jsonrpc: "2.0", id: payload.id, result: {} }, { headers: { "mcp-session-id": "sess-h" } });
+    }
+    if (payload.method === "notifications/initialized") {
+      return jsonRpcResponse({});
+    }
+    if (payload.method === "tools/list" && onToolsList) {
+      return onToolsList(payload);
+    }
+    if (payload.method === "tools/call" && onToolsCall) {
+      return onToolsCall(payload);
+    }
+    throw new Error(`unexpected method: ${payload.method}`);
+  };
+}
+
+const ESC_CHAR = String.fromCharCode(27);
+const HOSTILE_REMOTE_TEXT =
+  `line one\r\ninjected${ESC_CHAR}[2J${ESC_CHAR}[H bearer abcdefghijklmnopqrstuvwxyz0123 ` +
+  `access_token=sk_live_ABCDEFGHIJKLMNOPQRST ${"z".repeat(20_000)}`;
+
+test("mcp tools keeps a hostile JSON-RPC error out of the summary and bounds it under remote_error", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-mcp-tools-hostile");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl, "tool-token");
+  const fetchImpl = mcpFixture({
+    serverUrl,
+    onToolsList: (payload) => jsonRpcResponse({
+      jsonrpc: "2.0",
+      id: payload.id,
+      error: { code: -32000, message: HOSTILE_REMOTE_TEXT, data: { refresh_token: "rt_SECRET_ABCDEFGH" } },
+    }),
+  });
+
+  const result = await run(["mcp", "tools", "--base-url", "https://mcp.example", "--cache-root", cacheRoot], { fetchImpl });
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "mcp_error");
+  assert.equal(payload.error.message, "Remote MCP error for tools/list");
+  assert.ok(payload.error.remote_error.message.length <= 500);
+  assert.equal(payload.error.remote_error.code, "-32000");
+  assert.doesNotMatch(payload.error.remote_error.message, CONTROL_CHARS);
+  for (const secret of ["sk_live_", "abcdefghijklmnopqrstuvwxyz0123", "rt_SECRET", "refresh_token"]) {
+    assert.doesNotMatch(result.stdout, new RegExp(secret));
+    assert.doesNotMatch(result.stderr, new RegExp(secret));
+  }
+  assert.doesNotMatch(result.stderr.trimEnd(), CONTROL_CHARS);
+  assert.ok(result.stderr.length < 300);
+});
+
+test("mcp tools withholds mixed terminal-sequence text from every public error surface", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-mcp-tools-mixed-controls");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const CSI8 = String.fromCharCode(0x9b);
+  const ST8 = String.fromCharCode(0x9c);
+  const OSC8 = String.fromCharCode(0x9d);
+  const DCS8 = String.fromCharCode(0x90);
+  const mixedMessage =
+    `access_to${OSC8}junk${ST8}k${CSI8}en=abcd1234efgh5678 ` +
+    `access_to${DCS8}junk${ST8}k${CSI8}en=ijkl9012mnop3456`;
+  writeToken(cacheRoot, serverUrl, "tool-token");
+  const fetchImpl = mcpFixture({
+    serverUrl,
+    onToolsList: (payload) => jsonRpcResponse({
+      jsonrpc: "2.0",
+      id: payload.id,
+      error: { code: -32000, message: mixedMessage },
+    }),
+  });
+
+  const result = await run(
+    ["mcp", "tools", "--base-url", "https://mcp.example", "--cache-root", cacheRoot],
+    { fetchImpl },
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "mcp_error");
+  assert.equal(payload.error.remote_error.message, "[redacted]");
+  for (const fragment of ["abcd1234", "efgh5678", "ijkl9012", "mnop3456"]) {
+    assert.equal(result.stdout.includes(fragment), false);
+    assert.equal(result.stderr.includes(fragment), false);
+  }
+  for (const sequenceByte of [CSI8, ST8, OSC8, DCS8]) {
+    assert.equal(result.stdout.includes(sequenceByte), false);
+    assert.equal(result.stderr.includes(sequenceByte), false);
+  }
+  assert.doesNotMatch(result.stderr.trimEnd(), CONTROL_CHARS);
+});
+
+test("mcp tools rejects a successful status with a malformed JSON-RPC body", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-mcp-invalid-response");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const marker = "REMOTE-TEXT-MARKER access_token=abcd1234efgh5678";
+  writeToken(cacheRoot, serverUrl, "tool-token");
+  const fetchImpl = mcpFixture({
+    serverUrl,
+    onToolsList: () => new Response(marker, { status: 200, headers: { "content-type": "text/plain" } }),
+  });
+
+  const result = await run(
+    ["mcp", "tools", "--base-url", "https://mcp.example", "--cache-root", cacheRoot],
+    { fetchImpl },
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "invalid_response");
+  assert.equal(payload.error.message, "MCP response was invalid for tools/list");
+  assert.equal(payload.error.status_code, 200);
+  assert.doesNotMatch(payload.error.message, /REMOTE-TEXT-MARKER|abcd1234|efgh5678/u);
+  assert.doesNotMatch(result.stderr, /REMOTE-TEXT-MARKER|abcd1234|efgh5678/u);
+  assert.match(payload.error.remote_error.message, /\[redacted\]/u);
+});
+
+test("mcp call applies the same boundary to a tool-call error", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-mcp-call-hostile");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl, "tool-token");
+  const fetchImpl = mcpFixture({
+    serverUrl,
+    onToolsCall: (payload) => jsonRpcResponse({ jsonrpc: "2.0", id: payload.id, error: { code: -32601, message: HOSTILE_REMOTE_TEXT } }),
+  });
+
+  const result = await run(
+    ["mcp", "call", "get_call_run", "--args-json", '{"run_id":"run_1"}', "--base-url", "https://mcp.example", "--cache-root", cacheRoot],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "mcp_error");
+  assert.equal(payload.error.message, "Remote MCP error for tools/call");
+  assert.ok(payload.error.remote_error.message.length <= 500);
+  assert.doesNotMatch(result.stdout, /sk_live_|abcdefghijklmnopqrstuvwxyz0123/u);
+  assert.doesNotMatch(result.stderr, /sk_live_|abcdefghijklmnopqrstuvwxyz0123/u);
+  assert.doesNotMatch(result.stderr.trimEnd(), CONTROL_CHARS);
+});
+
+test("call start keeps a hostile clarifying question out of the plan_not_ready summary", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-call-start-hostile-question");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl, "tool-token");
+  const fetchImpl = mcpFixture({
+    serverUrl,
+    onToolsCall: (payload) => jsonRpcResponse({
+      jsonrpc: "2.0",
+      id: payload.id,
+      result: { structuredContent: { ready_to_run: false, clarifying_questions: [HOSTILE_REMOTE_TEXT] } },
+    }),
+  });
+
+  const result = await run(
+    ["call", "start", "--to-phone", "+15551234567", "--goal", "Confirm appointment", "--base-url", "https://mcp.example", "--cache-root", cacheRoot],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.stage, "plan_call");
+  assert.equal(payload.error.code, "plan_not_ready");
+  assert.match(payload.error.message, /^Call plan needs more information before it can run\./u);
+  assert.doesNotMatch(payload.error.message, /injected|zzzz/u);
+  assert.ok(payload.error.remote_error.message.length <= 500);
+  // The question carries both control sequences and credentials, so the readings disagree and
+  // the whole string is withheld rather than partially shown.
+  assert.equal(payload.error.remote_error.message, "[redacted]");
+  assert.doesNotMatch(payload.error.remote_error.message, CONTROL_CHARS);
+  assert.doesNotMatch(result.stdout, /sk_live_|abcdefghijklmnopqrstuvwxyz0123/u);
+  assert.doesNotMatch(result.stderr, /injected|sk_live_/u);
+});
+
+test("telemetry reports the same error code as the envelope for broker and transport failures", async () => {
+  const brokerRoot = makeTempRoot("calle-cli-telemetry-broker");
+  const brokerEvents = [];
+  await run(
+    [...LOGIN_ARGS, "--cache-root", brokerRoot],
+    {
+      fetchImpl: brokerFailure(502, { error: "oauth_register_failed", message: "x" }),
+      env: { CALLE_TELEMETRY: "1" },
+      telemetryFetchImpl: captureTelemetry(brokerEvents),
+    }
+  );
+  const brokerFailed = brokerEvents.find((event) => event.payload.event === "auth_login_local_failed");
+  assert.ok(brokerFailed, "auth_login_local_failed telemetry was emitted");
+  assert.equal(brokerFailed.payload.properties.error_code, "broker_unavailable");
+
+  const mcpRoot = makeTempRoot("calle-cli-telemetry-transport");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(mcpRoot, serverUrl, "tool-token");
+  const mcpEvents = [];
+  const dns = new TypeError("fetch failed");
+  dns.cause = { code: "ECONNREFUSED" };
+  const result = await run(
+    ["mcp", "tools", "--base-url", "https://mcp.example", "--cache-root", mcpRoot],
+    { fetchImpl: async () => { throw dns; }, env: { CALLE_TELEMETRY: "1" }, telemetryFetchImpl: captureTelemetry(mcpEvents) }
+  );
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.error.code, "transport_error");
+  assert.equal(payload.error.cause_code, "ECONNREFUSED");
+  const checked = mcpEvents.find((event) => event.payload.event === "mcp_tools_checked" && event.payload.properties.outcome === "failure");
+  assert.ok(checked, "mcp_tools_checked failure telemetry was emitted");
+  assert.equal(checked.payload.properties.error_code, "transport_error");
+});
+
+test("every error code the CLI can emit is documented, and nothing undocumented is emitted", async () => {
+  const { ERROR_CODES } = await import("../lib/cli.js");
+  const reference = fs.readFileSync(new URL("../docs/cli-reference.md", import.meta.url), "utf8");
+  const section = reference.split("## Error Envelopes")[1]?.split(/\n## /u)[0] ?? "";
+  const documented = new Set([...section.matchAll(/^\| `([a-z_]+)` \| \d /gmu)].map((m) => m[1]));
+  const emitted = new Set(Object.keys(ERROR_CODES));
+
+  assert.deepEqual([...documented].sort(), [...emitted].sort());
+  for (const [code, meta] of Object.entries(ERROR_CODES)) {
+    assert.match(section, new RegExp(`^\\| \`${code}\` \\| ${meta.exitCode} `, "mu"), `exit code documented for ${code}`);
+  }
+});
+
+test("the error-envelope docs never tell an agent to execute a command string", () => {
+  const reference = fs.readFileSync(new URL("../docs/cli-reference.md", import.meta.url), "utf8");
+  const section = reference.split("## Error Envelopes")[1]?.split(/\n## /u)[0] ?? "";
+  assert.ok(section.length > 0, "the Error Envelopes section exists");
+
+  // The canonical page states that only the *_argv arrays are executable and the paired
+  // *_command strings are display-only. This section must not contradict it.
+  assert.match(section, /`login_argv`, `help_argv` and `next_argv` are the only\nexecutable forms/u);
+  assert.match(section, /`next_argv` array as the next request's `argv`/u);
+  assert.match(section, /`help_argv` \| `invalid_arguments` only/u);
+
+  for (const line of section.split("\n")) {
+    if (!/`(next|help|login)_command`/u.test(line)) continue;
+    assert.match(
+      line,
+      /display-only|never be executed/u,
+      `a *_command mention must mark it display-only: ${line.trim().slice(0, 120)}`,
+    );
+    assert.doesNotMatch(
+      line,
+      /\b(run|execute|invoke) the returned `\w+_command`|directly runnable/u,
+      `the docs must not instruct executing a command string: ${line.trim().slice(0, 120)}`,
+    );
+  }
+});
+
+function bodyFailingResponse(error) {
+  return {
+    ok: true,
+    status: 200,
+    statusText: "OK",
+    headers: new Headers({ "mcp-session-id": "sess-body" }),
+    async text() {
+      throw error;
+    },
+  };
+}
+
+test("a body read that fails during a call stage is a typed transport outcome with stage context", async () => {
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const startArgs = ["call", "start", "--to-phone", "+15551234567", "--goal", "Confirm appointment", "--base-url", "https://mcp.example"];
+
+  const abortRoot = makeTempRoot("calle-cli-stage-body-abort");
+  writeToken(abortRoot, serverUrl, "tool-token");
+  const aborted = new Error("aborted");
+  aborted.name = "AbortError";
+  const abortResult = await run([...startArgs, "--cache-root", abortRoot], {
+    fetchImpl: mcpFixture({ serverUrl, onToolsCall: () => bodyFailingResponse(aborted) }),
+  });
+  const abortPayload = JSON.parse(abortResult.stdout);
+  assert.equal(abortResult.code, 1);
+  assert.equal(abortPayload.stage, "plan_call");
+  assert.equal(abortPayload.retry_safe, true);
+  assert.equal(abortPayload.error.code, "plan_call_timeout");
+  assert.equal(abortPayload.error.transport, true);
+  assert.equal(abortPayload.error.cause_code, "timeout");
+  assert.equal(abortPayload.error.phase, "body");
+  assert.match(
+    abortPayload.error.message,
+    /^plan_call timed out while the response was being read; the request had already been accepted\.$/u
+  );
+
+  const resetRoot = makeTempRoot("calle-cli-stage-body-reset");
+  writeToken(resetRoot, serverUrl, "tool-token");
+  const reset = new Error("socket hang up");
+  reset.code = "ECONNRESET";
+  const resetResult = await run([...startArgs, "--cache-root", resetRoot], {
+    fetchImpl: mcpFixture({ serverUrl, onToolsCall: () => bodyFailingResponse(reset) }),
+  });
+  const resetPayload = JSON.parse(resetResult.stdout);
+  assert.equal(resetResult.code, 1);
+  assert.equal(resetPayload.stage, "plan_call");
+  assert.equal(resetPayload.call_started, false);
+  assert.equal(resetPayload.retry_safe, true);
+  assert.equal(resetPayload.error.code, "transport_error", "a rejected transport at a stage is transport_error, not <stage>_error");
+  assert.equal(resetPayload.error.transport, true);
+  assert.equal(resetPayload.error.cause_code, "ECONNRESET");
+  assert.equal(resetPayload.error.phase, "body");
+  assert.match(
+    resetPayload.error.message,
+    /^plan_call failed while the response was being read; the request had already been accepted\.$/u
+  );
+});
+
+test("a call-stage body failure keeps its phase and does not claim nothing was received", async () => {
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const startArgs = ["call", "start", "--to-phone", "+15551234567", "--goal", "g", "--base-url", "https://mcp.example"];
+
+  const bodyFailures = [
+    {
+      name: "timeout while reading the body",
+      error: Object.assign(new Error("aborted"), { name: "AbortError" }),
+      code: "plan_call_timeout",
+      causeCode: "timeout",
+      summary: /^plan_call timed out while the response was being read; the request had already been accepted\.$/u,
+    },
+    {
+      name: "reset while reading the body",
+      error: Object.assign(new Error("socket hang up"), { code: "ECONNRESET" }),
+      code: "transport_error",
+      causeCode: "ECONNRESET",
+      summary: /^plan_call failed while the response was being read; the request had already been accepted\.$/u,
+    },
+  ];
+
+  for (const failure of bodyFailures) {
+    const cacheRoot = makeTempRoot("calle-cli-stage-phase");
+    writeToken(cacheRoot, serverUrl, "tool-token");
+    const result = await run([...startArgs, "--cache-root", cacheRoot], {
+      fetchImpl: mcpFixture({ serverUrl, onToolsCall: () => bodyFailingResponse(failure.error) }),
+    });
+    const payload = JSON.parse(result.stdout);
+
+    assert.equal(payload.error.code, failure.code, failure.name);
+    assert.equal(payload.error.transport, true, failure.name);
+    assert.equal(payload.error.phase, "body", `${failure.name}: the phase must survive the stage wrapper`);
+    assert.equal(payload.error.cause_code, failure.causeCode, failure.name);
+    assert.match(payload.error.message, failure.summary, failure.name);
+    assert.doesNotMatch(payload.error.message, /before a response was received/u, failure.name);
+    assert.equal(payload.stage, "plan_call");
+  }
+
+  // A connect-phase failure at the same stage must still say the request never landed.
+  const cacheRoot = makeTempRoot("calle-cli-stage-phase-connect");
+  writeToken(cacheRoot, serverUrl, "tool-token");
+  const dns = new TypeError("fetch failed");
+  dns.cause = { code: "ENOTFOUND" };
+  const connect = await run([...startArgs, "--cache-root", cacheRoot], { fetchImpl: async () => { throw dns; } });
+  const connectPayload = JSON.parse(connect.stdout);
+  assert.equal(connectPayload.error.phase, "connect");
+  assert.match(connectPayload.error.message, /^plan_call failed before a response was received\.$/u);
+});
+
+test("a credential split by a control sequence inside a remote body is still fully redacted", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-split-credential");
+  const ESC = String.fromCharCode(27);
+  const body = {
+    error: "oauth_register_failed",
+    message:
+      `access_token=abcd${ESC}[31m1234efgh5678 and sk_live_ABCDEFGHIJ${ESC}[0mKLMNOPQRSTUV plus ` +
+      `Bearer abcdefghijkl${ESC}]8;;x${String.fromCharCode(7)}mnopqrstuvwxyz012345`,
+  };
+  const result = await run([...LOGIN_ARGS, "--cache-root", cacheRoot], { fetchImpl: brokerFailure(502, body) });
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(payload.error.code, "broker_unavailable");
+  for (const fragment of ["abcd1234", "1234efgh", "efgh5678", "ABCDEFGHIJ", "KLMNOPQRSTUV", "abcdefghijkl", "mnopqrstuvwxyz012345"]) {
+    assert.doesNotMatch(result.stdout, new RegExp(fragment), `fragment ${fragment} leaked to stdout`);
+    assert.doesNotMatch(result.stderr, new RegExp(fragment), `fragment ${fragment} leaked to stderr`);
+  }
+  assert.match(payload.error.remote_error.message, /\[redacted\]/u);
+  assert.doesNotMatch(payload.error.remote_error.message, CONTROL_CHARS);
+});
+
+test("nested terminal payloads and Unicode line separators cannot leak through the CLI envelope", async () => {
+  const ESC = String.fromCharCode(0x1b);
+  const BEL = String.fromCharCode(0x07);
+  const cases = [
+    `access_to${ESC}]title${ESC}[31mmore${BEL}ken=abcd1234efgh5678`,
+    `access_to${String.fromCharCode(0x90)}junk${ESC}[31mmore${String.fromCharCode(0x9c)}ken=abcd1234efgh5678`,
+    `access_to${String.fromCharCode(0x90)}junk${BEL}more${String.fromCharCode(0x9c)}ken=abcd1234efgh5678`,
+    `access_to${ESC}cken=abcd1234efgh5678`,
+    `access_to${String.fromCharCode(0x9b)}1${String.fromCharCode(0)}2mken=abcd1234efgh5678`,
+    "access_token=abcd1234\u2028efgh5678",
+    "Bearer abcdefghijkl\u2029mnopqrstuvwxyz012345",
+  ];
+
+  for (const message of cases) {
+    const cacheRoot = makeTempRoot("calle-cli-nested-control-credential");
+    const result = await run(
+      [...LOGIN_ARGS, "--cache-root", cacheRoot],
+      { fetchImpl: brokerFailure(502, { error: "oauth_register_failed", message }) },
+    );
+    const payload = JSON.parse(result.stdout);
+
+    assert.equal(payload.error.code, "broker_unavailable");
+    assert.match(payload.error.remote_error.message, /\[redacted\]/u);
+    for (const fragment of ["abcd1234", "efgh5678", "abcdefghijkl", "mnopqrstuvwxyz012345", "junk", "more"]) {
+      assert.doesNotMatch(result.stdout, new RegExp(fragment), `${fragment} leaked to stdout`);
+      assert.doesNotMatch(result.stderr, new RegExp(fragment), `${fragment} leaked to stderr`);
+    }
+  }
+});
+
+test("every envelope agrees with the contract: transport flag, remote_error shape, local summary", async () => {
+  const { ERROR_CODES } = await import("../lib/cli.js");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const REMOTE_MARK = "REMOTE-TEXT-MARKER";
+  const dns = new TypeError("fetch failed");
+  dns.cause = { code: "ENOTFOUND" };
+  const aborted = new Error("aborted");
+  aborted.name = "AbortError";
+
+  const scenarios = [
+    { name: "invalid arguments", args: ["call", "plan", "--to"], deps: {} },
+    { name: "broker 5xx", args: [...LOGIN_ARGS], deps: { fetchImpl: brokerFailure(502, { error: "x", message: REMOTE_MARK }) } },
+    { name: "broker 4xx", args: [...LOGIN_ARGS], deps: { fetchImpl: brokerFailure(400, { error: "x", message: REMOTE_MARK }) } },
+    { name: "broker fetch rejected", args: [...LOGIN_ARGS], deps: { fetchImpl: async () => { throw dns; } } },
+    { name: "broker timeout", args: [...LOGIN_ARGS], deps: { fetchImpl: async () => { throw aborted; } } },
+    {
+      name: "mcp json-rpc error", args: ["mcp", "tools", "--base-url", "https://mcp.example"], token: true,
+      deps: { fetchImpl: mcpFixture({ serverUrl, onToolsList: (p) => jsonRpcResponse({ jsonrpc: "2.0", id: p.id, error: { code: -32000, message: REMOTE_MARK } }) }) },
+    },
+    { name: "mcp fetch rejected", args: ["mcp", "tools", "--base-url", "https://mcp.example"], token: true, deps: { fetchImpl: async () => { throw dns; } } },
+    {
+      name: "plan not ready", args: ["call", "start", "--to-phone", "+15551234567", "--goal", "g", "--base-url", "https://mcp.example"], token: true,
+      deps: { fetchImpl: mcpFixture({ serverUrl, onToolsCall: (p) => jsonRpcResponse({ jsonrpc: "2.0", id: p.id, result: { structuredContent: { ready_to_run: false, clarifying_questions: [REMOTE_MARK] } } }) }) },
+    },
+    {
+      name: "stage isError", args: ["call", "start", "--to-phone", "+15551234567", "--goal", "g", "--base-url", "https://mcp.example"], token: true,
+      deps: { fetchImpl: mcpFixture({ serverUrl, onToolsCall: (p) => jsonRpcResponse({ jsonrpc: "2.0", id: p.id, result: { isError: true, structuredContent: { error_code: "REMOTE_CODE", message: REMOTE_MARK } } }) }) },
+    },
+    {
+      name: "stage body reset", args: ["call", "start", "--to-phone", "+15551234567", "--goal", "g", "--base-url", "https://mcp.example"], token: true,
+      deps: { fetchImpl: mcpFixture({ serverUrl, onToolsCall: () => bodyFailingResponse(Object.assign(new Error("reset"), { code: "ECONNRESET" })) }) },
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    const cacheRoot = makeTempRoot("calle-cli-parity");
+    if (scenario.token) writeToken(cacheRoot, serverUrl, "tool-token");
+    const result = await run([...scenario.args, "--cache-root", cacheRoot], scenario.deps);
+    const payload = JSON.parse(result.stdout);
+    const label = `[${scenario.name}] code=${payload.error?.code}`;
+
+    assert.notEqual(result.code, 0, label);
+    assert.equal(payload.ok, false, label);
+    assert.ok(Object.hasOwn(ERROR_CODES, payload.error.code), `${label}: code is in the contract`);
+    assert.equal(result.code, ERROR_CODES[payload.error.code].exitCode, `${label}: exit code matches the contract`);
+    assert.equal(Boolean(payload.error.transport), ERROR_CODES[payload.error.code].transport, `${label}: transport flag matches the contract`);
+    assert.doesNotMatch(payload.error.message, new RegExp(REMOTE_MARK), `${label}: summary is locally authored`);
+    assert.doesNotMatch(result.stderr, new RegExp(REMOTE_MARK), `${label}: stderr is locally authored`);
+    if (payload.error.remote_error !== undefined) {
+      const keys = Object.keys(payload.error.remote_error);
+      assert.ok(keys.length > 0 && keys.every((k) => k === "code" || k === "message"), `${label}: remote_error is only {code, message}`);
+      if (payload.error.remote_error.code !== undefined) {
+        assert.match(payload.error.remote_error.code, /^-?[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/u, `${label}: remote code charset`);
+      }
+    }
+  }
+});
+
+test("a successful response with a non-JSON body does not publish the body as the summary", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-invalid-json");
+  const marker = "REMOTE-TEXT-MARKER access_token=sk_live_ABCDEFGHIJKLMNOP";
+  const result = await run(
+    [...LOGIN_ARGS, "--cache-root", cacheRoot],
+    {
+      fetchImpl: async (url, init) => {
+        if (String(url).endsWith("/api/v1/openagent-auth/sessions") && init?.method === "POST") {
+          return new Response(marker, { status: 200, headers: { "content-type": "text/plain" } });
+        }
+        throw new Error(`unexpected request: ${init?.method} ${url}`);
+      },
+    }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.error.code, "invalid_response");
+  assert.equal(payload.error.status_code, 200);
+  assert.equal(payload.error.transport, undefined, "a bad body is not a network condition");
+  assert.match(payload.error.message, /whose body was not the expected JSON/u);
+  // Node's own SyntaxError would have quoted the body here.
+  assert.doesNotMatch(payload.error.message, /REMOTE-TEXT-MARKER/u);
+  assert.doesNotMatch(result.stderr, /REMOTE-TEXT-MARKER/u);
+  assert.doesNotMatch(result.stdout, /sk_live_/u);
+  assert.doesNotMatch(result.stderr, /sk_live_/u);
+});
+
+test("a remote error_code is validated exactly like any other machine code", async () => {
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  const cases = [
+    { code: "EXECUTION_ACK_LOST", kept: "EXECUTION_ACK_LOST" },
+    { code: -32000, kept: "-32000" },
+    { code: 1e100, kept: undefined },
+    { code: 1.5, kept: undefined },
+    { code: "x".repeat(80), kept: undefined },
+    { code: "  spaced code  ", kept: undefined },
+    { code: " SAFE_CODE ", kept: undefined },
+    { code: `bad${String.fromCharCode(27)}[31m`, kept: undefined },
+    { code: "has spaces", kept: undefined },
+  ];
+
+  for (const { code, kept } of cases) {
+    const cacheRoot = makeTempRoot("calle-cli-errorcode");
+    writeToken(cacheRoot, serverUrl, "tool-token");
+    const result = await run(
+      ["call", "start", "--to-phone", "+15551234567", "--goal", "g", "--base-url", "https://mcp.example", "--cache-root", cacheRoot],
+      {
+        fetchImpl: mcpFixture({
+          serverUrl,
+          onToolsCall: (p) => jsonRpcResponse({
+            jsonrpc: "2.0",
+            id: p.id,
+            result: { isError: true, structuredContent: { error_code: code, message: "stage failed" } },
+          }),
+        }),
+      }
+    );
+    const payload = JSON.parse(result.stdout);
+    assert.equal(payload.error.error_code, kept, `for input ${JSON.stringify(code)}`);
+    if (payload.error.error_code !== undefined) {
+      assert.match(payload.error.error_code, /^-?[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/u);
+    }
+  }
+});
+
+test("a hostile plan_call result that omits plan_id cannot leak through the invalid-response path", async () => {
+  // extractRequiredStructuredString throws with the entire tool result as `payload`. That
+  // result is server-controlled: its text content, its structuredContent, and any extra
+  // fields. None of it may reach the summary, stderr, or an unvalidated remote_error.
+  const cacheRoot = makeTempRoot("calle-cli-plan-invalid-hostile");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl, "tool-token");
+  const ESC = String.fromCharCode(27);
+  const hostileText =
+    `${ESC}[2J${ESC}[H` +
+    `{"confirm_token":"confirm-secret-DO-NOT-PRINT","access_token":"sk_live_ABCDEFGHIJKLMNOPQRST"}` +
+    `\r\nplan-secret ${"y".repeat(20_000)}`;
+  const fetchImpl = mcpFixture({
+    serverUrl,
+    onToolsCall: (payload) => jsonRpcResponse({
+      jsonrpc: "2.0",
+      id: payload.id,
+      result: {
+        content: [{ type: "text", text: hostileText }],
+        // ready_to_run is true but plan_id is absent, so the CLI must reject the plan.
+        structuredContent: {
+          ready_to_run: true,
+          confirm_token: "confirm-secret-DO-NOT-PRINT",
+          message: `remote message ${ESC}[31m tok_SECRET_VALUE_1234567890`,
+          refresh_token: "rt_SECRET_ABCDEFGHIJ",
+        },
+      },
+    }),
+  });
+
+  const result = await run(
+    ["call", "start", "--to-phone", "+15551234567", "--goal", "Confirm appointment", "--base-url", "https://mcp.example", "--cache-root", cacheRoot],
+    { fetchImpl }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(payload.stage, "plan_call");
+  assert.equal(payload.call_started, false);
+  assert.equal(payload.retry_safe, true);
+  assert.equal(payload.error.code, "plan_call_invalid_response");
+  assert.equal(payload.error.message, "plan_call did not return plan_id");
+  assert.equal(payload.error.transport, undefined);
+  assert.ok(result.stdout.length < 2000, "no amplification of the 20 KB body");
+  for (const secret of ["confirm-secret", "DO-NOT-PRINT", "sk_live_", "plan-secret", "tok_SECRET", "rt_SECRET", "refresh_token", "yyyyyyyy"]) {
+    assert.doesNotMatch(result.stdout, new RegExp(secret), `${secret} leaked to stdout`);
+    assert.doesNotMatch(result.stderr, new RegExp(secret), `${secret} leaked to stderr`);
+  }
+  assert.doesNotMatch(result.stderr.trimEnd(), CONTROL_CHARS);
+  if (payload.error.remote_error !== undefined) {
+    assert.ok(Object.keys(payload.error.remote_error).every((k) => k === "code" || k === "message"));
+    assert.doesNotMatch(JSON.stringify(payload.error.remote_error), CONTROL_CHARS);
+  }
+});
+
 test("auth login start-only replaces locally active pending cache when broker reports it expired", async () => {
   const cacheRoot = makeTempRoot("calle-cli-login-start-only-expired-broker");
   const serverUrl = "https://mcp.example/mcp/openagent_oauth";
@@ -1519,8 +2426,9 @@ test("call start reports plan clarification and skips run_call when planning is 
   assert.equal(payload.error.code, "plan_not_ready");
   assert.equal(
     payload.error.message,
-    "Call plan needs more information before it can run: What should the agent ask or say on the call?"
+    "Call plan needs more information before it can run. See error.remote_error.message for the question the service asked."
   );
+  assert.equal(payload.error.remote_error.message, "What should the agent ask or say on the call?");
 });
 
 test("call start rejects a null structured confirm token without calling run_call", async () => {
@@ -1693,7 +2601,9 @@ test("call start preserves safe run_call error fields and an opaque recovery id"
   assert.equal(payload.error.code, "run_call_error");
   assert.equal(payload.error.error_code, "EXECUTION_ACK_LOST");
   assert.equal(payload.error.status, "UNKNOWN");
-  assert.equal(payload.error.message, "Execution acknowledgement was lost.");
+  assert.equal(payload.error.message, "run_call returned an error.");
+  assert.equal(payload.error.remote_error.message, "Execution acknowledgement was lost.");
+  assert.deepEqual(Object.keys(payload.error.remote_error).sort(), ["code", "message"]);
   assert.match(payload.recovery_id, /^[A-Za-z0-9_-]{20,}$/u);
   assert.match(payload.next_command, new RegExp(`calle call recover --recovery-id ${payload.recovery_id}`));
   assert.doesNotMatch(result.stdout, /plan-secret|confirm-secret|service-secret|do-not-print/);
@@ -1754,7 +2664,8 @@ test("call run preserves safe error fields when run_call omits run_id", async ()
   assert.equal(payload.error.code, "run_call_missing_run_id");
   assert.equal(payload.error.error_code, "DESTINATION_REJECTED");
   assert.equal(payload.error.status, "FAILED");
-  assert.equal(payload.error.message, "The destination was rejected.");
+  assert.equal(payload.error.message, "run_call did not return a run_id.");
+  assert.equal(payload.error.remote_error.message, "The destination was rejected.");
   assert.doesNotMatch(result.stdout, /plan-secret|confirm-secret|do-not-print/);
 });
 

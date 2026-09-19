@@ -1004,6 +1004,15 @@ test("agent requests preserve opaque values and recover once with the old SDK an
   assert.match(oldHelp.stderr, /MCP command help check failed/);
   // ponytail: dependency fixtures are CLI 0.5.0; install a candidate tarball when runtime dependencies change.
   for (const dir of ["bin", "lib", "scripts"]) fs.cpSync(path.join(packageRoot, dir), path.join(mcp, dir), { recursive: true });
+  // The registry copy of @call-e/core pinned by CLI 0.5.0 predates the subpaths this working
+  // tree imports, so the candidate CLI would fail to resolve them and exit before writing any
+  // envelope. Overlay the local core for the same reason the lines above overlay the CLI: the
+  // fixture exists to exercise this tree inside a shadowed environment, not the published core.
+  const localCore = path.join(packageRoot, "..", "core");
+  const installedCore = path.join(mcp, "node_modules/@call-e/core");
+  fs.mkdirSync(installedCore, { recursive: true });
+  fs.cpSync(path.join(localCore, "lib"), path.join(installedCore, "lib"), { recursive: true });
+  fs.cpSync(path.join(localCore, "package.json"), path.join(installedCore, "package.json"));
 
   const fakeBin = path.join(root, "fake bin");
   const fakeLog = path.join(root, "shadow-arguments.jsonl");

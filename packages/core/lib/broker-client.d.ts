@@ -68,6 +68,18 @@ export interface BrokerLoginResult {
   tokenDocument: TokenDocument;
 }
 
+export interface BrokerLoginErrorOptions {
+  code?: "broker_login_failed" | "broker_login_timeout";
+  remoteError?: unknown;
+}
+
+/** A broker workflow outcome whose message is locally authored and safe to print. */
+export class BrokerLoginError extends Error {
+  constructor(message: string, options?: BrokerLoginErrorOptions);
+  code: "broker_login_failed" | "broker_login_timeout";
+  remoteError: { code?: string; message?: string } | null;
+}
+
 export function createBrokerSession(
   config: CreateBrokerSessionConfig,
   options?: BrokerRequestOptions,
