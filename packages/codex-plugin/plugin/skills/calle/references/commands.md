@@ -191,8 +191,8 @@ and `confirm_token` exactly as returned by planning.
 call state from `status_result.structuredContent`. If that status is not
 terminal, show a user-visible progress update from
 `status_result.structuredContent.activity` immediately, then continue with
-`call status --run-id <run_id>` every 10 seconds until a terminal status is
-returned or the user asks you to stop.
+`call status --run-id <run_id>` following
+[Completion guidance](../SKILL.md#completion-guidance).
 
 ## Call recovery
 
@@ -226,11 +226,17 @@ Supported `call status` options:
 - `--limit <number>`
 
 Use status commands only with a known `run_id`.
+Follow [Completion guidance](../SKILL.md#completion-guidance) for `next_step`,
+retry confirmation, text progress without activity cards, and monitoring recovery.
+Read `next_step` from the same structured response as `status`: CLI
+`status_result.structuredContent` after start/run, or `result.structuredContent`
+after status. Direct MCP uses the tool response's `structuredContent`.
 
 Terminal statuses:
 
 - `COMPLETED`
 - `FAILED`
+- `NO ANSWER` (alias of `NO_ANSWER`)
 - `NO_ANSWER`
 - `DECLINED`
 - `CANCELED`
@@ -261,11 +267,12 @@ result.
 Polling cadence:
 
 1. Show the latest non-terminal progress.
-2. Wait 10 seconds.
+2. Follow `next_step` first. Wait 10 seconds only when it gives no polling
+   delay, stop, or confirmation instruction.
 3. Run `call status --run-id <run_id>`.
-4. If the status is still non-terminal, show the new activity and repeat.
-5. Stop polling when a terminal status is returned, the user asks you to stop,
-   or command execution is interrupted.
+4. Show the new activity and recheck `next_step` before repeating.
+5. Stop polling on a terminal status, a server stop or retry-confirmation
+   instruction, a user stop request, or interrupted command execution.
 
 For terminal statuses, include the final transcript in the user-visible reply:
 

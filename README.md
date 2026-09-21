@@ -145,10 +145,10 @@ sequenceDiagram
     Client->>CE: run_call(plan_id, confirm_token)
     CE-->>Client: run_id
     CE-)Phone: Outbound call
-    Note over Client,CE: Wait ~60s, then poll while call is in progress
-    loop Until terminal status
+    Note over Client,CE: Follow next_step; default first wait ~60s
+    loop Until terminal status, stop instruction, or confirmation request
         Client->>CE: get_call_run(run_id)
-        CE-->>Client: status, activity, transcript
+        CE-->>Client: status, activity, transcript, next_step
     end
 ```
 
@@ -158,10 +158,13 @@ sequenceDiagram
 | --- | --- |
 | `plan_call` | Creates or refines a call plan. Does **not** place a call. Returns `plan_id`, `confirm_token`, and `ready_to_run`. |
 | `run_call` | Starts the planned call. Requires the exact `plan_id` and `confirm_token` from the preceding `plan_call`. **Can place a real phone call.** |
-| `get_call_run` | Reads run status, activity, summary, and transcript. Read-only. After a call starts, wait ~60 seconds before the first poll, then every 5–10 seconds until terminal. |
+| `get_call_run` | Reads run status, activity, summary, and transcript. Read-only. Follow `next_step`; without guidance, wait ~60 seconds before the first poll, then every 5–10 seconds until terminal. |
 
 <!-- sync-with: docs/mcp/openagent-oauth.md#reliable-terminal-state-workflow -->
-The ~60-second delay is a polling recommendation, not a completion deadline.
+Server-directed delays, stop instructions, and retry-confirmation questions
+take precedence over the default cadence. Ask the user before a requested
+retry; do not place another call automatically. The ~60-second delay is a
+polling recommendation, not a completion deadline.
 Persist the returned `run_id` and resume `get_call_run` after a local timeout
 or restart; do not call `run_call` again. MCP `run_call` does not accept a
 `webhook_url`, so MCP clients should poll `get_call_run` for completion.

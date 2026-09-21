@@ -177,11 +177,17 @@ Supported `call status` options:
 - `--limit <number>`
 
 Use status commands only with a known `run_id`.
+Follow [Completion guidance](../SKILL.md#completion-guidance) for `next_step`,
+retry confirmation, text progress without activity cards, and monitoring recovery.
+Read `next_step` from the same structured response as `status`: CLI
+`status_result.structuredContent` after start/run, or `result.structuredContent`
+after status. Direct MCP uses the tool response's `structuredContent`.
 
 Terminal statuses:
 
 - `COMPLETED`
 - `FAILED`
+- `NO ANSWER` (alias of `NO_ANSWER`)
 - `NO_ANSWER`
 - `DECLINED`
 - `CANCELED`

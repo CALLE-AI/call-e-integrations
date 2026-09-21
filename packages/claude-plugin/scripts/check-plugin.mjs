@@ -156,7 +156,7 @@ function assertCliGuidance({ source, filePath, failures }) {
   assert(source.includes("call plan"), failures, `${displayPath(filePath)} must document call planning through the CLI.`);
   assert(source.includes("call run"), failures, `${displayPath(filePath)} must document planned call execution through the CLI.`);
   assert(source.includes("call status"), failures, `${displayPath(filePath)} must document call status polling through the CLI.`);
-  assert(!source.includes("/mcp"), failures, `${displayPath(filePath)} must not direct users to /mcp for CALL-E authorization.`);
+  assert(!/(?:^|[\s`])\/mcp\b/u.test(source), failures, `${displayPath(filePath)} must not direct users to /mcp for CALL-E authorization.`);
   assert(!source.includes("authorize the `calle` server"), failures, `${displayPath(filePath)} must not document native Claude MCP OAuth authorization.`);
 }
 

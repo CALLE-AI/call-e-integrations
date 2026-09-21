@@ -211,6 +211,15 @@ test("reports missing call flow guidance", () => {
   assert.ok(failures.some((failure) => failure.includes("periodic polling")));
 });
 
+test("allows MCP documentation paths without allowing the native auth command", () => {
+  const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-claude-plugin-doc-path"));
+  const skillPath = path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md");
+  fs.appendFileSync(skillPath, "\n<!-- sync-with: docs/mcp/openagent-oauth.md#reliable-terminal-state-workflow -->\n");
+  assert.deepEqual(checkClaudePlugin({ packageRoot, repoRoot }), []);
+  fs.appendFileSync(skillPath, "\nOpen `/mcp` for authorization.\n");
+  assert.ok(checkClaudePlugin({ packageRoot, repoRoot }).some((failure) => failure.includes("/mcp")));
+});
+
 test("reports native MCP auth guidance", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-claude-plugin-native-auth-text"));
   const skillPath = path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md");

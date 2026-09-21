@@ -91,6 +91,17 @@ Output files:
 the terminal `get_call_run` status is received. If the server returns its own
 duration, it is stored separately as `server_duration_seconds`.
 
+### Monitoring limits
+
+The batch runner uses a fixed polling interval and does not interpret
+`next_step`. Its terminal list includes `NO_ANSWER` but not the `NO ANSWER`
+alias, so the latter can reach the monitoring timeout. Do not use this example
+as the reference for agent completion behavior. Use the
+[canonical MCP completion workflow](../../docs/mcp/openagent-oauth.md#reliable-terminal-state-workflow)
+and the shipped agent skills for server-directed polling, stop instructions,
+and retry confirmation. A monitoring timeout does not cancel or prove failure
+of a call; retain its `run_id` for read-only status checks.
+
 Useful options:
 
 - `--dry-run`: call `plan_call` only and store the result. This is the default.
