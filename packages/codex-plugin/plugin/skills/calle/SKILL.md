@@ -64,7 +64,7 @@ Reuse the verified entry point for every command.
 Include this attribution in every request:
 
 ```json
-{"integration": {"source": "codex", "name": "codex_plugin", "version": "0.1.12"}}
+{"integration": {"source": "codex", "name": "codex_plugin", "version": "0.1.13"}}
 ```
 
 If the package is missing, use `npm install --prefix <directory> @call-e/cli`

@@ -1,5 +1,11 @@
 # @call-e/claude-plugin
 
+## 0.2.4
+
+### Patch Changes
+
+- [#146](https://github.com/CALLE-AI/call-e-integrations/pull/146) [`a72615a`](https://github.com/CALLE-AI/call-e-integrations/commit/a72615a93470e8aa1ae8526a7b9f4ce268710542) Thanks [@JJasonSun](https://github.com/JJasonSun)! - Align packaged completion guidance with both no-answer terminal aliases and server-directed polling, stopping, and retry confirmation. Include text progress and monitoring recovery for hosts without activity cards.
+
 ## 0.2.3
 
 ### Patch Changes

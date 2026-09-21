@@ -55,7 +55,7 @@ Reuse the verified entry point for every command.
 Include this attribution in every request:
 
 ```json
-{"integration": {"source": "claude", "name": "claude_code_plugin", "version": "0.2.3"}}
+{"integration": {"source": "claude", "name": "claude_code_plugin", "version": "0.2.4"}}
 ```
 
 If the package is missing, use `npm install --prefix <directory> @call-e/cli`
