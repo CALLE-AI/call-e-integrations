@@ -216,8 +216,11 @@ test("allows MCP documentation paths without allowing the native auth command", 
   const skillPath = path.join(packageRoot, "plugin", "skills", "calle", "SKILL.md");
   fs.appendFileSync(skillPath, "\n<!-- sync-with: docs/mcp/openagent-oauth.md#reliable-terminal-state-workflow -->\n");
   assert.deepEqual(checkClaudePlugin({ packageRoot, repoRoot }), []);
-  fs.appendFileSync(skillPath, "\nOpen `/mcp` for authorization.\n");
-  assert.ok(checkClaudePlugin({ packageRoot, repoRoot }).some((failure) => failure.includes("/mcp")));
+  const validSource = fs.readFileSync(skillPath, "utf8");
+  for (const command of ["/mcp", "`/mcp`", "(/mcp)", '"/mcp"']) {
+    fs.writeFileSync(skillPath, validSource + `\nOpen ${command} for authorization.\n`);
+    assert.ok(checkClaudePlugin({ packageRoot, repoRoot }).some((failure) => failure.includes("/mcp")));
+  }
 });
 
 test("reports native MCP auth guidance", () => {
