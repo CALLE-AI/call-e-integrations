@@ -465,7 +465,7 @@ If installation, authentication, or MCP tool verification fails, see the [CALL-E
 
 Common issues covered:
 
-- **Cursor sandbox network restrictions** — `CONNECT tunnel failed, response 403` means the Cursor agent shell is blocking outbound HTTPS. Fix: switch Cursor Auto-Run Mode to **Run Everything (Unsandboxed)** in Cursor Settings → Agents.
+- **Cursor network errors** — if setup works in your terminal but fails in the Cursor agent shell, see the [Cursor troubleshooting steps](docs/install/troubleshooting.md#cursor-agent-shell-returns-connect-tunnel-failed-response-403).
 - **`calle auth login` failures** — fetch failures, login errors, and token cache issues.
 - **Missing MCP tools** — how to confirm that `plan_call`, `run_call`, and `get_call_run` are available after install.
 
