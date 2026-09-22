@@ -279,7 +279,9 @@ function checkRepoDocs({ repoRoot, failures }) {
 
   if (fs.existsSync(troubleshootingPath)) {
     const troubleshooting = fs.readFileSync(troubleshootingPath, "utf8");
-    assert(troubleshooting.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g"), failures, "docs/install/troubleshooting.md must keep the skills.sh install example global with -g.");
+    if (troubleshooting.includes("npx skills add")) {
+      assert(troubleshooting.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g"), failures, "docs/install/troubleshooting.md must keep the skills.sh install example global with -g.");
+    }
   }
 }
 

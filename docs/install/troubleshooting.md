@@ -7,75 +7,74 @@ fails in a local agent environment.
 
 ### Symptoms
 
-In Cursor, CALL-E setup may fail even though the local machine has normal network
-access. Common symptoms include:
+A request works in your terminal but fails in the Cursor agent shell with
+`CONNECT tunnel failed, response 403`. The CALL-E CLI may also report
+`fetch failed`.
 
-- `npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g`
-  fails because sandboxed Git cannot write hooks.
-- `calle auth login` fails with a generic `fetch failed` error.
-- A direct network check fails with:
+### Check the sandbox
 
-  ```text
-  curl: (56) CONNECT tunnel failed, response 403
-  ```
+In Cursor 3.21.16, the setting is under **Settings → Agents → Execution and
+Approvals → Run Mode**. Keep **Auto-Review (with Sandbox)** enabled while checking
+network access. Run this in the agent shell:
 
-- The agent environment reports limited or allowlist-only network access.
+```bash
+printf "CURSOR_SANDBOX=%s\n" "$CURSOR_SANDBOX"
+curl -sS --connect-timeout 10 --max-time 20 -o /dev/null -w "HTTP %{http_code}\n" https://seleven-mcp-sg.airudder.com/
+```
 
-### Cause
+On macOS, `CURSOR_SANDBOX=seatbelt` identifies the sandbox. If curl reports a
+CONNECT 403 there but reaches the same host in your terminal, check the sandbox's
+domain policy. A generic `fetch failed` alone does not identify the cause.
 
-The `403` is returned by Cursor's sandbox network gate before the request reaches
-CALL-E. It is not a CALL-E authentication failure and does not mean the CALL-E
-server rejected the user.
+### Allow the CALL-E host
 
-The sandboxed agent shell may block outbound HTTPS connections to
-`https://seleven-mcp-sg.airudder.com`, which prevents the CLI from starting the
-brokered OAuth flow.
+Using your editor, add the CALL-E host to the workspace's
+`.cursor/sandbox.json`. If the file already exists, merge the entry into its
+`networkPolicy.allow` list without replacing other settings:
 
-### Fix
+```json
+{
+  "networkPolicy": {
+    "default": "deny",
+    "allow": ["seleven-mcp-sg.airudder.com"]
+  }
+}
+```
 
-Change the local Cursor agent execution mode so commands are not running in the
-restricted sandbox:
+This keeps the sandbox enabled. Existing deny rules and organization policies
+can still block the host; see Cursor's
+[sandbox configuration reference](https://cursor.com/docs/reference/sandbox).
+Retry the curl check. An HTTP 404 from this root URL still confirms that HTTPS
+reached the server; it does not verify authentication.
 
-1. Open Cursor Settings.
-2. Go to **Agents**.
-3. In **Auto-Run**, open **Auto-Run Mode**.
-4. Select **Run Everything (Unsandboxed)**.
+### Verify the CLI through the sandbox proxy
 
-After switching to a non-sandboxed mode, retry the CALL-E login or setup check.
-
-### Cursor Setting Screenshot
-
-![Cursor Auto-Run Mode setting showing Run Everything Unsandboxed](../assets/troubleshooting/cursor-agent-execution-mode.png)
-
-### Verify
-
-Outside the restricted sandbox, follow
+If curl connects but the Node CLI still reports `fetch failed`, Node may not be
+using the sandbox's proxy. Follow
 [CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
-and prepare the launcher and `request.json`. Use each array below as `argv`:
-
-```json
-["auth", "login"]
-```
-
-```json
-["auth", "status", "--json"]
-```
+to prepare the trusted launcher and a `tools-request.json` with this `argv`:
 
 ```json
 ["mcp", "tools"]
 ```
 
-Confirm that authentication is usable and that the tool list includes:
+With an existing CALL-E login, run:
 
-```text
-plan_call
-run_call
-get_call_run
+```bash
+NODE_USE_ENV_PROXY=1 node run-agent-command.mjs tools-request.json
 ```
 
-If the same URL works from the user's terminal but fails only inside the Cursor
-agent shell, the issue is the Cursor sandbox policy rather than CALL-E service
-availability.
+This asks Node to use the proxy environment supplied by the sandbox. Keep TLS
+certificate verification enabled. The environment variable requires a Node
+version that supports it; see the
+[Node reference](https://nodejs.org/api/cli.html#node_use_env_proxy1).
+A successful response has `ok: true` and lists `plan_call`, `run_call`, and
+`get_call_run` among its tools.
+
+These steps were tested on macOS with Cursor 3.21.16, Node 26.8.2, and CALL-E CLI
+0.5.2, using an existing login. The domain entry resolved curl's CONNECT 403;
+`NODE_USE_ENV_PROXY=1` also resolved the CLI's `fetch failed`. This check does not
+cover a fresh OAuth login or skill installation.
 
 ## Run CALL-E from Node on Windows
 

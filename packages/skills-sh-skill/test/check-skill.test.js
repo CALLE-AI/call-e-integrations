@@ -305,3 +305,13 @@ test("rejects bare calle and npx commands in the skill or command reference", (t
     }
   }
 });
+
+test("troubleshooting may omit installation but must keep any install example global", () => {
+  const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-troubleshooting-install"));
+  const doc = path.join(repoRoot, "docs", "install", "troubleshooting.md");
+  fs.writeFileSync(doc, "See the installation guide.\n");
+  assert.deepEqual(checkSkillsShSkill({ packageRoot, repoRoot }), []);
+  fs.writeFileSync(doc, "npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle\n");
+  assert.ok(checkSkillsShSkill({ packageRoot, repoRoot }).some((failure) =>
+    failure.includes("troubleshooting.md must keep the skills.sh install example global")));
+});
