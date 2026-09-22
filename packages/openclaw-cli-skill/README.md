@@ -1,8 +1,13 @@
 # @call-e/openclaw-cli-skill
 
 Make real outbound phone calls, run planned calls, and check call status in
-OpenClaw with CALL-E through the `calle` CLI. New users get 20 free calls to
-get started.
+OpenClaw with CALL-E through the `calle` CLI.
+
+<!-- sync-with: README.md -->
+New users receive 100 free credits (US$1) when they sign up. See the
+[website FAQ](https://www.heycall-e.com/) for current pricing and your
+[dashboard billing details](https://dashboard.heycall-e.com/account/billing)
+for actual usage charges.
 
 This package is the OpenClaw integration path maintained in this repository. It
 does not register OpenClaw-native tools or require a gateway restart from this

@@ -8,7 +8,7 @@ Tell CALL-E your goal, and it handles the phone task end-to-end: it plans, calls
 
 Use CALL-E directly, or integrate it into agents, platforms, and business systems through Skills, Plugins, SDKs, or APIs.
 
-New users get 20 free calls to get started. [Sign up now!](https://www.heycall-e.com/)
+New users receive 100 free credits (US$1) when they sign up. See the [website FAQ](https://www.heycall-e.com/) for current pricing and your [dashboard billing details](https://dashboard.heycall-e.com/account/billing) for actual usage charges.
 
 [Website](https://www.heycall-e.com/) · [Docs](https://docs.heycall-e.com/) · [Try on ClawHub](https://clawhub.ai/call-e-dev/phone-call-calle) · [Discord](https://discord.gg/6AbXUzUV8w)
 
