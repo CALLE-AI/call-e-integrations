@@ -145,7 +145,7 @@ sequenceDiagram
     Client->>CE: run_call(plan_id, confirm_token)
     CE-->>Client: run_id
     CE-)Phone: Outbound call
-    Note over Client,CE: Follow next_step; default first wait ~60s
+    Note over Client,CE: Follow next_step, default first wait ~60s
     loop Until terminal status, stop instruction, or confirmation request
         Client->>CE: get_call_run(run_id)
         CE-->>Client: status, activity, transcript, next_step
@@ -411,8 +411,6 @@ For authentication, webhooks, and the full reference, see the [API docs](https:/
 ## Supported Regions and Languages
 
 Use these country codes with the SDK and API recipient settings.
-
-The Languages column lists CALL-E's currently configured call languages for each destination.
 
 | Country | Country Code | Calling Code | Languages | Line Region |
 | --- | --- | --- | --- | --- |
