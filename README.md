@@ -412,6 +412,8 @@ For authentication, webhooks, and the full reference, see the [API docs](https:/
 
 Use these country codes with the SDK and API recipient settings.
 
+The Languages column lists CALL-E's currently configured call languages for each destination.
+
 | Country | Country Code | Calling Code | Languages | Line Region |
 | --- | --- | --- | --- | --- |
 | United States of America | `US` | +1 | English, Indonesian | Local |
