@@ -1,6 +1,6 @@
 ---
 name: Phone Call - CALL-E
-description: New users get 20 free calls to get started. Make real outbound phone calls, run planned calls, and check call status in OpenClaw.
+description: New users receive 100 free credits (US$1). Make real outbound phone calls, run planned calls, and check call status in OpenClaw.
 license: MIT-0
 metadata: {"openclaw":{"requires":{"bins":["node"]},"install":[{"id":"call-e-cli","kind":"node","package":"@call-e/cli","bins":["calle"],"label":"Install CALL-E CLI"}],"homepage":"https://github.com/CALLE-AI/call-e-integrations/tree/main/packages/openclaw-cli-skill"}}
 ---
