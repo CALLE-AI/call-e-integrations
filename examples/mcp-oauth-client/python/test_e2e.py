@@ -17,8 +17,10 @@ EXAMPLE = Path(__file__).resolve().parent
 FAKE_SERVER = ROOT / "shared" / "fake-mcp-broker-server.mjs"
 
 
-def start_fake_server(*, no_resources=False, unauthorized_mcp=False, oauth_issuer=None, oauth_redirects=False):
+def start_fake_server(*, no_resources=False, unauthorized_mcp=False, oauth_issuer=None, oauth_redirects=False, public_discovery=False):
     env = os.environ.copy()
+    if public_discovery:
+        env["FAKE_PUBLIC_DISCOVERY"] = "1"
     if no_resources:
         env["FAKE_NO_RESOURCES"] = "1"
     if unauthorized_mcp:
@@ -251,5 +253,26 @@ def test_oauth_client_follows_registration_and_token_redirects():
         assert [call["name"] for call in state["tool_calls"]] == ["plan_call"]
         assert '"event":"resources/read"' in result.stdout
         assert_no_secrets(result.stdout + result.stderr)
+    finally:
+        stop_fake_server(process)
+
+
+@pytest.mark.parametrize("tool_name", ["plan_call", ""])
+def test_oauth_client_authorizes_after_public_discovery(tool_name):
+    process, fake = start_fake_server(public_discovery=True)
+    try:
+        result = run_client({
+            "MCP_SERVER_URL": fake["server_url"],
+            "MCP_OAUTH_AUTO_AUTHORIZE": "1",
+            "MCP_TOOL_NAME": tool_name,
+            "MCP_TOOL_ARGS_JSON": '{"user_input":"Plan only; ask for missing details. Do not start a call."}',
+        })
+        assert result.returncode == 0, result.stderr
+        assert_no_secrets(result.stdout + result.stderr)
+        state = read_state(fake["state_url"])
+        assert len(state["oauth_tokens"]) == 1
+        assert not next(r for r in state["mcp_requests"] if r["method"] == "tools/list")["has_bearer_token"]
+        assert [c["name"] for c in state["tool_calls"]] == ([tool_name] if tool_name else [])
+        assert len(state["resource_reads"]) == 1
     finally:
         stop_fake_server(process)

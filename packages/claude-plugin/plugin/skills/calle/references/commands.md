@@ -287,6 +287,22 @@ Call id: <result.call_id or Not available>
 If the user requested extra final content, add it after `[Transcript]` using a
 short heading and only information present in the JSON output.
 
+## Run result fields
+
+<!-- sync-with: docs/mcp/openagent-oauth.md#get_call_run -->
+In this guide, `result` in call-content paths means the call-content object
+inside `structuredContent`, not the outer CLI `result` wrapper. For
+`call status`, read summary and transcript from
+`result.structuredContent.result.summary` and
+`result.structuredContent.result.transcript`. For start/run/recover, use
+`status_result.structuredContent.result`; direct MCP uses
+`structuredContent.result`.
+
+Read `post_summary` or `summary`, `transcript`, `outcome`, `extracted`, and
+`call_id` from that nested object when present. Read `status`, `activity`,
+`message`, and `next_step` from its parent structured object. Missing or empty
+fields stay unavailable; a summary does not substitute for a transcript.
+
 ## JSON handling
 
 - Treat command output as JSON.

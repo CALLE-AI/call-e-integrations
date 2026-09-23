@@ -74,6 +74,7 @@ function unauthorized(res, baseUrl, scope = "openid email profile") {
 function normalizeOptions(options = {}) {
   return {
     noResources: Boolean(options.noResources),
+    publicDiscovery: Boolean(options.publicDiscovery),
     unauthorizedMcp: Boolean(options.unauthorizedMcp),
     brokerPendingFirst: Boolean(options.brokerPendingFirst),
     oauthIssuer: options.oauthIssuer || null,
@@ -150,7 +151,8 @@ export async function startFakeServer(options = {}) {
     const payload = await readJson(req);
     state.mcp_requests.push(redactMcpRequest(req, payload, ACCESS_TOKEN));
 
-    if (opts.unauthorizedMcp || req.headers.authorization !== `Bearer ${ACCESS_TOKEN}`) {
+    const publicDiscovery = opts.publicDiscovery && ["initialize", "notifications/initialized", "tools/list"].includes(payload.method);
+    if (!publicDiscovery && (opts.unauthorizedMcp || req.headers.authorization !== `Bearer ${ACCESS_TOKEN}`)) {
       unauthorized(res, baseUrl);
       return;
     }
@@ -645,6 +647,7 @@ export async function startFakeServer(options = {}) {
 async function runCli() {
   const fake = await startFakeServer({
     noResources: process.env.FAKE_NO_RESOURCES === "1",
+    publicDiscovery: process.env.FAKE_PUBLIC_DISCOVERY === "1",
     unauthorizedMcp: process.env.FAKE_UNAUTHORIZED_MCP === "1",
     brokerPendingFirst: process.env.FAKE_BROKER_PENDING_FIRST === "1",
     oauthIssuer: process.env.FAKE_OAUTH_ISSUER,

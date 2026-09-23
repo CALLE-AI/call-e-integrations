@@ -156,7 +156,7 @@ async function getAuthorizationCode(config: Config, authorizationUrl: URL): Prom
   return waitForLocalCallback(config.redirectUri, authorizationUrl);
 }
 
-async function connect(config: Config): Promise<{ client: Client; transport: StreamableHTTPClientTransport }> {
+async function connect(config: Config) {
   let authorizationUrl: URL | null = null;
   const clientMetadata: OAuthClientMetadata = {
     client_name: "CALL-E OAuth MCP example",
@@ -170,21 +170,35 @@ async function connect(config: Config): Promise<{ client: Client; transport: Str
     authorizationUrl = url;
   });
 
+  async function authorize(transport: StreamableHTTPClientTransport) {
+    if (!authorizationUrl) {
+      throw new Error("OAuth authorization was required, but no authorization URL was produced.");
+    }
+    const code = await getAuthorizationCode(config, authorizationUrl);
+    await transport.finishAuth(code);
+  }
+
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const client = new Client({ name: "calle-oauth-example", version: "0.0.0" }, { capabilities: {} });
     const transport = new StreamableHTTPClientTransport(new URL(config.serverUrl), { authProvider: provider });
     try {
       await client.connect(transport);
-      return { client, transport };
+      async function withAuthorization<T>(request: () => Promise<T>): Promise<T> {
+        try {
+          return await request();
+        } catch (error) {
+          // Retry only an explicit auth challenge, never an uncertain tool outcome.
+          if (!(error instanceof UnauthorizedError)) throw error;
+          await authorize(transport);
+          return request();
+        }
+      }
+      return { client, transport, withAuthorization };
     } catch (error) {
       if (!(error instanceof UnauthorizedError)) {
         throw error;
       }
-      if (!authorizationUrl) {
-        throw new Error("OAuth authorization was required, but no authorization URL was produced.");
-      }
-      const code = await getAuthorizationCode(config, authorizationUrl);
-      await transport.finishAuth(code);
+      await authorize(transport);
       await transport.close().catch(() => {});
     }
   }
@@ -193,32 +207,35 @@ async function connect(config: Config): Promise<{ client: Client; transport: Str
 }
 
 async function runClient(config: Config): Promise<void> {
-  const { client, transport } = await connect(config);
+  const { client, transport, withAuthorization } = await connect(config);
   emit("connected", { server_url: config.serverUrl, session_id: transport.sessionId || null });
 
-  const tools = await client.listTools();
-  emit("tools/list", { count: tools.tools.length, tools: tools.tools.map((tool) => tool.name) });
+  try {
+    const tools = await withAuthorization(() => client.listTools());
+    emit("tools/list", { count: tools.tools.length, tools: tools.tools.map((tool) => tool.name) });
 
-  if (config.toolName) {
-    const result = await client.callTool({ name: config.toolName, arguments: config.toolArgs });
-    emit("tools/call", { tool_name: config.toolName, result });
+    if (config.toolName) {
+      const result = await withAuthorization(() => client.callTool({ name: config.toolName!, arguments: config.toolArgs }));
+      emit("tools/call", { tool_name: config.toolName, result });
+    }
+
+    const resources = await withAuthorization(() => client.listResources()).catch((error) => {
+      if (error?.code !== -32601) throw error;
+      emit("resources/list", { skipped: true, message: error?.message || String(error) });
+      return { resources: [] };
+    });
+    emit("resources/list", { count: resources.resources.length });
+
+    const firstResource = resources.resources[0];
+    if (firstResource) {
+      const result = await withAuthorization(() => client.readResource({ uri: firstResource.uri }));
+      emit("resources/read", { uri: firstResource.uri, result: summarizeResourceResult(result as Record<string, unknown>) });
+    } else {
+      emit("resources/read", { skipped: true, message: "no resources available" });
+    }
+  } finally {
+    await transport.close().catch(() => {});
   }
-
-  const resources = await client.listResources().catch((error) => {
-    emit("resources/list", { skipped: true, message: error?.message || String(error) });
-    return { resources: [] };
-  });
-  emit("resources/list", { count: resources.resources.length });
-
-  const firstResource = resources.resources[0];
-  if (firstResource) {
-    const result = await client.readResource({ uri: firstResource.uri });
-    emit("resources/read", { uri: firstResource.uri, result: summarizeResourceResult(result as Record<string, unknown>) });
-  } else {
-    emit("resources/read", { skipped: true, message: "no resources available" });
-  }
-
-  await transport.close().catch(() => {});
 }
 
 export async function main(): Promise<void> {

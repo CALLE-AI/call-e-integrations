@@ -28,6 +28,18 @@ export MCP_LOG_FILE=/tmp/calle-mcp-example.log
 The log file receives the same JSON events printed to stdout, plus timestamps.
 Do not publish it because live runs may include a browser authorization URL.
 
+## Authorization
+
+Connection and tool discovery can succeed before login. A protected request such
+as `plan_call` may be the first request that requires OAuth. Complete the browser
+authorization when prompted; the examples obtain their own token through dynamic
+registration and PKCE. Do not read or copy the CLI's private token cache.
+
+The TypeScript example handles an explicit authorization challenge at connection
+or request time and retries the challenged request after authorization. A timeout
+or other uncertain tool error is not an authorization challenge and is not retried.
+The Python SDK handles request-time authorization through its HTTP auth provider.
+
 ## Plan Call Example
 
 `plan_call` creates a CALL-E call plan. It does not start the call; running the
@@ -64,7 +76,8 @@ pnpm test:e2e
 
 ## Python
 
-The Python example uses MCP Python SDK 2.x and `httpx2`.
+The Python example pins MCP Python SDK `2.1.1`, verified with browser OAuth
+and `plan_call`, and uses `httpx2`.
 
 ```bash
 cd examples/mcp-oauth-client/python
