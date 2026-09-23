@@ -515,7 +515,7 @@ Broker and MCP requests still create service-side security, audit, and operation
 
 ## Development
 
-Requires Node `>=22` and pnpm `>=10.18.3`, Changesets, and GitHub Actions.
+Requires Node `>=22` and pnpm `10.18.3`, Changesets, and GitHub Actions.
 
 ```bash
 pnpm install

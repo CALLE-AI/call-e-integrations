@@ -7,7 +7,12 @@ Thanks for contributing to CALL-E Integrations.
 This repository targets:
 
 - Node.js `>=22`
-- pnpm `>=10.18.3`
+- pnpm `10.18.3` (the exact version pinned in `packageManager` and CI)
+
+Check `pnpm --version` before installing. If your global pnpm differs, use
+`npx pnpm@10.18.3` in place of `pnpm` for the commands below. Newer pnpm
+versions can use different dependency-build approval settings; this repository
+does not require a pnpm 11 upgrade or a new build-script approval.
 
 Install dependencies from the repository root:
 
