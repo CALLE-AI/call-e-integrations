@@ -76,7 +76,7 @@ pnpm test:e2e
 
 ## Python
 
-The Python example pins MCP Python SDK `2.1.1`, verified with browser OAuth
+The Python example pins MCP Python SDK `2.2.0`, verified with browser OAuth
 and `plan_call`, and uses `httpx2`.
 
 ```bash
