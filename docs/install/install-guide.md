@@ -197,6 +197,13 @@ The Codex, Claude Code, Cursor plugin, OpenClaw, and skills.sh skills reuse the
 verified absolute entry point. The skills.sh skill requires an already
 installed CLI and does not download remote npm packages.
 
+### First-Time Users: Create The Account
+
+On the sign-in page, choose **Continue with Google** to create a CALL-E
+account or sign in to an existing one.
+
+If login fails, see [Troubleshooting](./troubleshooting.md).
+
 ## Safety
 
 CALL-E can place real outbound phone calls. Integrations must plan first,

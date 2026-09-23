@@ -42,6 +42,10 @@ Verify the command:
 
 ## Step 3 Authenticate
 
+<!-- sync-with: docs/install/install-guide.md#first-time-users-create-the-account -->
+First time? Choose **Continue with Google** on the sign-in page.
+See [First-time users](./install-guide.md#first-time-users-create-the-account).
+
 Run the login command and let the user complete browser authorization:
 
 ```json
