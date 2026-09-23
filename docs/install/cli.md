@@ -85,3 +85,5 @@ for the canonical command and option reference.
 
 When embedding the CLI in a Node application on Windows, follow the
 [shell-free child-process guidance](./troubleshooting.md#run-call-e-from-node-on-windows).
+For Python, see [Windows subprocess guidance](./troubleshooting.md#run-call-e-from-python-on-windows),
+including how to avoid `FileNotFoundError: [WinError 2]`.
