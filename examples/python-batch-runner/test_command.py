@@ -83,7 +83,9 @@ def test_explicit_relative_path_does_not_select_path_namesake(tmp_path, monkeypa
         result = client.run_command(command)
         assert result.returncode == 0, result.stderr
         assert result.stdout.strip() == "local"
-    assert client.run_command([name]).stdout.strip() == "shadow"
+    # Windows may also search the current directory for a bare command.
+    if sys.platform != "win32":
+        assert client.run_command([name]).stdout.strip() == "shadow"
 
 
 def test_non_executable_file_fails_precheck_on_posix(tmp_path):
