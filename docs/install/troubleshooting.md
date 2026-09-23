@@ -84,39 +84,18 @@ The npm installation provides a `calle.cmd` wrapper on Windows; a direct
 process launch does not resolve the bare command like a shell does. This
 failure occurs before the CLI starts.
 
-In the reported Windows test, using `calle.cmd` explicitly displayed help.
-For application integrations, use the existing
-[CLI launcher](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
-with a trusted Node executable instead of passing commands through `cmd /c`.
-This also avoids the shell argument parsing described below.
-
-After selecting a trusted CLI installation as described in that guide,
-replace these paths with your absolute Node executable and package paths:
+In the reported Windows test, specifying `calle.cmd` displayed help:
 
 ```python
-import json
 import subprocess
-from pathlib import Path
 
-node = Path(r"C:\Program Files\nodejs\node.exe")
-package_dir = Path(r"C:\trusted\node_modules\@call-e\cli")
-launcher = package_dir / "scripts" / "run-agent-command.mjs"
-request = {"package_dir": str(package_dir), "argv": ["--help"]}
-
-subprocess.run(
-    [str(node), str(launcher)],
-    input=json.dumps(request),
-    text=True,
-    shell=False,
-    check=True,
-)
+subprocess.run(["calle.cmd", "--help"])
 ```
 
-This help check requires no login and makes no calls. For subsequent commands,
-change the request's `argv` array; keep each argument as a separate element
-and send the JSON through stdin. Do not construct a shell command from user
-text. See the CLI reference for integration attribution and returned argument
-arrays.
+This help check requires no login and makes no calls. The test confirms this
+invocation; it does not validate arbitrary arguments through the `.cmd` wrapper.
+For application integrations, see the existing
+[CLI launcher guidance](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point).
 
 ## Run CALL-E from Node on Windows
 
