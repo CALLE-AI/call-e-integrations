@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import hashlib
 import json
+import os
 import re
 import shlex
 import shutil
@@ -129,6 +130,21 @@ def parse_positive_float(value: str) -> float:
     return parsed
 
 
+def parse_cli_command(value: str) -> list[str]:
+    # An executable path may contain spaces without containing CLI arguments.
+    if Path(value).expanduser().is_file():
+        return [value]
+    if sys.platform == "win32":
+        # Preserve Windows path separators; quotes group paths containing spaces.
+        parts = shlex.split(value, posix=False)
+        parts = [part[1:-1] if part.startswith('"') and part.endswith('"') else part for part in parts]
+    else:
+        parts = shlex.split(value)
+    if not parts:
+        raise argparse.ArgumentTypeError("expected a CLI command or executable path")
+    return parts
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run CALL-E MCP calls from a JSONL batch file.")
     parser.add_argument("--input", required=True, type=Path, help="Path to the input JSONL file.")
@@ -142,7 +158,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--channel", default=DEFAULT_CHANNEL, help=f"MCP channel. Default: {DEFAULT_CHANNEL}.")
     parser.add_argument("--server-url", help="Full MCP server URL. Overrides --base-url and --channel.")
     parser.add_argument("--cache-root", default=DEFAULT_CACHE_ROOT, help=f"calle CLI cache root. Default: {DEFAULT_CACHE_ROOT}.")
-    parser.add_argument("--calle-command", default="calle", help="calle CLI command or path. Default: calle.")
+    parser.add_argument("--calle-command", type=parse_cli_command, default="calle", help="calle CLI command or path. Default: calle.")
     parser.add_argument("--npm-command", default="npm", help="npm command used for automatic CLI installation. Default: npm.")
     parser.add_argument("--cli-package", default=DEFAULT_CLI_PACKAGE, help=f"CLI package to install when calle is missing. Default: {DEFAULT_CLI_PACKAGE}.")
     parser.add_argument("--no-auto-install-cli", action="store_true", help="Fail if calle is missing instead of installing it.")
@@ -168,7 +184,7 @@ def read_config(argv: list[str] | None = None) -> Config:
         channel=args.channel,
         server_url=resolve_server_url(args.base_url, args.channel, args.server_url),
         cache_root=args.cache_root,
-        calle_command=shlex.split(args.calle_command),
+        calle_command=args.calle_command,
         npm_command=args.npm_command,
         cli_package=args.cli_package,
         auto_install_cli=not args.no_auto_install_cli,
@@ -180,9 +196,17 @@ def read_config(argv: list[str] | None = None) -> Config:
     )
 
 
+def resolve_executable(executable: str) -> str | None:
+    # Keep explicit relative paths (./tool) distinct from PATH command names.
+    return shutil.which(os.path.expanduser(executable))
+
+
 def run_command(command: list[str], *, capture: bool = True) -> subprocess.CompletedProcess[str]:
+    resolved = resolve_executable(command[0])
+    if resolved is None:
+        raise CliUnavailableError(f"Executable not found: {command[0]}")
     return subprocess.run(
-        command,
+        [resolved, *command[1:]],
         check=False,
         text=True,
         capture_output=capture,
@@ -190,16 +214,11 @@ def run_command(command: list[str], *, capture: bool = True) -> subprocess.Compl
 
 
 def executable_exists(command: list[str]) -> bool:
-    if not command:
-        return False
-    executable = command[0]
-    if Path(executable).expanduser().exists():
-        return True
-    return shutil.which(executable) is not None
+    return bool(command) and resolve_executable(command[0]) is not None
 
 
 def install_calle_cli(config: Config, console: Console) -> None:
-    npm_path = shutil.which(config.npm_command)
+    npm_path = resolve_executable(config.npm_command)
     if not npm_path:
         raise CliUnavailableError(
             f"`{config.calle_command[0]}` is not installed and `{config.npm_command}` was not found. "

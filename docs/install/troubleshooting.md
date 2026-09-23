@@ -76,6 +76,81 @@ These steps were tested on macOS with Cursor 3.21.16, Node 26.8.2, and CALL-E CL
 `NODE_USE_ENV_PROXY=1` also resolved the CLI's `fetch failed`. This check does not
 cover a fresh OAuth login or skill installation.
 
+## Run CALL-E from Python on Windows
+
+For Python applications, invoke the existing CLI launcher with a trusted Node
+executable and pass arguments as JSON through stdin. This avoids Windows
+command-name lookup and shell parsing of argument values. The launcher verifies
+that the selected package is `@call-e/cli` before running it.
+
+### Recommended invocation
+
+Follow [CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
+to select a trusted installation. Replace the two paths below with your absolute
+Node executable and `@call-e/cli` package paths:
+
+```python
+import json
+import subprocess
+from pathlib import Path
+
+node = Path(r"C:\Program Files\nodejs\node.exe")
+package_dir = Path(r"C:\trusted\node_modules\@call-e\cli")
+launcher = package_dir / "scripts" / "run-agent-command.mjs"
+request = {"package_dir": str(package_dir), "argv": ["--help"]}
+
+subprocess.run(
+    [str(node), str(launcher)],
+    input=json.dumps(request),
+    text=True,
+    shell=False,
+    check=True,
+)
+```
+
+This help check requires no login and makes no calls. Use the same invocation
+on macOS or Linux with the corresponding absolute paths. For other commands,
+change `argv`; see the CLI reference for integration attribution and returned
+argument arrays.
+
+### Common questions
+
+**Why does `calle` work in my terminal but fail from Python?**
+
+Python's `subprocess.run(["calle", "--help"])` can raise
+`FileNotFoundError: [WinError 2]` on Windows. npm provides a `calle.cmd` wrapper,
+while a direct process launch does not resolve the bare name like a shell does.
+The CLI has not started when this error occurs.
+
+**Can I use `calle.cmd` or `cmd /c` instead?**
+
+The reported Windows test confirmed that `calle.cmd --help` displayed help when
+called from Python, and the reporter used `cmd /c` for a status query. Those
+results do not verify arbitrary arguments. For application integrations, use
+the recommended launcher: command scripts can reinterpret quotes, special
+characters, and multiline text. Adding `shell=True` is not needed.
+
+**Where do I find the paths?**
+
+In PowerShell, `Get-Command node.exe` shows the Node executable. For a global
+npm installation, `npm root -g` gives the package root; append `@call-e/cli` to
+that directory. For a local installation, select the trusted application's
+`node_modules/@call-e/cli` directory. Configure these paths once instead of
+running discovery commands before every invocation.
+
+**How do I pass spaces, quotes, or multiline text?**
+
+Keep each argument as one string in `argv`, including an entire multiline value
+as one element. Let `json.dumps` serialize the request. Do not add shell quotes
+to individual arguments, concatenate a command string, or use `shell=True`.
+
+**What if the launcher rejects the package or entry point?**
+
+Check that `package_dir` names the `@call-e/cli` directory, not its parent
+`node_modules` directory or the older `@call-e/calle` SDK. If the launcher reports
+that command-help checks failed, update the trusted CLI installation as directed
+by the CLI reference before authenticating.
+
 ## Run CALL-E from Node on Windows
 
 ### Symptoms
