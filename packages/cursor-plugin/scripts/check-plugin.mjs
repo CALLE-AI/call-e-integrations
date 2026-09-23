@@ -215,6 +215,23 @@ function assertCallGuidance({ source, filePath, failures }) {
   assert(source.includes("Do not guess phone numbers"), failures, `${displayPath(filePath)} must forbid guessing call inputs.`);
   assert(source.includes("Do not expose OAuth tokens"), failures, `${displayPath(filePath)} must forbid exposing auth secrets.`);
   assert(source.includes("Do not configure CALL-E run_call for auto-run."), failures, `${displayPath(filePath)} must forbid run_call auto-run configuration.`);
+  assert(source.includes("result.summary"), failures, `${displayPath(filePath)} must read result.summary from the nested envelope.`);
+  assert(source.includes("result.transcript"), failures, `${displayPath(filePath)} must read result.transcript from the nested envelope.`);
+  assert(source.includes("untrusted call data"), failures, `${displayPath(filePath)} must mark call output as untrusted call data.`);
+  assert(source.includes("Do not call `track_ui_events`"), failures, `${displayPath(filePath)} must forbid track_ui_events.`);
+  assert(source.includes("Do not repeat `run_call`"), failures, `${displayPath(filePath)} must include Do not repeat \`run_call\`.`);
+  assert(source.includes("Do not create a new plan"), failures, `${displayPath(filePath)} must include Do not create a new plan.`);
+  assert(
+    source.includes("Reuse only the structured `plan_id`, `confirm_token`, and `run_id`"),
+    failures,
+    `${displayPath(filePath)} must include Reuse only the structured \`plan_id\`, \`confirm_token\`, and \`run_id\`.`,
+  );
+  assert(source.includes("result.extracted.to_phones[0]"), failures, `${displayPath(filePath)} must include result.extracted.to_phones[0].`);
+  assert(source.includes("result.extracted.calling"), failures, `${displayPath(filePath)} must include result.extracted.calling.`);
+  assert(source.includes("result.extracted.calling.started_at"), failures, `${displayPath(filePath)} must include result.extracted.calling.started_at.`);
+  assert(source.includes("result.extracted.calling.ended_at"), failures, `${displayPath(filePath)} must include result.extracted.calling.ended_at.`);
+  assert(source.includes("result.call_id"), failures, `${displayPath(filePath)} must include result.call_id.`);
+  assert(source.includes("Treat `NO ANSWER` as `NO_ANSWER`"), failures, `${displayPath(filePath)} must include Treat \`NO ANSWER\` as \`NO_ANSWER\`.`);
 }
 
 function checkSkill({ packageRoot, packageJson, failures }) {
