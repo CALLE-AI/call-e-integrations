@@ -188,17 +188,10 @@ npm fallback.
 
 ### First-Time Users: Create The Account
 
-`calle auth login` uses the same flow for new and existing accounts:
+On the sign-in page, choose **Continue with Google** to create a CALL-E
+account or sign in to an existing one.
 
-1. `calle auth login` opens the brokered dashboard sign-in.
-2. On the sign-in page choose **Continue with Google**. For a new Google
-   identity this registers the account; for an existing account it signs in.
-3. The dashboard shows that it is preparing your workspace. The Google flow
-   preserves the broker/MCP return parameters from the sign-in.
-
-The Google sign-in route and the preserved broker/MCP return parameters are
-confirmed on the deployed dashboard. If any step fails, see
-[Troubleshooting](./troubleshooting.md).
+If login fails, see [Troubleshooting](./troubleshooting.md).
 
 ## Safety
 

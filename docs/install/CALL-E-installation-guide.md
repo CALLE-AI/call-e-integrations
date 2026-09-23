@@ -40,6 +40,10 @@ env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_V
 
 ## Step 3 Authenticate
 
+<!-- sync-with: docs/install/install-guide.md#first-time-users-create-the-account -->
+First time? Choose **Continue with Google** on the sign-in page.
+See [First-time users](./install-guide.md#first-time-users-create-the-account).
+
 Run the login command and let the user complete browser authorization:
 
 ```bash
@@ -58,16 +62,6 @@ After the user confirms authorization is complete, finish the pending login:
 ```bash
 env CALLE_SOURCE=skills_sh CALLE_INTEGRATION=skills_sh_skill CALLE_INTEGRATION_VERSION=0.1.0 calle auth login --no-browser-open
 ```
-
-## Step 3.5 First-Time Users: Create The Account
-
-<!-- sync-with: docs/install/install-guide.md#first-time-users-create-the-account -->
-
-`calle auth login` uses the same flow for new and existing accounts: it opens
-the brokered dashboard sign-in, where **Continue with Google** registers a new
-account or signs in an existing one while preserving the broker/MCP return
-parameters. Full first-time-user detail:
-[First-Time Users](./install-guide.md#first-time-users-create-the-account).
 
 ## Step 4 Verify
 
