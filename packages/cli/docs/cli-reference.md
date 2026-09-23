@@ -121,6 +121,15 @@ than the latest call state. See the
 [MCP tool result envelope](../../../docs/mcp/openagent-oauth.md#tool-result-envelope)
 for the direct protocol shape and SDK field-name differences.
 
+For `get_call_run`, the structured object has its own nested `result` containing
+call content. In `call status` output, the summary is therefore
+`result.structuredContent.result.summary` and the transcript is
+`result.structuredContent.result.transcript`. In start/run/recover output,
+use `status_result.structuredContent.result` instead. `status`, `activity`, and
+`next_step` remain directly on the structured object. See the
+[run result fields](../../../docs/mcp/openagent-oauth.md#get_call_run) for the
+other nested fields.
+
 ## Finding Command Help
 
 Help is available at the root, command-group, and subcommand levels:

@@ -156,7 +156,7 @@ After extracting the structured object, use these handoff fields:
 | --- | --- |
 | `plan_call` | `ready_to_run`, `plan_id`, `confirm_token`, and any `clarifying_questions` |
 | `run_call` | `run_id`, current `status`, and `next_step` when present |
-| `get_call_run` | `run_id`, `status`, `activity`, result fields, and `next_step` when present |
+| `get_call_run` | `run_id`, `status`, `activity`, `result.summary`, `result.transcript`, `result.outcome`, `result.extracted`, and `next_step` when present |
 
 These are workflow handoff fields, not an exhaustive output schema. Follow the
 current tool definitions returned by `tools/list` and do not infer fields that
@@ -218,9 +218,30 @@ Important inputs:
 - `cursor`: optional pagination cursor from a previous `get_call_run` response.
 - `limit`: optional maximum number of activity entries to return.
 
-The response can include status, activity, summary, details, transcript, and
-`next_step` guidance. Follow the workflow below until the run reaches a
-terminal state.
+Inside the structured object, `status`, `activity`, and `next_step` are
+run-level fields. Call content is nested under `result`: read
+`result.post_summary` or `result.summary`, `result.transcript`,
+`result.outcome`, `result.extracted`, and `result.call_id` when present.
+Do not read `summary` or `transcript` directly from `structuredContent`.
+
+For example, this synthetic excerpt shows the nesting, not a complete response:
+
+```json
+{
+  "run_id": "run_example",
+  "status": "COMPLETED",
+  "activity": [],
+  "result": {
+    "summary": "The recipient confirmed availability.",
+    "transcript": "[00:00:01] USER: Yes, I am available.",
+    "outcome": { "task_completed": true },
+    "extracted": {}
+  }
+}
+```
+
+An absent or empty transcript remains unavailable; do not fill it from the
+summary. Follow the workflow below until the run reaches a terminal state.
 
 ### Reliable terminal-state workflow
 

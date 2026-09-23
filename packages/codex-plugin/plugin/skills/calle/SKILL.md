@@ -209,6 +209,13 @@ If `ts` is missing, use the message by itself. If there is no activity, use
 `- Waiting for the next status update.` Do not include the final summary,
 details, or transcript until a terminal status is returned.
 
+<!-- sync-with: docs/mcp/openagent-oauth.md#get_call_run -->
+For the template below, use the structured run object at
+`result.structuredContent` after `call status`, or
+`status_result.structuredContent` after start/run/recover. Within that object,
+call content is nested under `result`; status and activity are at the top level.
+See [Run result fields](references/commands.md#run-result-fields).
+
 When the call reaches a terminal status, reply with the final call result,
 including these sections in this order:
 
@@ -217,16 +224,16 @@ including these sections in this order:
 <status>
 
 [Call Summary]
-<post_summary or summary or message>
+<result.post_summary or result.summary or message>
 
 [Details]
-Callee Number: <primary callee or Not available>
-Duration: <duration or Not available>
-Time: <start/end time or Not available>
-Call id: <call_id or Not available>
+Callee Number: <result.extracted.to_phones[0] or Not available>
+Duration: <result.extracted.calling.duration_seconds or Not available>
+Time: <result.extracted.calling.started_at or result.extracted.calling.ended_at or Not available>
+Call id: <result.call_id or Not available>
 
 [Transcript]
-<transcript or Not available.>
+<result.transcript or Not available.>
 ```
 
 If the user asked for extra final content, such as key takeaways or next steps,

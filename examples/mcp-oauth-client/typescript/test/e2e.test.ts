@@ -115,3 +115,44 @@ test("OAuth example reports repeated MCP 401 without leaking tokens", async (t) 
   assert.match(result.stderr, /oauth_client_error/);
   assertNoSecrets(`${result.stdout}\n${result.stderr}`);
 });
+
+for (const toolName of ["plan_call", ""]) {
+  test(`OAuth example authorizes after public discovery (${toolName || "resources"})`, async (t) => {
+    const fake = await startFakeServer({ publicDiscovery: true });
+    t.after(() => fake.close());
+    const result = await runClient({
+      MCP_SERVER_URL: fake.serverUrl,
+      MCP_OAUTH_AUTO_AUTHORIZE: "1",
+      MCP_TOOL_NAME: toolName,
+      MCP_TOOL_ARGS_JSON: '{"user_input":"Plan only; ask for missing details. Do not start a call."}',
+    });
+    assert.equal(result.code, 0, result.stderr);
+    assertNoSecrets(result.stdout + result.stderr);
+    const state = await readState(fake.stateUrl);
+    assert.equal(state.oauth_tokens.length, 1);
+    assert.equal(state.mcp_requests.find((r: {method: string}) => r.method === "tools/list").has_bearer_token, false);
+    assert.deepEqual(state.tool_calls.map((c: {name: string}) => c.name), toolName ? [toolName] : []);
+    assert.equal(state.resource_reads.length, 1);
+  });
+}
+
+for (const toolName of ["plan_call", ""]) {
+  test(`OAuth example stops after repeated request-time 401 (${toolName || "resources"})`, async (t) => {
+    const fake = await startFakeServer({ publicDiscovery: true, unauthorizedMcp: true });
+    t.after(() => fake.close());
+    const result = await runClient({
+      MCP_SERVER_URL: fake.serverUrl,
+      MCP_OAUTH_AUTO_AUTHORIZE: "1",
+      MCP_TOOL_NAME: toolName,
+      MCP_TOOL_ARGS_JSON: '{"user_input":"Plan only. Do not start a call."}',
+    });
+    assert.notEqual(result.code, 0);
+    assertNoSecrets(result.stdout + result.stderr);
+    const state = await readState(fake.stateUrl);
+    const method = toolName ? "tools/call" : "resources/list";
+    // The SDK may refresh once before its repeated-401 circuit breaker stops.
+    const attempts = state.mcp_requests.filter((r: {method: string}) => r.method === method).length;
+    assert.ok(attempts >= 2 && attempts <= 3);
+    assert.deepEqual(state.tool_calls, []);
+  });
+}
