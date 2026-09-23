@@ -25,12 +25,20 @@ The script runs these prechecks before processing the JSONL file:
 4. If the CLI is not logged in, pause and ask the operator to run
    `calle auth login`, then press Enter to continue.
 
-On Windows, the runner resolves `calle` to its installed executable (normally
-`calle.cmd`) before checking authentication. `--calle-command` also accepts an
-executable path; quote paths containing spaces when supplying a command with
-additional arguments. This CLI subprocess only checks authentication; call
-payloads are sent directly through MCP. For general Python-to-CLI integrations,
-see [Windows invocation guidance](../../docs/install/troubleshooting.md#run-call-e-from-python-on-windows).
+## CLI invocation
+
+The runner uses the same executable lookup for its CLI precheck, authentication
+check, and npm installation. Bare names such as `calle` use PATH (including the
+Windows `calle.cmd` wrapper); explicit paths such as `./calle` or an absolute
+path keep their meaning. An existing file must also be executable.
+
+`--calle-command` accepts an executable path or a command with arguments. Use
+double quotes around paths containing spaces when combining them with arguments.
+The runner passes arguments separately without enabling a shell. Its CLI calls
+only check authentication; call payloads go directly through MCP.
+
+For general Python-to-CLI integrations and Windows troubleshooting, follow the
+[shared CLI invocation guidance](../../docs/install/troubleshooting.md#run-call-e-from-python-on-windows).
 
 Input is JSONL. Each line may use the customer payload shape directly:
 

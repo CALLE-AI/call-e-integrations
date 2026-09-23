@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import hashlib
 import json
+import os
 import re
 import shlex
 import shutil
@@ -132,7 +133,7 @@ def parse_positive_float(value: str) -> float:
 def parse_cli_command(value: str) -> list[str]:
     # An executable path may contain spaces without containing CLI arguments.
     if Path(value).expanduser().is_file():
-        return [str(Path(value).expanduser())]
+        return [value]
     if sys.platform == "win32":
         # Preserve Windows path separators; quotes group paths containing spaces.
         parts = shlex.split(value, posix=False)
@@ -195,9 +196,13 @@ def read_config(argv: list[str] | None = None) -> Config:
     )
 
 
+def resolve_executable(executable: str) -> str | None:
+    # Keep explicit relative paths (./tool) distinct from PATH command names.
+    return shutil.which(os.path.expanduser(executable))
+
+
 def run_command(command: list[str], *, capture: bool = True) -> subprocess.CompletedProcess[str]:
-    executable = str(Path(command[0]).expanduser())
-    resolved = shutil.which(executable)
+    resolved = resolve_executable(command[0])
     if resolved is None:
         raise CliUnavailableError(f"Executable not found: {command[0]}")
     return subprocess.run(
@@ -209,16 +214,11 @@ def run_command(command: list[str], *, capture: bool = True) -> subprocess.Compl
 
 
 def executable_exists(command: list[str]) -> bool:
-    if not command:
-        return False
-    executable = command[0]
-    if Path(executable).expanduser().exists():
-        return True
-    return shutil.which(executable) is not None
+    return bool(command) and resolve_executable(command[0]) is not None
 
 
 def install_calle_cli(config: Config, console: Console) -> None:
-    npm_path = shutil.which(config.npm_command)
+    npm_path = resolve_executable(config.npm_command)
     if not npm_path:
         raise CliUnavailableError(
             f"`{config.calle_command[0]}` is not installed and `{config.npm_command}` was not found. "

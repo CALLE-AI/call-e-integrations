@@ -63,3 +63,34 @@ def test_documented_python_launcher():
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     assert "Usage: calle" in result.stdout
+
+
+def test_explicit_relative_path_does_not_select_path_namesake(tmp_path, monkeypatch):
+    name = "local cli.cmd" if sys.platform == "win32" else "local cli"
+    local = tmp_path / name
+    shadow_dir = tmp_path / "path-bin"
+    shadow_dir.mkdir()
+    for path, output in [(local, "local"), (shadow_dir / name, "shadow")]:
+        prefix = "@echo off\n" if sys.platform == "win32" else "#!/bin/sh\n"
+        path.write_text(prefix + f"echo {output}\n")
+        path.chmod(0o755)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PATH", str(shadow_dir) + os.pathsep + os.environ["PATH"])
+    explicit = "./" + name
+    for value in [explicit, f'"{explicit}" --help']:
+        command = client.parse_cli_command(value)
+        assert client.executable_exists(command)
+        result = client.run_command(command)
+        assert result.returncode == 0, result.stderr
+        assert result.stdout.strip() == "local"
+    assert client.run_command([name]).stdout.strip() == "shadow"
+
+
+def test_non_executable_file_fails_precheck_on_posix(tmp_path):
+    if sys.platform == "win32":
+        pytest.skip("POSIX executable permission")
+    path = tmp_path / "not-executable"
+    path.touch(mode=0o600)
+    assert not client.executable_exists([str(path)])
+    with pytest.raises(client.CliUnavailableError, match="Executable not found"):
+        client.run_command([str(path)])

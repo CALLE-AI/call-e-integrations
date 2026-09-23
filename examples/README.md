@@ -12,3 +12,13 @@ not define a supported application API.
 The default e2e tests use a local fake broker/OAuth/MCP server, so they do not
 require real CALL-E credentials or browser login. Live verification against the
 real CALL-E service is opt-in through each example README.
+
+## Invocation conventions
+
+The OAuth and broker examples connect directly to MCP; they do not require a
+CLI subprocess. The batch runner reuses the CLI login state before making MCP
+calls. For applications that invoke CLI commands, follow the shared
+[Python/Windows invocation guide](../docs/install/troubleshooting.md#run-call-e-from-python-on-windows)
+and [CLI reference](../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
+instead of constructing shell command strings. Keep platform troubleshooting
+in the guide and example-specific options in each example README.
