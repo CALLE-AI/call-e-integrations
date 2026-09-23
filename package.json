@@ -4,7 +4,7 @@
   "packageManager": "pnpm@10.18.3",
   "engines": {
     "node": ">=22",
-    "pnpm": ">=10.18.3"
+    "pnpm": "10.18.3"
   },
   "scripts": {
     "test": "pnpm -r --filter \"./packages/*\" run test",
