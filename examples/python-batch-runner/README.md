@@ -25,6 +25,13 @@ The script runs these prechecks before processing the JSONL file:
 4. If the CLI is not logged in, pause and ask the operator to run
    `calle auth login`, then press Enter to continue.
 
+On Windows, the runner resolves `calle` to its installed executable (normally
+`calle.cmd`) before checking authentication. `--calle-command` also accepts an
+executable path; quote paths containing spaces when supplying a command with
+additional arguments. This CLI subprocess only checks authentication; call
+payloads are sent directly through MCP. For general Python-to-CLI integrations,
+see [Windows invocation guidance](../../docs/install/troubleshooting.md#run-call-e-from-python-on-windows).
+
 Input is JSONL. Each line may use the customer payload shape directly:
 
 ```json
