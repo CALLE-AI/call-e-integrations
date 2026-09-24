@@ -28,7 +28,7 @@ inspect parameters, or plan a call:
 ```
 
 ```json
-["call", "plan", "--to-phone", "+15551234567", "--goal", "Confirm the appointment"]
+["call", "plan", "--to-phone", "+14155550123", "--goal", "Confirm the appointment"]
 ```
 
 Help is available at every command level:
@@ -86,11 +86,11 @@ Help is available at every command level:
 ```
 
 ```json
-["call", "plan", "--to-phone", "+15551234567", "--goal", "Confirm the appointment"]
+["call", "plan", "--to-phone", "+14155550123", "--goal", "Confirm the appointment"]
 ```
 
 ```json
-["call", "start", "--to-phone", "+15551234567", "--goal", "Confirm the appointment"]
+["call", "start", "--to-phone", "+14155550123", "--goal", "Confirm the appointment"]
 ```
 
 ```json

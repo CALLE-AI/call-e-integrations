@@ -138,7 +138,7 @@ I'll keep you updated on the phone status, call content, and summary.
 ## Call planning
 
 ```json
-["call", "plan", "--to-phone", "+15551234567", "--goal", "Confirm the appointment"]
+["call", "plan", "--to-phone", "+14155550123", "--goal", "Confirm the appointment"]
 ```
 
 Supported `call plan` options:

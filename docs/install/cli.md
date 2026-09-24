@@ -59,7 +59,7 @@ version, then create a plan:
 ```
 
 ```json
-["call", "plan", "--to-phone", "+15551234567", "--goal", "Confirm the appointment"]
+["call", "plan", "--to-phone", "+14155550123", "--goal", "Confirm the appointment"]
 ```
 
 Help follows the command hierarchy, so you can discover a group before choosing

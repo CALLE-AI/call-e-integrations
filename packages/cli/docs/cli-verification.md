@@ -71,7 +71,7 @@ browser login state, and test account access.
 Set the target test phone number:
 
 ```bash
-export CALLE_CLI_LIVE_TO_PHONE='+15551234567'
+export CALLE_CLI_LIVE_TO_PHONE='+14155550123'
 ```
 
 Run the live OAuth, MCP tools, and call planning flow without placing a phone
@@ -138,7 +138,7 @@ Use these arrays as `request.argv`, preserving returned IDs and tokens as data.
 Plan a call:
 
 ```json
-["call", "plan", "--base-url", "https://seleven-mcp-sg.airudder.com", "--to-phone", "+15551234567", "--goal", "Verify the calle CLI live call flow."]
+["call", "plan", "--base-url", "https://seleven-mcp-sg.airudder.com", "--to-phone", "+14155550123", "--goal", "Verify the calle CLI live call flow."]
 ```
 
 Run the planned call:

@@ -30,6 +30,7 @@ import {
   isUnauthorizedMcpError,
   listMcpTools,
 } from "./mcp-client.js";
+import { destinationPhoneFormatError } from "./phone.js";
 import { createTelemetryClient } from "./telemetry.js";
 
 class InvalidArgumentsError extends Error {
@@ -152,28 +153,28 @@ const COMMAND_GROUPS = {
         summary: "Plan a phone call via plan_call",
         usage: "calle call plan --to-phone <phone> --goal <text> [options]",
         options: [
-          "  --to-phone <phone>            Required; repeat once per destination phone number",
+          "  --to-phone <phone>            Required; repeat once per destination E.164 number",
           "  --goal <text>                 Required; call goal or instruction",
           "  --language <language>         Optional language hint",
           "  --region <region>             Optional region hint",
           "  --timezone <iana>             Optional planning timezone metadata",
         ],
         examples: [
-          `calle call plan --to-phone +15551234567 --goal "Confirm the appointment"`,
+          `calle call plan --to-phone +14155550123 --goal "Confirm the appointment"`,
         ],
       },
       start: {
         summary: "Plan and run a phone call without printing confirmation data",
         usage: "calle call start --to-phone <phone> --goal <text> [options]",
         options: [
-          "  --to-phone <phone>            Required; repeat once per destination phone number",
+          "  --to-phone <phone>            Required; repeat once per destination E.164 number",
           "  --goal <text>                 Required; call goal or instruction",
           "  --language <language>         Optional language hint",
           "  --region <region>             Optional region hint",
           "  --timezone <iana>             Optional planning timezone metadata",
         ],
         examples: [
-          `calle call start --to-phone +15551234567 --goal "Confirm the appointment"`,
+          `calle call start --to-phone +14155550123 --goal "Confirm the appointment"`,
         ],
       },
       run: {
@@ -983,6 +984,12 @@ function buildPlanArguments(options) {
     to_phones: toPhones,
     goal: requireStringOption(options, "goal", "--goal"),
   };
+  for (const phone of toPhones) {
+    const formatError = destinationPhoneFormatError(phone);
+    if (formatError) {
+      throw new InvalidArgumentsError(formatError);
+    }
+  }
   const language = optionalStringOption(options, "language");
   const region = optionalStringOption(options, "region");
   if (language) {
