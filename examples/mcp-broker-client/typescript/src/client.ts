@@ -24,6 +24,7 @@ import {
   ensurePendingLogin,
   exchangeBrokerSession,
   getBrokerSessionStatus,
+  normalizePendingSession,
 } from "@call-e/core/broker-client";
 
 import {
@@ -177,6 +178,20 @@ function clearBrokerState(config: Config) {
   removeFile(pendingCachePath(config.cacheRoot, config.serverUrl));
 }
 
+function normalizeCachedPending(config: Config, pending: ReturnType<typeof readPendingLogin>) {
+  if (!pending) {
+    return null;
+  }
+  try {
+    return normalizePendingSession(pending, {
+      brokerBaseUrl: config.brokerBaseUrl,
+      authBaseUrl: config.authBaseUrl,
+    });
+  } catch {
+    return null;
+  }
+}
+
 async function ensureBrokerToken(config: Config): Promise<Record<string, unknown>> {
   const cachePath = tokenCachePath(config.cacheRoot, config.serverUrl);
   const pendingPath = pendingCachePath(config.cacheRoot, config.serverUrl);
@@ -198,13 +213,16 @@ async function ensureBrokerToken(config: Config): Promise<Record<string, unknown
     });
   }
 
-  let pending = readPendingLogin(pendingPath);
+  let pending = normalizeCachedPending(config, readPendingLogin(pendingPath));
   if (!pending || pendingIsExpired(pending)) {
-    if (pending) {
+    if (readPendingLogin(pendingPath)) {
       removeFile(pendingPath);
     }
     const result = await ensurePendingLogin(config);
-    pending = result.pending;
+    pending = normalizePendingSession(result.pending, {
+      brokerBaseUrl: config.brokerBaseUrl,
+      authBaseUrl: config.authBaseUrl,
+    });
     printEvent("auth_status", {
       status: "login_required",
       pending_status: pending.status,
@@ -222,13 +240,16 @@ async function ensureBrokerToken(config: Config): Promise<Record<string, unknown
   const deadline = Date.now() + config.pollTimeoutSeconds * 1000;
   while (Date.now() < deadline) {
     const statusPayload = await getBrokerSessionStatus(config, pending);
-    pending = {
+    pending = normalizePendingSession({
       ...pending,
       status: String(statusPayload.status || pending.status || "PENDING").toUpperCase(),
       expires_at: typeof statusPayload.expires_at === "string" ? statusPayload.expires_at : pending.expires_at,
       error_message: typeof statusPayload.error_message === "string" ? statusPayload.error_message : null,
       poll_after_ms: Number(statusPayload.poll_after_ms || 0) || pending.poll_after_ms || null,
-    };
+    }, {
+      brokerBaseUrl: config.brokerBaseUrl,
+      authBaseUrl: config.authBaseUrl,
+    });
     writePrivateJson(pendingPath, pending);
     printEvent("auth_poll", {
       pending_status: pending.status,
