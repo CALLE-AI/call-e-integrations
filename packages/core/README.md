@@ -60,6 +60,19 @@ The override applies only to the tool call. MCP session initialization keeps
 using `config.timeoutSeconds`; when the override is omitted, the tool call uses
 that configured timeout too.
 
+## Streamed Responses
+
+The MCP client accepts both `application/json` and `text/event-stream`
+responses. For event streams it returns the JSON-RPC response whose `id`
+matches the request and stops reading once it arrives. It skips interleaved
+server notifications. A JSON-RPC `error` in the stream is thrown as an
+`McpHttpError` with `code: "mcp_error"`, the same as for JSON responses.
+
+A stream that ends without a matching response, contains malformed JSON,
+exceeds 8 MiB, or carries more than 10,000 events is rejected with
+`code: "mcp_protocol_error"`. `config.maxSseResponseBytes` and
+`config.maxSseEvents` override those limits.
+
 ## Tool Result Payloads
 
 `callMcpTool` returns the MCP `CallToolResult` envelope and preserves its raw
