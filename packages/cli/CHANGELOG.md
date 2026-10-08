@@ -1,5 +1,11 @@
 # @call-e/cli
 
+## 0.5.3
+
+### Patch Changes
+
+- [#156](https://github.com/CALLE-AI/call-e-integrations/pull/156) [`1646804`](https://github.com/CALLE-AI/call-e-integrations/commit/164680499bfc11382ad85254d2987bd734c84b33) Thanks [@JJasonSun](https://github.com/JJasonSun)! - Clarify the nested get_call_run result fields in CLI and packaged agent guidance.
+
 ## 0.5.2
 
 ### Patch Changes

@@ -66,7 +66,7 @@ The plugin reuses the verified entry point for every CLI command. Commands run
 by the skill include this CALL-E attribution:
 
 ```json
-{"integration": {"source": "claude", "name": "claude_code_plugin", "version": "0.2.4"}}
+{"integration": {"source": "claude", "name": "claude_code_plugin", "version": "0.2.5"}}
 ```
 
 ## Use
