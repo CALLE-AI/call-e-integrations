@@ -9,6 +9,10 @@ export interface McpClientConfig {
   mcpClientName?: string;
   mcpClientVersion?: string;
   cliVersion?: string;
+  /** Byte cap for one text/event-stream response. Defaults to 8 MiB. */
+  maxSseResponseBytes?: number;
+  /** Event cap for one text/event-stream response. Defaults to 10,000. */
+  maxSseEvents?: number;
 }
 
 export interface McpHttpErrorOptions {
