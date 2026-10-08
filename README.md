@@ -180,16 +180,17 @@ CALL-E server SDKs are available for TypeScript and Python. Use them in trusted 
 
 ```bash
 # TypeScript
-pnpm add @call-e/calle@0.7.0
+pnpm add @call-e/calle@1.0.1
 
 # Python
-pip install calle-ai==0.7.0
+pip install calle-ai==1.0.1
 ```
 
 **Set your API key, recipient, and workflow key:**
 
 ```bash
 export CALLE_API_KEY="<YOUR_CALLE_API_KEY>"
+export CALLE_BASE_URL="https://api.heycall-e.com"
 export CALLE_EXAMPLE_PHONE="<AUTHORIZED_E164_PHONE>"
 export CALLE_IDEMPOTENCY_KEY="<UNIQUE_WORKFLOW_KEY>"
 ```
@@ -200,48 +201,49 @@ for integration testing, follow the [official test-hotline instructions](https:/
 Choose and save a unique workflow key before the first request. Reuse it only for
 the same request; a new key can create another call.
 
-The examples below use the published TypeScript and Python SDKs at **0.7.0**.
-An explicit `recipients` entry uses these API fields:
+The examples below use SDK **1.0.1** and the single-target Calls V2 API.
+Existing integrations must [migrate inputs and result handling](https://docs.heycall-e.com/migration)
+before upgrading. Historical call-task IDs still use the legacy interface.
 
 | Field | Meaning |
 | --- | --- |
-| `phones` | Required, non-empty array of E.164 phone numbers. |
-| `region` | Optional recipient country/region code, such as `US`. |
-| `locale` | Optional conversation language hint, such as `en-US`. |
+| `phone` | Required, one E.164 phone number. |
+| `region` | Optional destination country/region code, inferred from the phone. |
+| `locale` | Optional spoken-language hint, inferred from the task and supported regional languages. |
 
-Set `region` and `locale` for your recipient. `name` is not an accepted recipient
-field in the [API schema](https://docs.heycall-e.com/openapi/calle.openapi.yaml).
-Python SDK 0.7.0 also accepts the singular shorthand `recipient={"phone": "..."}`;
-use `phones` inside a `recipients` list, as shown below.
-
-When explicit recipients are omitted, the service attempts to infer them from
-`task`. It can return `no_recipients` if inference finds none. Use explicit
-recipients when the destination is known; see [recipient errors](https://docs.heycall-e.com/errors#code-specific-guidance).
+Calls require a result schema with a closed object of scalar fields
+(`additionalProperties: false`); arrays and nested objects are unsupported.
+The idempotency key is required. Missing or conflicting task inputs return
+`422 input_incomplete`; collect the requested facts before resubmitting.
 
 **TypeScript:**
 
 ```ts
 import { CalleClient } from "@call-e/calle";
 
-const client = new CalleClient({ apiKey: process.env.CALLE_API_KEY! });
+const client = new CalleClient({
+  apiKey: process.env.CALLE_API_KEY!,
+  baseUrl: process.env.CALLE_BASE_URL!,
+});
 
-const call = await client.calls.createAndWait({
-  task: "Call the recipient and confirm whether they can attend Friday lunch.",
-  recipients: [{ phones: [process.env.CALLE_EXAMPLE_PHONE!], region: "US", locale: "en-US" }],
+const created = await client.calls.create({
+  task: "Say hello in English, allow a brief reply, then politely end the call.",
+  phone: process.env.CALLE_EXAMPLE_PHONE!,
   resultSchema: {
     type: "object",
-    required: ["can_attend"],
+    additionalProperties: false,
+    required: ["summary"],
     properties: {
-      can_attend: { type: "string", enum: ["yes", "no", "unknown"] },
+      summary: { type: "string" },
     },
   },
 }, { idempotencyKey: process.env.CALLE_IDEMPOTENCY_KEY! });
 
-console.log(call.status);
-console.log(call.taskCompleted);
-console.log(call.completionConfidence);
-console.log(call.structuredResult);
-console.log(call.evidence);
+console.log("Save this Call ID before waiting:", created.id);
+const call = await client.calls.waitForResult(created.id);
+console.log(call.status, call.callOutcome, call.resultStatus);
+console.log(call.result, call.error);
+console.log(call.transcript);
 ```
 
 **Python:**
@@ -250,25 +252,30 @@ console.log(call.evidence);
 import os
 from calle import CalleClient
 
-client = CalleClient(api_key=os.environ["CALLE_API_KEY"])
+client = CalleClient(
+    api_key=os.environ["CALLE_API_KEY"],
+    base_url=os.environ["CALLE_BASE_URL"],
+)
 
-call = client.calls.create_and_wait(
-    task="Call the recipient and confirm whether they can attend Friday lunch.",
-    recipients=[{"phones": [os.environ["CALLE_EXAMPLE_PHONE"]], "region": "US", "locale": "en-US"}],
+created = client.calls.create(
+    task="Say hello in English, allow a brief reply, then politely end the call.",
+    phone=os.environ["CALLE_EXAMPLE_PHONE"],
     idempotency_key=os.environ["CALLE_IDEMPOTENCY_KEY"],
     result_schema={
         "type": "object",
-        "required": ["can_attend"],
+        "additionalProperties": False,
+        "required": ["summary"],
         "properties": {
-            "can_attend": {"type": "string", "enum": ["yes", "no", "unknown"]},
+            "summary": {"type": "string"},
         },
     },
 )
 
-print(call["status"])
-print(call["task_completed"])
-print(call["structured_result"])
-print(call["evidence"])
+print("Save this Call ID before waiting:", created["id"])
+call = client.calls.wait_for_result(created["id"])
+print(call["status"], call["call_outcome"], call["result_status"])
+print(call["result"], call["error"])
+print(call["transcript"])
 ```
 
 **Python exceptions:**
@@ -297,8 +304,12 @@ from calle import (
 
 Catch authentication/rate-limit subclasses before `CalleAPIError` when handling
 them separately. A polling timeout does not cancel an accepted call. For a
-complete example that saves the Call ID and resumes polling, see the
-[Calls example and recovery guide](https://docs.heycall-e.com/quickstart#run-a-complete-example).
+complete example that saves the original request and Call ID and resumes polling,
+see the [Calls example and recovery guide](https://docs.heycall-e.com/quickstart#run-a-complete-example).
+Wait helpers stop when `result_status` is no longer `pending` (`resultStatus`
+in TypeScript). `completed` alone does not establish result readiness or business
+success. Use the separate `id` for API requests and `call_id` (`callId` in TypeScript)
+for Billing lookup.
 
 #### Community SDKs
 
@@ -313,68 +324,62 @@ The CALL-E Developer API provides direct HTTP access for any trusted backend, wo
 ```bash
 export CALLE_API_KEY="<YOUR_CALLE_API_KEY>"
 export CALLE_BASE_URL="https://api.heycall-e.com"
+export CALLE_IDEMPOTENCY_KEY="<UNIQUE_WORKFLOW_KEY>"
 ```
 
 **Endpoints:**
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `POST` | `/v1/calls` | Create a one-recipient or batch call task. |
-| `GET` | `/v1/calls/{call_id}` | Read status, summaries, structured results, and transcripts. |
-| `GET` | `/v1/calls/{call_id}/events` | List developer-facing call events. |
+| `POST` | `/v2/calls` | Prepare and accept one immediate phone call (HTTP 202). |
+| `GET` | `/v2/calls/{call_id}` | Read execution status, result readiness, result, error, and transcript. |
+| `GET` | `/v2/calls/{call_id}/events` | List developer-facing call events. |
+| `POST` | `/v2/calls/{call_id}/cancel` | Cancel before provider submission; active calls cannot be hung up through this operation. |
 
 The webhook URL is yours. Pass it as `webhook_url` when creating a call. See the [webhooks guide](https://docs.heycall-e.com/webhooks).
 
 **Create a call:**
 
 ```bash
-curl "$CALLE_BASE_URL/v1/calls" \
+curl --fail-with-body --silent --show-error "$CALLE_BASE_URL/v2/calls" \
   --request POST \
   --header "Authorization: Bearer $CALLE_API_KEY" \
   --header "Content-Type: application/json" \
-  --header "Idempotency-Key: wf_123_friday_lunch" \
+  --header "Idempotency-Key: $CALLE_IDEMPOTENCY_KEY" \
   --data '{
-    "task": "Call each recipient and ask whether they can attend Friday lunch.",
-    "recipients": [
-      { "phones": ["<E164_PHONE>"],
-        "region": "US",
-        "locale": "en-US"
-      }
-    ],
+    "task": "Say hello in English, allow a brief reply, then politely end the call.",
+    "phone": "<AUTHORIZED_E164_PHONE>",
     "result_schema": {
       "type": "object",
-      "required": ["completed_count"],
+      "additionalProperties": false,
+      "required": ["summary"],
       "properties": {
-        "completed_count": {
-          "type": "integer"
-        }
-      }
-    },
-    "recipient_result_schema": {
-      "type": "object",
-      "required": ["can_attend"],
-      "properties": {
-        "can_attend": {
-          "type": "string",
-          "enum": ["yes", "no", "unknown"]
+        "summary": {
+          "type": "string"
         }
       }
     },
     "metadata": {
-      "workflow_run_id": "wf_123"
-    },
-    "webhook_url": "https://example.com/calle/webhook"
+      "workflow_run_id": "hello-001"
+    }
   }'
 ```
 
 **Read a result:**
 
 ```bash
-curl "$CALLE_BASE_URL/v1/calls/call_123" \
+export CALLE_CALL_ID="<ID_FROM_CREATE>"
+curl --fail-with-body --silent --show-error "$CALLE_BASE_URL/v2/calls/$CALLE_CALL_ID" \
   --header "Authorization: Bearer $CALLE_API_KEY"
 ```
 
-**Terminal call result:**
+Poll until `result_status` is not `pending`. `available` means `result` is ready;
+`unavailable` means stop waiting even when both `result` and `error` are null.
+`not_applicable` means inspect cancellation or the technical error.
+After a timeout, query the saved ID or replay the unchanged original request/key;
+a new key can place another call. See the [retry rules](https://docs.heycall-e.com/calls#idempotency).
+
+**Ready result excerpt:**
 
 <details>
 <summary>Example response</summary>
@@ -382,29 +387,20 @@ curl "$CALLE_BASE_URL/v1/calls/call_123" \
 ```json
 {
   "status": "completed",
-  "task_completed": true,
-  "completion_confidence": { "score": 0.92, "label": "high" },
-  "evidence": ["The recipient said they can attend Friday lunch."],
-  "structured_result": { "completed_count": 1 },
-  "recipients": [
-    {
-      "structured_result": { "can_attend": "yes" },
-      "attempts": [
-        {
-          "transcript_turns": [
-            { "offset_seconds": 0, "speaker": "bot", "text": "Hi, I am calling about Friday lunch." },
-            { "offset_seconds": 4, "speaker": "user", "text": "Yes, I can attend." }
-          ]
-        }
-      ]
-    }
+  "call_outcome": "completed",
+  "result_status": "available",
+  "result": { "summary": "The recipient replied hello." },
+  "error": null,
+  "transcript": [
+    { "offset_seconds": 0, "speaker": "bot", "text": "Hello!" },
+    { "offset_seconds": 4, "speaker": "user", "text": "Hello." }
   ]
 }
 ```
 
 </details>
 
-For authentication, webhooks, and the full reference, see the [API docs](https://docs.heycall-e.com/#/api-reference).
+For authentication, webhooks, and the full reference, see the [API docs](https://docs.heycall-e.com/api-reference).
 
 ---
 
