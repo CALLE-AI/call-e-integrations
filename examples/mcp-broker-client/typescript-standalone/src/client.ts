@@ -12,6 +12,10 @@ const DEFAULT_MIN_TTL_SECONDS = 300;
 const MCP_PROTOCOL_VERSION = "2025-11-25";
 const INTEGRATION_HEADER = "X-Call-E-Integration";
 const SESSION_SECRET_HEADER = "X-OpenAgent-Session-Secret";
+const CONTROL_CHARACTERS = /[\u0000-\u001F\u007F-\u009F]/u;
+const MAX_LOGIN_URL_LENGTH = 2048;
+const MAX_SESSION_ID_LENGTH = 512;
+const MAX_SESSION_SECRET_LENGTH = 1024;
 
 type Config = {
   baseUrl: string;
@@ -215,25 +219,94 @@ function tokenIsUsable(document: Record<string, unknown> | null, minTtlSeconds: 
   return expiresAt.getTime() - Date.now() > minTtlSeconds * 1000;
 }
 
-function normalizePendingLogin(value: Record<string, unknown> | null): PendingLogin | null {
+function hasUnpairedSurrogate(value: string) {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      if (index + 1 >= value.length) return true;
+      const next = value.charCodeAt(index + 1);
+      if (next < 0xdc00 || next > 0xdfff) return true;
+      index += 1;
+    } else if (code >= 0xdc00 && code <= 0xdfff) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function requiredSessionString(value: Record<string, unknown>, field: string, maxLength: number) {
+  const candidate = value[field];
+  if (typeof candidate !== "string" || !candidate.trim() || candidate.length > maxLength || CONTROL_CHARACTERS.test(candidate) || hasUnpairedSurrogate(candidate)) {
+    throw new Error(`Broker session has invalid ${field}.`);
+  }
+  return candidate;
+}
+
+function isLoopbackHost(hostname: string) {
+  return hostname === "localhost" || hostname === "::1" || hostname === "[::1]" || /^127(?:\.\d{1,3}){3}$/u.test(hostname);
+}
+
+function configuredOrigin(value: string) {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error("Broker configuration has an invalid trusted origin.");
+  }
+  if (parsed.username || parsed.password || (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && isLoopbackHost(parsed.hostname)))) {
+    throw new Error("Broker configuration has an invalid trusted origin.");
+  }
+  return parsed.origin;
+}
+
+function validateBrokerConfiguration(config: Config) {
+  configuredOrigin(config.brokerBaseUrl);
+  configuredOrigin(config.authBaseUrl);
+}
+
+function validateLoginUrl(config: Config, value: Record<string, unknown>) {
+  const loginUrl = requiredSessionString(value, "login_url", MAX_LOGIN_URL_LENGTH);
+  let parsed: URL;
+  try {
+    parsed = new URL(loginUrl);
+  } catch {
+    throw new Error("Broker session has invalid login_url.");
+  }
+  const trustedOrigins = new Set([configuredOrigin(config.brokerBaseUrl), configuredOrigin(config.authBaseUrl)]);
+  if (parsed.username || parsed.password || !trustedOrigins.has(parsed.origin) || (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && isLoopbackHost(parsed.hostname)))) {
+    throw new Error("Broker session has invalid login_url.");
+  }
+  return parsed.toString();
+}
+
+function normalizePendingLogin(value: Record<string, unknown> | null, config: Config): PendingLogin | null {
   if (!value) {
     return null;
   }
-  for (const field of ["session_id", "session_secret", "login_url", "status", "created_at"]) {
-    if (typeof value[field] !== "string" || !value[field]) {
-      return null;
+  try {
+    const sessionId = requiredSessionString(value, "session_id", MAX_SESSION_ID_LENGTH);
+    if (sessionId === "." || sessionId === "..") {
+      throw new Error("Broker session has invalid session_id.");
     }
+    const sessionSecret = requiredSessionString(value, "session_secret", MAX_SESSION_SECRET_LENGTH);
+    if (!/^[\x21-\x7E]+$/u.test(sessionSecret)) {
+      throw new Error("Broker session has invalid session_secret.");
+    }
+    const status = requiredSessionString(value, "status", 128);
+    requiredSessionString(value, "created_at", 256);
+    return {
+      session_id: sessionId,
+      session_secret: sessionSecret,
+      login_url: validateLoginUrl(config, value),
+      status: status.toUpperCase(),
+      created_at: String(value.created_at),
+      expires_at: typeof value.expires_at === "string" ? value.expires_at : null,
+      error_message: typeof value.error_message === "string" ? value.error_message : null,
+      poll_after_ms: Number(value.poll_after_ms || 0) || null,
+    };
+  } catch {
+    return null;
   }
-  return {
-    session_id: String(value.session_id),
-    session_secret: String(value.session_secret),
-    login_url: String(value.login_url),
-    status: String(value.status).toUpperCase(),
-    created_at: String(value.created_at),
-    expires_at: typeof value.expires_at === "string" ? value.expires_at : null,
-    error_message: typeof value.error_message === "string" ? value.error_message : null,
-    poll_after_ms: Number(value.poll_after_ms || 0) || null,
-  };
 }
 
 function pendingIsExpired(pending: PendingLogin | null) {
@@ -260,6 +333,7 @@ async function requestJson(method: string, url: string, { headers = {}, json }: 
 }
 
 async function createBrokerSession(config: Config): Promise<PendingLogin> {
+  validateBrokerConfiguration(config);
   const payload = await requestJson("POST", `${config.brokerBaseUrl}/api/v1/openagent-auth/sessions`, {
     headers: { [INTEGRATION_HEADER]: config.integrationHeader },
     json: {
@@ -270,31 +344,45 @@ async function createBrokerSession(config: Config): Promise<PendingLogin> {
       client_name: config.clientName,
     },
   });
-  return {
-    session_id: String(payload.session_id),
-    session_secret: String(payload.session_secret),
-    login_url: String(payload.login_url),
-    status: String(payload.status || "PENDING").toUpperCase(),
+  const pending = normalizePendingLogin({
+    session_id: payload.session_id,
+    session_secret: payload.session_secret,
+    login_url: payload.login_url,
+    status: payload.status ?? "PENDING",
     created_at: new Date().toISOString(),
     expires_at: typeof payload.expires_at === "string" ? payload.expires_at : null,
     error_message: null,
     poll_after_ms: Number(payload.poll_after_ms || 0) || null,
-  };
+  }, config);
+  if (!pending) {
+    throw new Error("Broker response has an invalid session.");
+  }
+  return pending;
 }
 
 async function getBrokerStatus(config: Config, pending: PendingLogin) {
-  return requestJson("GET", `${config.brokerBaseUrl}/api/v1/openagent-auth/sessions/${pending.session_id}`, {
+  validateBrokerConfiguration(config);
+  const safePending = normalizePendingLogin(pending, config);
+  if (!safePending) {
+    throw new Error("Broker session has invalid cached data.");
+  }
+  return requestJson("GET", `${config.brokerBaseUrl}/api/v1/openagent-auth/sessions/${encodeURIComponent(safePending.session_id)}`, {
     headers: {
-      [SESSION_SECRET_HEADER]: pending.session_secret,
+      [SESSION_SECRET_HEADER]: safePending.session_secret,
       [INTEGRATION_HEADER]: config.integrationHeader,
     },
   });
 }
 
 async function exchangeBrokerSession(config: Config, pending: PendingLogin) {
-  return requestJson("POST", `${config.brokerBaseUrl}/api/v1/openagent-auth/sessions/${pending.session_id}/exchange`, {
+  validateBrokerConfiguration(config);
+  const safePending = normalizePendingLogin(pending, config);
+  if (!safePending) {
+    throw new Error("Broker session has invalid cached data.");
+  }
+  return requestJson("POST", `${config.brokerBaseUrl}/api/v1/openagent-auth/sessions/${encodeURIComponent(safePending.session_id)}/exchange`, {
     headers: {
-      [SESSION_SECRET_HEADER]: pending.session_secret,
+      [SESSION_SECRET_HEADER]: safePending.session_secret,
       [INTEGRATION_HEADER]: config.integrationHeader,
     },
   });
@@ -316,9 +404,10 @@ async function ensureBrokerToken(config: Config): Promise<Record<string, unknown
     emit("auth_status", { status: "expired", server_url: config.serverUrl, expires_at: cached.expires_at || null });
   }
 
-  let pending = normalizePendingLogin(readJson(pendingPath));
+  const cachedPending = readJson(pendingPath);
+  let pending = normalizePendingLogin(cachedPending, config);
   if (!pending || pendingIsExpired(pending)) {
-    if (pending) {
+    if (cachedPending) {
       removeFile(pendingPath);
     }
     pending = await createBrokerSession(config);
@@ -340,13 +429,18 @@ async function ensureBrokerToken(config: Config): Promise<Record<string, unknown
   const deadline = Date.now() + config.pollTimeoutSeconds * 1000;
   while (Date.now() < deadline) {
     const statusPayload = await getBrokerStatus(config, pending);
-    pending = {
+    pending = normalizePendingLogin({
       ...pending,
+      ...statusPayload,
       status: String(statusPayload.status || pending.status || "PENDING").toUpperCase(),
       expires_at: typeof statusPayload.expires_at === "string" ? statusPayload.expires_at : pending.expires_at,
       error_message: typeof statusPayload.error_message === "string" ? statusPayload.error_message : null,
       poll_after_ms: Number(statusPayload.poll_after_ms || 0) || pending.poll_after_ms || null,
-    };
+    }, config);
+    if (!pending) {
+      removeFile(pendingPath);
+      throw new Error("Broker response has an invalid session.");
+    }
     writePrivateJson(pendingPath, pending);
     emit("auth_poll", { pending_status: pending.status });
 

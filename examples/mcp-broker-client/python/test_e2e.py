@@ -1,4 +1,5 @@
 import hashlib
+import asyncio
 import json
 import os
 import subprocess
@@ -7,6 +8,10 @@ import tempfile
 from pathlib import Path
 from urllib.request import Request, urlopen
 
+import httpx
+import pytest
+
+from client import create_broker_session, exchange_broker_session, get_broker_status, normalize_pending_login
 
 ROOT = Path(__file__).resolve().parents[2]
 EXAMPLE = Path(__file__).resolve().parent
@@ -112,6 +117,18 @@ def assert_no_secrets(output):
     assert "fake-refresh-token" not in output
     assert "fake-session-secret" not in output
     assert "stale-access-token" not in output
+
+
+def broker_config():
+    return {
+        "broker_base_url": "https://broker.test",
+        "auth_base_url": "https://broker.test",
+        "integration_header": "test",
+        "server_url": "https://broker.test/mcp",
+        "channel": "openagent_oauth",
+        "scope": "openid",
+        "client_name": "test",
+    }
 
 
 def test_broker_client_login_tool_resource_and_cached_reuse():
@@ -247,3 +264,120 @@ def test_broker_client_clears_stale_cached_token_rejected_by_mcp_server():
         assert any(request["has_bearer_token"] for request in state["mcp_requests"])
     finally:
         stop_fake_server(process)
+
+
+def test_broker_client_discards_hostile_cached_login_before_output_or_broker_request():
+    process, fake = start_fake_server()
+    try:
+        cache_root = tempfile.mkdtemp(prefix="calle-broker-example-python-")
+        write_cache(
+            cache_root,
+            fake["server_url"],
+            "pending_login.json",
+            {
+                "session_id": "../exchange?unsafe=true",
+                "session_secret": "safe\r\nX-Evil: 1",
+                "login_url": "javascript:alert('unsafe')",
+                "status": "PENDING",
+                "created_at": "2026-01-01T00:00:00Z",
+                "expires_at": "2030-01-01T00:00:00Z",
+            },
+        )
+        result = run_client(
+            {
+                "MCP_BASE_URL": fake["base_url"],
+                "MCP_SERVER_URL": fake["server_url"],
+                "MCP_CACHE_ROOT": cache_root,
+            }
+        )
+
+        assert result.returncode == 0, result.stderr
+        assert "javascript:alert" not in result.stdout + result.stderr
+        assert "X-Evil" not in result.stdout + result.stderr
+        state = read_state(fake["state_url"])
+        assert len(state["broker_creates"]) == 1
+        assert state["broker_exchange_count"] == 1
+    finally:
+        stop_fake_server(process)
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"login_url": "https://untrusted.example/login"}, {"login_url": "javascript:alert(1)"},
+        {"login_url": "https://\u200d.example/login"},
+        {"session_secret": "safe\r\nX-Evil: 1"}, {"session_secret": "safe✓"},
+        {"session_id": "safe\x00id"}, {"session_id": "safe\ud800"}, {"session_id": "a" * 513},
+        {"session_id": None}, {"session_secret": None}, {"login_url": 1},
+    ],
+)
+def test_broker_client_rejects_hostile_response_before_cache_or_output(override):
+    async def exercise():
+        payload = {
+            "session_id": "safe-id",
+            "session_secret": "safe-secret",
+            "login_url": "https://broker.test/login",
+            **override,
+        }
+
+        def handler(request):
+            return httpx.Response(
+                201,
+                content=json.dumps(payload, ensure_ascii=True).encode("utf-8"),
+                headers={"content-type": "application/json"},
+            )
+
+        transport = httpx.MockTransport(handler)
+        async with httpx.AsyncClient(transport=transport) as client:
+            with pytest.raises(RuntimeError, match="invalid session"):
+                await create_broker_session(client, broker_config())
+
+    asyncio.run(exercise())
+
+
+def test_broker_client_encodes_opaque_session_ids_before_request_sinks():
+    async def exercise():
+        observed = []
+
+        def handler(request):
+            observed.append((str(request.url), request.headers["X-OpenAgent-Session-Secret"]))
+            return httpx.Response(200, json={"status": "PENDING"})
+
+        pending = {
+            "session_id": "../exchange?x=✓",
+            "session_secret": "safe-secret",
+            "login_url": "https://broker.test/login",
+            "status": "PENDING",
+            "created_at": "2026-01-01T00:00:00Z",
+        }
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            await get_broker_status(client, broker_config(), pending)
+            await exchange_broker_session(client, broker_config(), pending)
+
+        assert observed == [
+            ("https://broker.test/api/v1/openagent-auth/sessions/..%2Fexchange%3Fx%3D%E2%9C%93", "safe-secret"),
+            ("https://broker.test/api/v1/openagent-auth/sessions/..%2Fexchange%3Fx%3D%E2%9C%93/exchange", "safe-secret"),
+        ]
+
+    asyncio.run(exercise())
+
+
+@pytest.mark.parametrize(
+    ("broker_origin", "login_url"),
+    [
+        ("https://bücher.example", "https://xn--bcher-kva.example/login"),
+        ("http://[0:0:0:0:0:0:0:1]", "http://[::1]/login"),
+    ],
+)
+def test_broker_client_accepts_equivalent_idn_and_ipv6_origins(broker_origin, login_url):
+    config = {**broker_config(), "broker_base_url": broker_origin, "auth_base_url": broker_origin}
+    assert normalize_pending_login(
+        {
+            "session_id": "safe-id",
+            "session_secret": "safe-secret",
+            "login_url": login_url,
+            "status": "PENDING",
+            "created_at": "2026-01-01T00:00:00Z",
+        },
+        config,
+    ) is not None

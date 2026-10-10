@@ -38,6 +38,11 @@ export MCP_LOG_FILE=/tmp/calle-mcp-example.log
 The log file receives the same JSON events printed to stdout, plus timestamps.
 Do not publish it because live runs may include a browser login URL.
 
+The clients accept a pending login only when its browser URL uses HTTPS (or a
+configured HTTP loopback origin) and its origin matches `MCP_BROKER_BASE_URL`
+or `MCP_AUTH_BASE_URL`. Invalid cached or broker-provided session data is
+discarded before it is logged, printed, or used in a broker request.
+
 ## Plan Call Example
 
 `plan_call` creates a CALL-E call plan. It does not start the call; running the
