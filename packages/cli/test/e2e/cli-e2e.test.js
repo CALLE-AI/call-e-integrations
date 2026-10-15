@@ -1013,10 +1013,10 @@ test("agent requests preserve opaque values and recover once with the old SDK an
   fs.writeFileSync(path.join(fakeBin, "capture.cjs"), fakeSource);
   fs.writeFileSync(path.join(fakeBin, "calle.cmd"), '@"' + process.execPath + '" "%~dp0capture.cjs" %*\r\n');
   const env = { PATH: [fakeBin, process.env.PATH].join(path.delimiter) };
-  const poison = "O'Hare \" $(touch injected) `touch injected` \\ & echo injected>injected &\n中文";
+  const poison = "O'Hare \" $(touch injected) `touch injected` \\ & echo injected>injected &\n\u4E2D\u6587";
   const fake = await startFakeServer({ droppedRunResponses: 1, planId: "plan-" + poison, confirmToken: "confirm-" + poison, runId: "run-" + poison });
   t.after(() => fake.close());
-  const cacheRoot = path.join(root, "private cache 中文");
+  const cacheRoot = path.join(root, "private cache \u4E2D\u6587");
   const common = ["--base-url", fake.baseUrl, "--cache-root", cacheRoot, "--no-telemetry"];
   const invoke = (argv) => runAgentRequest({ package_dir: mcp, argv }, root, { env });
 
@@ -1113,7 +1113,7 @@ for (const shell of documentedShells) {
       }
       assert.ok(commands.size >= 5, "documented command arrays must be exercised");
       const launcher = profile.skill ? path.join(repoRoot, profile.skill, "scripts/run-agent-command.mjs") : launcherPath;
-      const cacheRoot = path.join(root, "documented cache 中文");
+      const cacheRoot = path.join(root, "documented cache \u4E2D\u6587");
       for (const template of commands.values()) {
         const values = { "<plan_id>": "plan-1", "<confirm_token>": "confirm-1", "<run_id>": "run-doc" };
         if (template[1] === "recover") {
@@ -1122,7 +1122,7 @@ for (const shell of documentedShells) {
         const argv = template.map((arg) => values[arg] ?? arg);
         const argsJson = argv.indexOf("--args-json");
         if (argsJson >= 0 && argv[argsJson + 1].includes("<latest user message verbatim>")) {
-          argv[argsJson + 1] = JSON.stringify({ user_input: "Call O'Hare: \"hello\", $(), `text`, \\ and\n中文" });
+          argv[argsJson + 1] = JSON.stringify({ user_input: "Call O'Hare: \"hello\", $(), `text`, \\ and\n\u4E2D\u6587" });
         }
         for (const [flag, value] of [["--base-url", fake.baseUrl], ["--cache-root", cacheRoot]]) {
           const index = argv.indexOf(flag);
