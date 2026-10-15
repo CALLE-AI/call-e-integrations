@@ -899,6 +899,44 @@ test("auth status reports missing, usable, and expired cache states", async () =
   assert.doesNotMatch(result.stdout, /secret-1/);
 });
 
+test("status and auth-required output never expose hostile cached broker sessions", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-hostile-status");
+  const baseUrl = "https://mcp.example";
+  const serverUrl = `${baseUrl}/mcp/openagent_oauth`;
+  const pendingPath = pendingCachePath(cacheRoot, serverUrl);
+  const valid = {
+    session_id: "session-1",
+    session_secret: "safe-secret",
+    login_url: `${baseUrl}/login`,
+    status: "PENDING",
+    created_at: "2026-04-23T00:00:00Z",
+  };
+  for (const invalid of [
+    { login_url: "javascript:alert(1)" },
+    { login_url: "https://untrusted.example/login" },
+    { session_id: "session\nunsafe" },
+    { session_secret: "secret\r\nX-Evil: 1" },
+  ]) {
+    writePrivateJson(pendingPath, { ...valid, ...invalid });
+    for (const command of [["auth", "status"], ["mcp", "tools"]]) {
+      const result = await run([...command, "--base-url", baseUrl, "--cache-root", cacheRoot], {
+        fetchImpl: async () => { throw new Error("invalid cache must not cause network access"); },
+      });
+      const payload = JSON.parse(result.stdout);
+      assert.equal(payload.login_url, undefined);
+      assert.equal(payload.assistant_hint, undefined);
+      assert.ok(payload.pending_login_url == null);
+      assert.doesNotMatch(result.stdout, /javascript:|untrusted\.example|X-Evil|safe-secret/);
+      if (command[0] === "auth") {
+        assert.equal(payload.pending_exists, true);
+        assert.equal(payload.pending_status, null);
+      } else {
+        assert.equal(payload.error.code, "auth_required");
+      }
+    }
+  }
+});
+
 test("auth logout removes token and pending cache", async () => {
   const cacheRoot = makeTempRoot("calle-cli-logout");
   const serverUrl = "https://mcp.example/mcp/openagent_oauth";
