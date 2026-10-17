@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
+  parseIsoDate,
   readJson,
   serverHash,
   writePrivateJson,
@@ -69,6 +70,50 @@ export function removeCallRecovery(config, recoveryId) {
   } catch {
     // Best-effort cleanup after run_call returned a stable run_id.
   }
+}
+
+function planConfirmCacheId(planId) {
+  return crypto.createHash("sha256").update(String(planId), "utf8").digest("base64url");
+}
+
+export function writePlanConfirm(config, { planId, confirmToken, expiresAt = null }) {
+  if (typeof planId !== "string" || !planId.trim() || typeof confirmToken !== "string" || !confirmToken.trim()) {
+    throw new TypeError("Invalid plan confirmation cache record");
+  }
+  writePrivateJson(callRecoveryCachePath(config.cacheRoot, config.serverUrl, planConfirmCacheId(planId.trim())), {
+    schema_version: 1,
+    created_at: new Date().toISOString(),
+    plan_id: planId.trim(),
+    confirm_token: confirmToken.trim(),
+    timezone: null,
+    expires_at: typeof expiresAt === "string" && expiresAt.trim() ? expiresAt.trim() : null,
+  });
+}
+
+export function readPlanConfirm(config, planId) {
+  if (typeof planId !== "string" || !planId.trim()) {
+    return null;
+  }
+  const record = readJson(callRecoveryCachePath(config.cacheRoot, config.serverUrl, planConfirmCacheId(planId.trim())));
+  if (
+    record?.schema_version !== 1
+    || record.plan_id !== planId.trim()
+    || typeof record.confirm_token !== "string"
+    || !record.confirm_token
+  ) {
+    return null;
+  }
+  if (record.expires_at !== null && record.expires_at !== undefined && record.expires_at !== "") {
+    const expiresAt = parseIsoDate(record.expires_at);
+    if (!expiresAt || Date.now() >= expiresAt.getTime()) {
+      return null;
+    }
+  }
+  return {
+    planId: record.plan_id,
+    confirmToken: record.confirm_token,
+    expiresAt: typeof record.expires_at === "string" && record.expires_at ? record.expires_at : null,
+  };
 }
 
 export function removeCallRecoveries(config) {
