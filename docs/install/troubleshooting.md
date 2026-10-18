@@ -281,7 +281,7 @@ If the command used an explicit timeout shorter than planning needs, remove the
 flag to use the current planning default or retry with a longer value:
 
 ```json
-["call", "plan", "--to-phone", "+15551234567", "--goal", "Confirm the appointment", "--timeout-seconds", "300"]
+["call", "plan", "--to-phone", "+14155550123", "--goal", "Confirm the appointment", "--timeout-seconds", "300"]
 ```
 
 If help reports only the 15-second shared default for planning, update the CLI

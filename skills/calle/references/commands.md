@@ -152,7 +152,7 @@ Use planning only when the user explicitly asks to draft or verify a plan
 without placing a call.
 
 ```json
-["call", "plan", "--to-phone", "+15551234567", "--goal", "Confirm the appointment"]
+["call", "plan", "--to-phone", "+14155550123", "--goal", "Confirm the appointment"]
 ```
 
 Supported `call plan` options:
@@ -173,7 +173,7 @@ plans and starts the call internally without printing execution confirmation
 data.
 
 ```json
-["call", "start", "--to-phone", "+15551234567", "--goal", "Confirm the appointment"]
+["call", "start", "--to-phone", "+14155550123", "--goal", "Confirm the appointment"]
 ```
 
 Supported `call start` options:

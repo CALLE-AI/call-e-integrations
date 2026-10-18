@@ -182,6 +182,12 @@ If `plan_call` returns `ready_to_run: false`, `calle call start` exits without
 calling `run_call`. The JSON error uses code `plan_not_ready` and includes the
 first clarification question when available.
 
+`calle call plan` and `calle call start` validate `--to-phone` locally before
+calling `plan_call`. Malformed or fictional numbers, including NANP `555` area
+codes and numbers with an invalid area code, fail with `invalid_arguments`.
+The error names a phone-number format problem and does not describe an
+unsupported region.
+
 Call workflow failures include a `stage` of `plan_call`, `run_call`, or
 `get_call_run`, plus `call_started` and `retry_safe` guidance. A `plan_call`
 failure reports `call_started: false` and is safe to retry. If `run_call` may
@@ -268,10 +274,10 @@ network requests or output.
 
 | Option | Value | Default | Applies to | Required | Repeatable | Purpose | Example |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `--to-phone` | Phone number | None | `call plan`, `call start` | Yes | Yes | Destination phone number. Provide one flag per number and do not infer country codes. | `calle call plan --to-phone +15551234567 --goal "Confirm the appointment"` |
-| `--goal` | Text | None | `call plan`, `call start` | Yes | No | Call goal or instruction for `plan_call`. | `calle call start --to-phone +15551234567 --goal "Confirm the appointment"` |
-| `--language` | Text | None | `call plan`, `call start` | No | No | Language hint passed to `plan_call`. Only provide when explicitly known. | `calle call plan --to-phone +15551234567 --goal "Confirm" --language English` |
-| `--region` | Text | None | `call plan`, `call start` | No | No | Region hint passed to `plan_call`. Only provide when explicitly known. | `calle call plan --to-phone +15551234567 --goal "Confirm" --region US` |
+| `--to-phone` | Phone number | None | `call plan`, `call start` | Yes | Yes | Destination number in E.164. Malformed or fictional values fail as a format problem, not an unsupported region. Do not infer country codes. | `calle call plan --to-phone +14155550123 --goal "Confirm the appointment"` |
+| `--goal` | Text | None | `call plan`, `call start` | Yes | No | Call goal or instruction for `plan_call`. | `calle call start --to-phone +14155550123 --goal "Confirm the appointment"` |
+| `--language` | Text | None | `call plan`, `call start` | No | No | Language hint passed to `plan_call`. Only provide when explicitly known. | `calle call plan --to-phone +14155550123 --goal "Confirm" --language English` |
+| `--region` | Text | None | `call plan`, `call start` | No | No | Region hint passed to `plan_call`. Only provide when explicitly known. | `calle call plan --to-phone +14155550123 --goal "Confirm" --region US` |
 | `--timezone` | IANA timezone | System timezone | `call plan`, `call start`, `call run`, `call recover`, `call status` | No | No | Adds planning timezone metadata for planning commands and localizes returned call timestamps for run/status commands. | `calle call status --run-id run_123 --timezone Asia/Shanghai` |
 | `--plan-id` | Text | None | `call run` | Yes | No | Planned call ID returned by `plan_call`. Preserve exactly. | `calle call run --plan-id plan_123 --confirm-token token_123` |
 | `--confirm-token` | Text | None | `call run` | Yes | No | Execution confirmation token returned by `plan_call`. Preserve exactly. | `calle call run --plan-id plan_123 --confirm-token token_123` |

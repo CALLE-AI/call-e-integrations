@@ -157,7 +157,7 @@ test("prints the supported regions and languages documentation URL", async () =>
 });
 
 test("call plan argument errors recommend its command-specific help", async () => {
-  const result = await run(["call", "plan", "--to", "+15551234567", "--goal", "Confirm"]);
+  const result = await run(["call", "plan", "--to", "+14155550123", "--goal", "Confirm"]);
   const payload = JSON.parse(result.stdout);
 
   assert.equal(result.code, 2);
@@ -172,7 +172,7 @@ test("call plan option value errors recommend its command-specific help", async 
     "call",
     "plan",
     "--to-phone",
-    "+15551234567",
+    "+14155550123",
     "--goal",
     "Confirm",
     "--timeout-seconds",
@@ -1028,7 +1028,7 @@ test("mcp call forwards plan_call arguments and request meta", async () => {
       "call",
       "plan_call",
       "--args-json",
-      '{"to_phones":["+15551234567"],"goal":"Confirm appointment"}',
+      '{"to_phones":["+14155550123"],"goal":"Confirm appointment"}',
       "--timezone",
       "Asia/Shanghai",
       "--base-url",
@@ -1044,7 +1044,7 @@ test("mcp call forwards plan_call arguments and request meta", async () => {
   assert.deepEqual(calls, [
     {
       name: "plan_call",
-      arguments: { to_phones: ["+15551234567"], goal: "Confirm appointment" },
+      arguments: { to_phones: ["+14155550123"], goal: "Confirm appointment" },
       _meta: {
         "openai/userLocation": { timezone: "Asia/Shanghai" },
         timezone_offset_minutes: -480,
@@ -1101,7 +1101,7 @@ test("mcp call gives plan_call an extended default timeout and honors an explici
         "call",
         "plan_call",
         "--args-json",
-        '{"to_phones":["+15551234567"],"goal":"Confirm appointment"}',
+        '{"to_phones":["+14155550123"],"goal":"Confirm appointment"}',
         "--base-url",
         "https://mcp.example",
         "--cache-root",
@@ -1117,7 +1117,7 @@ test("mcp call gives plan_call an extended default timeout and honors an explici
         "call",
         "plan_call",
         "--args-json",
-        '{"to_phones":["+15551234567"],"goal":"Confirm appointment"}',
+        '{"to_phones":["+14155550123"],"goal":"Confirm appointment"}',
         "--timeout-seconds",
         "30",
         "--base-url",
@@ -1236,9 +1236,9 @@ test("call plan maps flags to plan_call arguments", async () => {
       "call",
       "plan",
       "--to-phone",
-      "+15551234567",
+      "+14155550123",
       "--to-phone",
-      "+15557654321",
+      "+12125550199",
       "--goal",
       "Confirm appointment",
       "--language",
@@ -1259,7 +1259,7 @@ test("call plan maps flags to plan_call arguments", async () => {
   assert.deepEqual(toolCall, {
     name: "plan_call",
     arguments: {
-      to_phones: ["+15551234567", "+15557654321"],
+      to_phones: ["+14155550123", "+12125550199"],
       goal: "Confirm appointment",
       language: "English",
       region: "US",
@@ -1273,6 +1273,87 @@ test("call plan maps flags to plan_call arguments", async () => {
   assert.equal(toolCall._meta["openai/session"], undefined);
   assert.equal(toolCall._meta["openai/organization"], undefined);
   assert.equal(JSON.parse(result.stdout).tool_name, "plan_call");
+});
+
+test("call plan rejects malformed or fictional numbers as format errors without calling plan_call", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-call-plan-phone-format");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl, "unused-token");
+  let fetchCalled = false;
+  const fetchImpl = async () => {
+    fetchCalled = true;
+    throw new Error("fetch should not be called");
+  };
+
+  for (const toPhone of ["+15551234567", "+1234567890"]) {
+    fetchCalled = false;
+    const result = await run(
+      [
+        "call",
+        "plan",
+        "--to-phone",
+        toPhone,
+        "--goal",
+        "Test plan only, do not run: confirm business hours",
+        "--region",
+        "US",
+        "--language",
+        "English",
+        "--base-url",
+        "https://mcp.example",
+        "--cache-root",
+        cacheRoot,
+      ],
+      { fetchImpl }
+    );
+    const payload = JSON.parse(result.stdout);
+
+    assert.equal(result.code, 2, toPhone);
+    assert.equal(fetchCalled, false, toPhone);
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_arguments");
+    assert.equal(
+      payload.error.message,
+      `--to-phone ${toPhone} is a malformed or fictional number. Provide a valid E.164 destination number. This is a phone-number format problem, not an unsupported region.`
+    );
+    assert.doesNotMatch(payload.error.message, /region are not supported/i);
+    assert.equal(payload.help_command, "calle call plan --help");
+  }
+});
+
+test("call start rejects malformed numbers as format errors without calling plan_call", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-call-start-phone-format");
+  const serverUrl = "https://mcp.example/mcp/openagent_oauth";
+  writeToken(cacheRoot, serverUrl, "unused-token");
+  let fetchCalled = false;
+
+  const result = await run(
+    [
+      "call",
+      "start",
+      "--to-phone",
+      "+15551234567",
+      "--goal",
+      "Confirm appointment",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    {
+      fetchImpl: async () => {
+        fetchCalled = true;
+        throw new Error("fetch should not be called");
+      },
+    }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 2);
+  assert.equal(fetchCalled, false);
+  assert.equal(payload.error.code, "invalid_arguments");
+  assert.match(payload.error.message, /malformed or fictional number/);
+  assert.doesNotMatch(payload.error.message, /region are not supported/i);
 });
 
 test("call plan injects timezone meta from CALLE_TIMEZONE", async () => {
@@ -1304,7 +1385,7 @@ test("call plan injects timezone meta from CALLE_TIMEZONE", async () => {
       "call",
       "plan",
       "--to-phone",
-      "+15551234567",
+      "+14155550123",
       "--goal",
       "Confirm appointment",
       "--base-url",
@@ -1349,7 +1430,7 @@ test("call plan skips timezone meta when explicit timezone is invalid", async ()
       "call",
       "plan",
       "--to-phone",
-      "+15551234567",
+      "+14155550123",
       "--goal",
       "Confirm appointment",
       "--timezone",
@@ -1422,7 +1503,7 @@ test("call start plans and runs without printing confirmation data", async () =>
       "call",
       "start",
       "--to-phone",
-      "+15551234567",
+      "+14155550123",
       "--goal",
       "Confirm appointment",
       "--timezone",
@@ -1440,7 +1521,7 @@ test("call start plans and runs without printing confirmation data", async () =>
   assert.deepEqual(toolCalls, [
     {
       name: "plan_call",
-      arguments: { to_phones: ["+15551234567"], goal: "Confirm appointment" },
+      arguments: { to_phones: ["+14155550123"], goal: "Confirm appointment" },
       _meta: {
         "openai/userLocation": { timezone: "Asia/Shanghai" },
         timezone_offset_minutes: -480,
@@ -1502,7 +1583,7 @@ test("call start reports plan clarification and skips run_call when planning is 
       "call",
       "start",
       "--to-phone",
-      "+15551234567",
+      "+14155550123",
       "--goal",
       "See what they say",
       "--base-url",
@@ -1565,7 +1646,7 @@ test("call start rejects a null structured confirm token without calling run_cal
       "call",
       "start",
       "--to-phone",
-      "+15551234567",
+      "+14155550123",
       "--goal",
       "Confirm appointment",
       "--base-url",
@@ -1609,7 +1690,7 @@ test("call start labels a plan_call timeout as safe to retry", async () => {
       "call",
       "start",
       "--to-phone",
-      "+15551234567",
+      "+14155550123",
       "--goal",
       "Confirm appointment",
       "--base-url",
@@ -1674,7 +1755,7 @@ test("call start preserves safe run_call error fields and an opaque recovery id"
       "call",
       "start",
       "--to-phone",
-      "+15551234567",
+      "+14155550123",
       "--goal",
       "Confirm appointment",
       "--base-url",
@@ -1815,7 +1896,7 @@ test("call recover reuses the original confirmation after a run_call timeout", a
       "call",
       "start",
       "--to-phone",
-      "+15551234567",
+      "+14155550123",
       "--goal",
       "Confirm appointment",
       "--base-url",
@@ -1922,7 +2003,7 @@ test("call start returns an accepted run_id when get_call_run times out", async 
       "call",
       "start",
       "--to-phone",
-      "+15551234567",
+      "+14155550123",
       "--goal",
       "Confirm appointment",
       "--base-url",
@@ -2326,7 +2407,7 @@ test("call plan removes cached token when MCP rejects it", async () => {
       "call",
       "plan",
       "--to-phone",
-      "+15551234567",
+      "+14155550123",
       "--goal",
       "Confirm appointment",
       "--base-url",
@@ -2455,7 +2536,7 @@ test("call plan success does not emit CLI call telemetry", async () => {
       "call",
       "plan",
       "--to-phone",
-      "+15551234567",
+      "+14155550123",
       "--goal",
       "Confirm appointment",
       "--base-url",
@@ -2483,7 +2564,7 @@ test("call plan local validation errors emit cli_local_error without call detail
       "call",
       "plan",
       "--to-phone",
-      "+15551234567",
+      "+14155550123",
       "--base-url",
       "https://mcp.example",
       "--cache-root",
@@ -2499,7 +2580,7 @@ test("call plan local validation errors emit cli_local_error without call detail
   assert.deepEqual(telemetryEvents.map((event) => event.payload.event), ["cli_local_error"]);
   assert.equal(telemetryEvents[0].payload.properties.error_code, "invalid_arguments");
   const serialized = JSON.stringify(telemetryEvents.map((event) => event.payload));
-  assert.doesNotMatch(serialized, /\+15551234567/);
+  assert.doesNotMatch(serialized, /\+14155550123/);
   assert.doesNotMatch(serialized, /to_phones/);
 });
 

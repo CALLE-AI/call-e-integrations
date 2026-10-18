@@ -459,7 +459,7 @@ test("forwards mcp plan_call arguments and request meta", async (t) => {
   t.after(() => fs.rmSync(cacheRoot, { recursive: true, force: true }));
   writeToken(cacheRoot, fake.baseUrl);
 
-  const argsJson = '{"to_phones":["+15551234567"],"goal":"Confirm appointment"}';
+  const argsJson = '{"to_phones":["+14155550123"],"goal":"Confirm appointment"}';
   const result = await runCalle([
     "mcp",
     "call",
@@ -481,7 +481,7 @@ test("forwards mcp plan_call arguments and request meta", async (t) => {
   assert.deepEqual(fake.state.toolCalls, [
     {
       name: "plan_call",
-      arguments: { to_phones: ["+15551234567"], goal: "Confirm appointment" },
+      arguments: { to_phones: ["+14155550123"], goal: "Confirm appointment" },
       _meta: {
         "openai/userLocation": { timezone: "Asia/Shanghai" },
         timezone_offset_minutes: -480,
@@ -505,9 +505,9 @@ test("maps call plan flags to plan_call arguments", async (t) => {
     "call",
     "plan",
     "--to-phone",
-    "+15551234567",
+    "+14155550123",
     "--to-phone",
-    "+15557654321",
+    "+12125550199",
     "--goal",
     "Confirm appointment",
     "--language",
@@ -530,7 +530,7 @@ test("maps call plan flags to plan_call arguments", async (t) => {
     {
       name: "plan_call",
       arguments: {
-        to_phones: ["+15551234567", "+15557654321"],
+        to_phones: ["+14155550123", "+12125550199"],
         goal: "Confirm appointment",
         language: "English",
         region: "US",
@@ -601,7 +601,7 @@ test("starts a call without exposing plan confirmation data", async (t) => {
     "call",
     "start",
     "--to-phone",
-    "+15551234567",
+    "+14155550123",
     "--goal",
     "Confirm appointment",
     "--timezone",
@@ -630,7 +630,7 @@ test("starts a call without exposing plan confirmation data", async (t) => {
   assert.deepEqual(fake.state.toolCalls, [
     {
       name: "plan_call",
-      arguments: { to_phones: ["+15551234567"], goal: "Confirm appointment" },
+      arguments: { to_phones: ["+14155550123"], goal: "Confirm appointment" },
       _meta: {
         "openai/userLocation": { timezone: "Asia/Shanghai" },
         timezone_offset_minutes: -480,
@@ -679,7 +679,7 @@ for (const command of ["start", "run"]) {
     assert.equal(parseJson(auth.stdout).usable, true);
 
     const callArgs = command === "start"
-      ? ["--to-phone", "+15551234567", "--goal", "Confirm appointment"]
+      ? ["--to-phone", "+14155550123", "--goal", "Confirm appointment"]
       : ["--plan-id", "plan-1", "--confirm-token", "confirm-1"];
     const first = await runCalle([
       "call", command, ...callArgs,
@@ -844,7 +844,7 @@ test("returns structured invalid_arguments errors", async (t) => {
     "call",
     "plan",
     "--to-phone",
-    "+15551234567",
+    "+14155550123",
     "--base-url",
     "http://127.0.0.1:9",
     "--cache-root",
@@ -861,12 +861,48 @@ test("returns structured invalid_arguments errors", async (t) => {
   assert.match(result.stderr, /Run 'calle call plan --help' for usage\./);
 });
 
+test("rejects malformed call plan phone numbers as format errors without contacting MCP", async (t) => {
+  const fake = await startFakeServer();
+  const cacheRoot = makeTempCacheRoot();
+  t.after(() => fake.close());
+  t.after(() => fs.rmSync(cacheRoot, { recursive: true, force: true }));
+  writeToken(cacheRoot, fake.baseUrl);
+
+  for (const toPhone of ["+15551234567", "+1234567890"]) {
+    const result = await runCalle([
+      "call",
+      "plan",
+      "--to-phone",
+      toPhone,
+      "--goal",
+      "Test plan only, do not run: confirm business hours",
+      "--region",
+      "US",
+      "--language",
+      "English",
+      "--base-url",
+      fake.baseUrl,
+      "--cache-root",
+      cacheRoot,
+      "--no-telemetry",
+    ]);
+    const payload = parseJson(result.stdout);
+
+    assert.equal(result.code, 2, toPhone);
+    assert.equal(payload.error.code, "invalid_arguments");
+    assert.match(payload.error.message, /malformed or fictional number/);
+    assert.doesNotMatch(payload.error.message, /region are not supported/i);
+    assert.equal(fake.state.mcpRequests.length, 0, toPhone);
+    assert.deepEqual(fake.state.toolCalls, []);
+  }
+});
+
 test("returns command help for invalid option values", async () => {
   const result = await runCalle([
     "call",
     "plan",
     "--to-phone",
-    "+15551234567",
+    "+14155550123",
     "--goal",
     "Confirm",
     "--timeout-seconds",
@@ -1032,7 +1068,7 @@ test("agent requests preserve opaque values and recover once with the old SDK an
   const rawPlan = await invoke(["mcp", "call", "plan_call", "--args-json", JSON.stringify({ user_input: poison }), ...common]);
   assert.equal(rawPlan.code, 0, rawPlan.stderr);
   assert.equal(fake.state.toolCalls.at(-1).arguments.user_input, poison);
-  const plan = await invoke(["call", "plan", "--to-phone", "+15551234567", "--goal", poison, ...common]);
+  const plan = await invoke(["call", "plan", "--to-phone", "+14155550123", "--goal", poison, ...common]);
   assert.equal(plan.code, 0, plan.stderr);
   const credentials = parseJson(plan.stdout).result.structuredContent;
   const first = await invoke(["call", "run", "--plan-id", credentials.plan_id, "--confirm-token", credentials.confirm_token, "--timezone", "Asia/Shanghai", ...common]);
