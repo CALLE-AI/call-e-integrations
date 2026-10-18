@@ -57,6 +57,7 @@ class CallStageError extends McpHttpError {
     recoveryId = null,
     nextCommand = null,
     remoteError = null,
+    untrustedDetail = null,
   }) {
     super(message, { code, statusCode });
     this.name = "CallStageError";
@@ -66,6 +67,7 @@ class CallStageError extends McpHttpError {
     this.recoveryId = recoveryId;
     this.nextCommand = nextCommand;
     this.remoteError = remoteError;
+    this.untrustedDetail = untrustedDetail;
   }
 }
 export function preAuthHelpMessage(loginUrl) {
@@ -882,6 +884,9 @@ function errorPayload(error, config, helpCommand = null) {
           status_code: error.statusCode,
           ...(remoteError?.error_code !== undefined ? { error_code: remoteError.error_code } : {}),
           ...(remoteError?.status !== undefined ? { status: remoteError.status } : {}),
+          ...(error instanceof CallStageError && error.untrustedDetail
+            ? { untrusted: error.untrustedDetail }
+            : {}),
         },
       },
     };
@@ -1028,6 +1033,87 @@ function safeRemoteString(value, maxLength = 1000) {
     return undefined;
   }
   return value.trim().slice(0, maxLength);
+}
+
+const MCP_KNOWN_TOOLS = new Set(["plan_call", "run_call", "get_call_run"]);
+const MCP_TOOL_ERROR_SUMMARY = "The MCP tool returned an error.";
+
+function inertRemoteCode(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return /^[A-Za-z0-9_.:-]{1,64}$/u.test(trimmed) ? trimmed : undefined;
+}
+
+function inertToolIdentity(toolName) {
+  if (typeof toolName !== "string") {
+    return null;
+  }
+  const trimmed = toolName.trim();
+  return /^[A-Za-z][A-Za-z0-9_-]{0,63}$/u.test(trimmed) ? trimmed : null;
+}
+
+function sanitizeUntrustedRemoteText(value, maxLength = 200) {
+  if (typeof value !== "string" || !value) {
+    return undefined;
+  }
+  let text = value
+    .replace(/\u001b\][\s\S]*?(?:\u0007|\u001b\\)/g, "")
+    .replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, "")
+    .replace(/\u001b./g, "")
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, " ");
+  if (/\b(?:access_token|refresh_token|id_token|confirm_token|api[_-]?key|client_secret)\b["']?\s*[:=]/i.test(text)) {
+    return undefined;
+  }
+  text = text
+    .replace(/\b(?:sk|rk|pk|ak)-[A-Za-z0-9]{8,}\b/g, "[redacted]")
+    .replace(/\b(?:Bearer|bearer)\s+[A-Za-z0-9._-]+/g, "Bearer [redacted]");
+  text = text.replace(/\s+/g, " ").trim();
+  if (!text) {
+    return undefined;
+  }
+  return text.slice(0, maxLength);
+}
+
+function mcpCallSideEffectDefaults(toolName) {
+  if (toolName === "plan_call") {
+    return { callStarted: false, retrySafe: true };
+  }
+  return { callStarted: "unknown", retrySafe: toolName === "get_call_run" };
+}
+
+function mcpToolErrorFromResult(toolName, result) {
+  const remoteError = safeRemoteCallError(result);
+  const defaults = mcpCallSideEffectDefaults(toolName);
+  const knownTool = MCP_KNOWN_TOOLS.has(toolName) ? toolName : null;
+  const inertName = knownTool || inertToolIdentity(toolName);
+  const untrusted = {};
+  const detail = sanitizeUntrustedRemoteText(remoteError.message);
+  if (detail) {
+    untrusted.message = detail;
+  }
+  if (inertName && !knownTool) {
+    untrusted.tool = inertName;
+  }
+  return new CallStageError(MCP_TOOL_ERROR_SUMMARY, {
+    stage: knownTool || "mcp_call",
+    code: "mcp_tool_error",
+    callStarted: remoteError.call_started ?? defaults.callStarted,
+    retrySafe: remoteError.retry_safe ?? defaults.retrySafe,
+    remoteError: {
+      ...(inertRemoteCode(remoteError.error_code) !== undefined
+        ? { error_code: inertRemoteCode(remoteError.error_code) }
+        : {}),
+      ...(inertRemoteCode(remoteError.status) !== undefined
+        ? { status: inertRemoteCode(remoteError.status) }
+        : {}),
+    },
+    untrustedDetail: Object.keys(untrusted).length > 0 ? untrusted : null,
+  });
 }
 
 function safeRemoteCallError(result) {
@@ -1340,6 +1426,9 @@ async function handleMcpCommand({ command, positional, options, config, deps, st
         timeoutSeconds: mcpToolTimeoutSeconds({ config, options, toolName }),
         fetchImpl: deps.fetchImpl || globalThis.fetch,
       });
+      if (result?.isError === true) {
+        throw mcpToolErrorFromResult(toolName, result);
+      }
       writeJson(stdout, mcpSuccessPayload({ config, toolName, result }));
       return 0;
     }
