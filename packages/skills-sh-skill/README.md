@@ -1,8 +1,8 @@
 # @call-e/skills-sh-skill
 
-skills.sh compatible CALL-E skill for making real outbound phone calls,
-starting calls, and checking call status through the `calle` CLI.
-The skill source of truth lives at the repository root in `skills/calle`;
+The `calle-cli` Skill provides CALL-E calling and recovery through a trusted
+local `calle` CLI for skills.sh compatible agents.
+The skill source of truth lives at the repository root in `skills/calle-cli`;
 this package only keeps validation and packaging-related checks for that
 portable skills.sh surface.
 
@@ -17,7 +17,7 @@ skills.sh skill, and it must not contain a package-local `skills/` copy.
 It remains in the monorepo for three reasons:
 
 - provide a `pnpm --filter @call-e/skills-sh-skill check` target for validating
-  the public `skills/calle` source;
+  the public `skills/calle-cli` source;
 - own the skills.sh integration version used in
   the request's `integration.version` field;
 - keep CI guardrails around skills.sh install docs, CLI safety guidance,
@@ -27,7 +27,7 @@ It remains in the monorepo for three reasons:
 
 ```text
 ../../skills/
-  calle/
+  calle-cli/
     SKILL.md
     agents/
       openai.yaml
@@ -43,8 +43,8 @@ From the repository root:
 pnpm --filter @call-e/skills-sh-skill check
 pnpm --filter @call-e/skills-sh-skill test
 pnpm --filter @call-e/skills-sh-skill pack:dry-run
-npx -y skills-ref validate ./skills/calle
-npx -y skills add ./skills/calle --list
+npx -y skills-ref validate ./skills/calle-cli
+npx -y skills add ./skills/calle-cli --list
 ```
 
 ## CLI Selection

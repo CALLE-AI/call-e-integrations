@@ -1,18 +1,32 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const SKILLS_ROOT = path.join(REPO_ROOT, ".agents", "skills");
-const DIST_ROOT = path.join(REPO_ROOT, "dist", "skills");
 const FIXED_DATE = new Date("2024-01-01T00:00:00Z");
+const EXCLUDED_NAMES = new Set([
+  "node_modules", "__pycache__", "venv", "dist", "coverage", "logs",
+  "credentials.json", "secret.json", "secrets.json", "token.json", "tokens.json",
+]);
+const TEST_ONLY_DIRECTORIES = new Set(["evals", "tests"]);
+
+function isExcluded(name) {
+  return name.startsWith(".") || EXCLUDED_NAMES.has(name.toLowerCase()) ||
+    /\.(?:env|key|pem|p12|pfx|pyc|pyo|log)$/iu.test(name);
+}
 
 function usage() {
-  console.error("Usage: node scripts/pack-skills.mjs [--all|<skill-name> ...]");
+  console.error("Usage: node scripts/pack-skills.mjs [--public] [--all|<skill-name> ...]");
 }
 
 function toPosixPath(value) {
   return value.split(path.sep).join("/");
+}
+
+function assertSkillName(skillName) {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(skillName) || skillName.length > 64) {
+    throw new Error(`Invalid skill name "${skillName}".`);
+  }
 }
 
 function assertSkillFrontmatter(skillName, skillMarkdown) {
@@ -41,15 +55,21 @@ function assertSkillFrontmatter(skillName, skillMarkdown) {
   }
 }
 
-function collectSkillFiles(skillName) {
-  const skillRoot = path.join(SKILLS_ROOT, skillName);
+function collectSkillFiles(skillName, skillsRoot) {
+  assertSkillName(skillName);
+
+  const skillRoot = path.join(skillsRoot, skillName);
   const skillFile = path.join(skillRoot, "SKILL.md");
 
   if (!fs.existsSync(skillRoot)) {
     throw new Error(`Unknown skill "${skillName}" at ${skillRoot}.`);
   }
 
-  if (!fs.existsSync(skillFile)) {
+  if (!fs.lstatSync(skillRoot).isDirectory()) {
+    throw new Error(`${skillName}: skill source must be a directory, not a symlink.`);
+  }
+
+  if (!fs.existsSync(skillFile) || !fs.lstatSync(skillFile).isFile()) {
     throw new Error(`${skillName}: missing SKILL.md.`);
   }
 
@@ -60,7 +80,8 @@ function collectSkillFiles(skillName) {
   function walk(currentDir) {
     const dirents = fs
       .readdirSync(currentDir, { withFileTypes: true })
-      .filter((dirent) => dirent.name !== ".DS_Store")
+      .filter((dirent) => !isExcluded(dirent.name) &&
+        !(dirent.isDirectory() && TEST_ONLY_DIRECTORIES.has(dirent.name.toLowerCase())))
       .sort((a, b) => a.name.localeCompare(b.name));
 
     for (const dirent of dirents) {
@@ -191,8 +212,8 @@ function createStoredZip(entries, outFile) {
   );
 }
 
-function copySkillTree(skillName, files) {
-  const distSkillRoot = path.join(DIST_ROOT, skillName);
+function copySkillTree(skillName, files, distRoot) {
+  const distSkillRoot = path.join(distRoot, skillName);
   fs.rmSync(distSkillRoot, { recursive: true, force: true });
   fs.mkdirSync(distSkillRoot, { recursive: true });
 
@@ -205,53 +226,59 @@ function copySkillTree(skillName, files) {
   return distSkillRoot;
 }
 
-function packSkill(skillName) {
-  const files = collectSkillFiles(skillName);
-  const distSkillRoot = copySkillTree(skillName, files);
-  const zipPath = path.join(DIST_ROOT, `${skillName}.zip`);
+function packSkill(skillName, skillsRoot, distRoot) {
+  const files = collectSkillFiles(skillName, skillsRoot);
+  const distSkillRoot = copySkillTree(skillName, files, distRoot);
+  const zipPath = path.join(distRoot, `${skillName}.zip`);
   createStoredZip(files, zipPath);
   return { skillName, distSkillRoot, zipPath, fileCount: files.length };
 }
 
-function listSkillNames() {
-  if (!fs.existsSync(SKILLS_ROOT)) {
+function listSkillNames(skillsRoot) {
+  if (!fs.existsSync(skillsRoot)) {
     return [];
   }
 
   return fs
-    .readdirSync(SKILLS_ROOT, { withFileTypes: true })
-    .filter((dirent) => dirent.isDirectory())
+    .readdirSync(skillsRoot, { withFileTypes: true })
+    .filter((dirent) => dirent.isDirectory() && !isExcluded(dirent.name))
     .map((dirent) => dirent.name)
     .sort();
 }
 
-function main() {
-  const args = process.argv.slice(2);
+export function main(args = process.argv.slice(2), { repoRoot = REPO_ROOT, log = console.log } = {}) {
   if (args.includes("--help") || args.includes("-h")) {
     usage();
-    process.exit(0);
+    return [];
   }
 
+  const skillsRoot = path.join(repoRoot, ...(args.includes("--public") ? ["skills"] : [".agents", "skills"]));
+  const distRoot = path.join(repoRoot, "dist", "skills");
+  const names = args.filter((arg) => arg !== "--public" && arg !== "--all");
+  names.forEach(assertSkillName);
   const requestedSkills =
-    args.length === 0 || args.includes("--all")
-      ? listSkillNames()
-      : args.filter((arg) => arg !== "--all");
+    names.length === 0 || args.includes("--all")
+      ? listSkillNames(skillsRoot)
+      : names;
 
   if (requestedSkills.length === 0) {
     throw new Error("No skills found to pack.");
   }
 
-  const results = requestedSkills.map(packSkill);
+  const results = requestedSkills.map((name) => packSkill(name, skillsRoot, distRoot));
   for (const result of results) {
-    console.log(
+    log(
       `Packed ${result.skillName}: ${result.fileCount} file(s) -> ${result.zipPath}`,
     );
   }
+  return results;
 }
 
-try {
-  main();
-} catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    main();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  }
 }

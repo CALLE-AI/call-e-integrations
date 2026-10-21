@@ -8,7 +8,19 @@ This repository is a multi-ecosystem integration monorepo.
 - Keep ecosystem-specific implementations under `packages/`.
 - Keep shared local capability in `packages/cli`.
 - Keep package-scoped, productized skills under their owning package.
-- Keep the skills.sh public `calle` skill at the repository root in `skills/`.
+- Keep the skills.sh CLI compatibility `calle-cli` Skill at the repository root in `skills/`.
+- Keep the standalone `callev2` source alongside it in `skills/`. It prefers
+  host-managed OAuth MCP and can select direct HTTPS/API Key before business
+  writes when the host explicitly lacks MCP support, the target MCP connection
+  is confirmed not configured, or complete discovery confirms the required
+  capability is missing. Authentication failure or cancellation does not trigger
+  fallback.
+  Business operations and updates use non-CLI host facilities. MCP setup prefers
+  the current host's native management capabilities, with a limited official
+  host-command exception defined in
+  [connection lifecycle](../skills/callev2/references/connection.md).
+  The earlier `calle-api-key` and `calle-mcp-oauth` entries are
+  replaced by this unified entry; installed copies need explicit migration.
 - Keep repository-local Codex helper skills in `.agents/skills/`.
 
 Current Codex layout:
@@ -26,10 +38,11 @@ Current OpenClaw layout:
 packages/openclaw-cli-skill/skills/
 ```
 
-Current skills.sh layout:
+Current standalone layout:
 
 ```text
-skills/calle/
+skills/calle-cli/  # Official CLI compatibility entry
+skills/callev2/    # Personal MCP/API testing candidate
 ```
 
 Current Claude Code layout:
@@ -47,8 +60,8 @@ packages/cursor-plugin/plugin/
 ```
 
 Use `packages/openclaw-cli-skill/skills/` for the OpenClaw CALL-E skill source.
-Use `skills/calle/` for the skills.sh compatible CALL-E skill source so
-skills.sh public search and detail pages can index the portable `calle` skill
+Use `skills/calle-cli/` for the skills.sh compatible CALL-E skill source so
+skills.sh public search and detail pages can index the portable `calle-cli` Skill
 from the default repository install path.
 Use `.agents/skills/` for repository-local Codex helper skills. Do not put
 productized client-specific skill packages there; keep them under their owning
@@ -90,8 +103,11 @@ For Cursor:
 For skills.sh:
 
 - The skills.sh package path must stay `packages/skills-sh-skill`.
-- The skills.sh skill directory must stay `skills/calle`.
-- The skills.sh skill frontmatter `name` must stay `calle`.
+- The skills.sh skill directory must stay `skills/calle-cli`.
+- The skills.sh skill frontmatter `name` must stay `calle-cli`.
+- The CLI executable remains `calle`; existing auth/cache and recovery paths stay unchanged.
+- Existing standalone `calle` users explicitly install `calle-cli`, preserve their state,
+  and retire only the intended old standalone copy after verification.
 - The skills.sh CLI integration attribution must stay
   `skills_sh/skills_sh_skill/<version>`.
 
@@ -140,6 +156,51 @@ intentionally exposes multiple CALL-E marketplaces in the same client UI.
 - The release workflow initializes `@call-e/claude-plugin@latest` from the
   current package release tag when missing, then updates it only after
   `@call-e/claude-plugin` publishes.
+
+## Standalone Skills
+
+The [staged migration plan](calle-skill-migration-plan.md) records the authorized
+current layout: legacy `calle` becomes `calle-cli`, while the MCP/API candidate
+uses `callev2` with display name `callev2`, invocation `$callev2`, and metadata
+version `2.0.0` for personal testing. The later official `calle` takeover is not
+implemented by this staging step; final artifact and delivery gates still apply.
+
+`skills/callev2/` is distributed as a complete source directory and local
+`dist/skills/callev2.zip`. Its metadata and repository evaluation version are
+independent of the legacy CLI attribution version in private
+`@call-e/skills-sh-skill`, currently `0.1.0`. That package continues validating
+`skills/calle-cli/`; it does not own the new standalone version.
+
+Use [callev2 installation](install/callev2.md) for the personal candidate and
+[calle-cli installation](install/skills-sh-skill.md) for the official CLI entry.
+The user selected the existing `CALLE-AI/call-e-integrations` repository for
+`callev2`; personal testing does not change source ownership. Both source and
+update metadata must target `main/skills/callev2` in that repository. Local files
+do not establish publication, indexing, host activation, or renamed-artifact acceptance. Earlier
+Connect verification records remain tied to their original hashes.
+
+This customer Skill supports production only. Its fixed MCP endpoint is
+`https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth`, and its fixed API base URL
+is `https://api.heycall-e.com`. Setup uses those endpoints without an environment
+selection. Resolve any different saved endpoint before sending credentials or
+requests; changing a URL does not authorize reusing credentials from that URL.
+
+Keep formal evaluation definitions at `tests/behavior/callev2-evals.json`
+and other test fixtures under `tests/`, outside `skills/callev2/`. They are
+repository development inputs and are not included in the installed directory or
+ZIP. Keep the evaluation version aligned with the Skill metadata. Safe manual
+testing guides remain in the Skill, with no dependency on repository-only fixtures.
+
+Only the selected interface's detailed contract is loaded after routing. API
+fallback is a pre-execution choice, not a retry for authentication errors or
+unknown write results. A call retains its original interface, account and
+endpoint unless interoperability has been verified. Records from a different
+endpoint are outside this production Skill's recovery scope.
+
+The CLI compatibility entry is `skills/calle-cli`; keep its original CLI
+attribution, configuration and recovery behavior. CLI executable `calle` and
+ecosystem marketplace/plugin identities remain unchanged. The personal candidate
+is `skills/callev2`.
 
 ## External Codex Directory Follow-Up
 
@@ -249,15 +310,17 @@ submission; publication is a separate operational step.
 
 skills.sh install example:
 
-Use the repository root with `--skill calle` and `-g` so skills.sh installs the
-portable `calle` skill from the root skill source at user-level/global scope:
+<!-- sync-with: docs/install/skills-sh-skill.md#install-from-github -->
+
+Use the official repository root with `--skill calle-cli` and `-g` so skills.sh installs the
+portable `calle-cli` Skill from the root skill source at user-level/global scope:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent <agent>
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent <agent>
 ```
 
 Or install the root skill source directly with the same user-level/global scope:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -g -y --agent <agent>
+npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle-cli -g -y --agent <agent>
 ```

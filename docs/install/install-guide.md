@@ -21,24 +21,37 @@ its own environment.
 
 ### skills.sh Compatible Agents
 
-Install the portable `calle` skill globally from the repository root:
+<!-- sync-with: docs/install/skills-sh-skill.md#install-from-github -->
+
+Install the portable `calle-cli` skill globally from the repository root:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent <agent>
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent <agent>
 ```
 
 Replace `<agent>` with the target agent name, such as `codex`, `openclaw`, or
 another value supported by your local skills CLI.
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent codex
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent codex
 ```
 
 For direct source installs, use the same user-level/global scope:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -g -y --agent <agent>
+npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle-cli -g -y --agent <agent>
 ```
+
+### callev2 Personal Testing
+
+The standalone MCP/API candidate uses `callev2` version `2.0.0`, separately from
+`calle-cli` and plugin-provided `calle` Skills. Follow the
+[callev2 guide](callev2.md) to import the complete local source or ZIP, verify the
+loaded identity, and check the selected repository publication status. This staging
+step does not announce the eventual official `calle` takeover.
+
+Existing standalone CLI `calle` users should explicitly install `calle-cli` and
+follow its [state-preserving migration notice](skills-sh-skill.md#existing-calle-users).
 
 ### Codex
 

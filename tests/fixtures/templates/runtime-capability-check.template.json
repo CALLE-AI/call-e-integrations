@@ -1,0 +1,26 @@
+{
+  "status": "NOT_RUN",
+  "observed_at": null,
+  "timezone": "Asia/Singapore",
+  "host_name": null,
+  "host_version": null,
+  "skill_loaded": {
+    "api": null,
+    "mcp": null
+  },
+  "capabilities": {
+    "direct_https_tool": "unknown",
+    "secret_header_injection": "unknown",
+    "single_bearer_prefix_mock_verified": "unknown",
+    "redirect_control": "unknown",
+    "private_durable_storage": "unknown",
+    "remote_mcp": "unknown",
+    "oauth_login": "unknown",
+    "actual_tools_discovery": "unknown",
+    "safe_read_only_tool": "unknown"
+  },
+  "non_secret_tool_identifiers": [],
+  "evidence_files": [],
+  "blockers": [],
+  "notice": "Do not record secrets, callback tokens, complete authorization URLs or private raw responses."
+}

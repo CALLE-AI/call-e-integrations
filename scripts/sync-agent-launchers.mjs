@@ -9,7 +9,7 @@ const skillDirs = [
   "packages/claude-plugin/plugin/skills/calle",
   "packages/cursor-plugin/plugin/skills/calle",
   "packages/openclaw-cli-skill/skills/phone-call-calle",
-  "skills/calle",
+  "skills/calle-cli",
 ];
 for (const dir of skillDirs) {
   const target = path.join(root, dir, "scripts/run-agent-command.mjs");

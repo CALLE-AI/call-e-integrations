@@ -1,0 +1,25 @@
+{
+  "notice": "Empty PRIVATE record template; instances belong in protected local storage, never in shared reports or release ZIPs. No credentials here.",
+  "interface": null,
+  "server_or_base_url": null,
+  "non_secret_account_reference": null,
+  "logical_operation_reference": null,
+  "created_at": null,
+  "authorization_scope": {
+    "explicit_user_instruction_reference": null,
+    "approved_number": null,
+    "approved_purpose": null,
+    "maximum_logical_calls": 0
+  },
+  "original_request_body_or_tool_arguments": null,
+  "api_idempotency_key": null,
+  "mcp_actual_tool_name": null,
+  "mcp_observed_idempotency_contract": null,
+  "resource_id": null,
+  "resource_id_type": null,
+  "billing_call_id": null,
+  "submission_outcome": "not_submitted",
+  "last_event_cursor": null,
+  "last_observed_state": null,
+  "notice_on_retry": "Keep original interface/identity/body/key. MCP unknown write outcome has no automatic replay without a verified contract."
+}

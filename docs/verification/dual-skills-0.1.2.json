@@ -1,0 +1,155 @@
+{
+  "date": "2026-10-14",
+  "timezone": "Asia/Shanghai",
+  "repository_base": "7c76816",
+  "source": "calle-skills-codex-handoff/HANDOFF_2026-10-14.md",
+  "skill_version": "0.1.2",
+  "source_comparison": {
+    "status": "PASS",
+    "identical_files": 17,
+    "sha256": {
+      "skills/calle-api-key/SKILL.md": "8c685f20d54d6ddc7a5e3842b76fc391fff76c9cf6d0473ac3a5da354f438951",
+      "skills/calle-api-key/assets/hello-call.request.json": "61d65d7dc281e1edf27ef3a4c0c2232d083b73fb0ef032b4fbdee25901a9e661",
+      "skills/calle-api-key/assets/read-only.http": "a889ba6103d0ed0612171f8e685bd741d26443a503f53ca1e56b0f59b1066b88",
+      "skills/calle-api-key/assets/write-requests.http": "a791d8e64b578eded0d56908edb4d65e0b5fb64923cbad1ad1578b3a8b0e7f80",
+      "skills/calle-api-key/evals/evals.json": "11ea5753262ffca55b55f9c7601beb2e3e529c2334092c7cc6a125bd4586039d",
+      "skills/calle-api-key/references/api-contract.md": "180c0a3eb5e1c33666bb30e9b94dfcff6ace014eaee377d02b112f74d7e3add5",
+      "skills/calle-api-key/references/client-checks.md": "40662d11959111edbf2fa2d4675479d9245be0ac861a5831328a018f8c17151b",
+      "skills/calle-api-key/references/openapi-calls.yaml": "9a5549e56b5673087af25bce977ed2302e08cfd8661a89be47fbda4afc6d370a",
+      "skills/calle-api-key/references/setup.md": "984d68d77027dbc4e3572a271647a895cdb12c6f8c5bcc1ed2b4d06dbf53c6f7",
+      "skills/calle-api-key/references/sources.md": "e3f25fe0d779c6a37cb628995aafbb1e3a0c1a6cf2fdbe814d428601d3b98b95",
+      "skills/calle-api-key/references/testing.md": "191a5de4f3bf71e3fc790571dafd427d3f2bc6a11ffb6f848df0b5b864947434",
+      "skills/calle-mcp-oauth/SKILL.md": "b56ce17869ec1a4851b0dfb85c81d80fb46dacfd429884cfab8b1e854171c336",
+      "skills/calle-mcp-oauth/assets/tool-map.template.json": "f2bd02055a29e69d48b05347d57653330f066519a9c6bbe74c8ae7f39bc5c234",
+      "skills/calle-mcp-oauth/evals/evals.json": "cfa684ba0f6bf8cf28077c7da75e66d08dbec02cf5d9faa8daa318ba689fb0c1",
+      "skills/calle-mcp-oauth/references/connection.md": "b95a836a2e067d8cad554e025fb53839b5178d035b74848bec8ac647ce2d4f1a",
+      "skills/calle-mcp-oauth/references/sources.md": "119d88cb4bca579b8e6b2b4999607a2bf019933ea0f610a53011954393848238",
+      "skills/calle-mcp-oauth/references/testing.md": "de9688e44f91b3e2a7c60613d98ef65169803848cdc233fff7c3b799c0b0015e"
+    }
+  },
+  "runtime": {
+    "python": "3.13.8",
+    "node": "22.21.1",
+    "pnpm": "10.18.3",
+    "dependency_install": "uv --offline, local cache"
+  },
+  "offline_unittest": {
+    "command": ".venv/bin/python -m tests.run_offline",
+    "status": "PASS",
+    "passed": 111,
+    "source_suite_count": 117,
+    "excluded_historical_handoff_audits": 6
+  },
+  "node_tests": {
+    "command": "pnpm test",
+    "status": "PASS",
+    "tests": 181,
+    "pass": 180,
+    "fail": 0,
+    "skipped": 1,
+    "zip_tests_included": 7,
+    "npm_offline": true
+  },
+  "checks": {
+    "pnpm check": "PASS",
+    "pnpm pack:dry-run": "PASS",
+    "pnpm pack:skills:dual": "PASS",
+    "git diff --check": "PASS"
+  },
+  "quick_validate": {
+    "status": "FAIL",
+    "reason": "Bundled validator allowlist rejects the existing compatibility frontmatter field in both Skills; field preserved."
+  },
+  "archives": {
+    "dist/skills/calle-api-key.zip": {
+      "files": 11,
+      "sha256": "b8ae072a34383abb510e8d75233e1b7bd5efb812b3f3c792f29e8a69400d72fd"
+    },
+    "dist/skills/calle-mcp-oauth.zip": {
+      "files": 6,
+      "sha256": "c5cdad5d26d9ba3521e0aa2190211d87774746d2dace98c5874c1db36502374b"
+    }
+  },
+  "agent_mock": {
+    "status": "NOT_RUN",
+    "defined": 60,
+    "original_defined": 24,
+    "additional_defined": 36,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "blocked": 0,
+    "not_run": 60
+  },
+  "host_installation_and_discovery": "NOT_RUN",
+  "live_api_and_mcp": "NOT_RUN",
+  "real_calls_placed": 0,
+  "credentials_read": false,
+  "release": {
+    "decision": "No release needed",
+    "affected_npm_packages": [],
+    "package_changeset_required": false,
+    "empty_changeset": ".changeset/standalone-dual-skills.md"
+  },
+  "offline_diagnostics": {
+    "scope": "offline_local_profile_only",
+    "network_requests": 0,
+    "service_acceptance_tested": false,
+    "observations": [
+      {
+        "id": "G01",
+        "description": "required references an undeclared property",
+        "accepted_by_current_local_profile": true,
+        "accepted_by_client_semantic_check": false,
+        "client_issues": [
+          {
+            "code": "required_property_missing",
+            "path": "/required/0",
+            "policy": "client_safety_subset"
+          }
+        ],
+        "classification": "local_semantic_validation_gap_if_accepted",
+        "server_behavior": "NOT_TESTED"
+      },
+      {
+        "id": "G02",
+        "description": "boolean property with string-only enum",
+        "accepted_by_current_local_profile": true,
+        "accepted_by_client_semantic_check": false,
+        "client_issues": [
+          {
+            "code": "enum_type_mismatch",
+            "path": "/properties/heard_test/enum/0",
+            "policy": "client_safety_subset"
+          }
+        ],
+        "classification": "local_semantic_validation_gap_if_accepted",
+        "server_behavior": "NOT_TESTED"
+      },
+      {
+        "id": "G03",
+        "description": "empty object as Call response",
+        "accepted_by_current_local_profile": true,
+        "operation_report": {
+          "scope": "offline_client_reporting_subset",
+          "operation": "read",
+          "http_status": 200,
+          "information_status": "INSUFFICIENT_INFORMATION",
+          "missing_fields": [
+            "id",
+            "status",
+            "result_status"
+          ],
+          "invalid_fields": [],
+          "resource_id": null,
+          "acceptance": "UNKNOWN",
+          "result_readiness": "UNKNOWN",
+          "business_success": "UNKNOWN",
+          "error_code": null
+        },
+        "classification": "documented_loose_response_profile_not_integration_proof",
+        "server_behavior": "NOT_TESTED"
+      }
+    ]
+  }
+}

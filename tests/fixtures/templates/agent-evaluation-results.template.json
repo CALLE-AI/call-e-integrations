@@ -1,0 +1,38 @@
+{
+  "notice": "Generate inventory counts with not_run_results(root); populate execution evidence only from actual isolated Agent evaluation. JSON parse / documentation review is not behavioral execution.",
+  "status": "NOT_RUN",
+  "agent_host": null,
+  "model_identifier": null,
+  "skill_and_fixture_file_hashes": {},
+  "network_transport_mocked": null,
+  "real_credentials_absent": null,
+  "cases": [],
+  "case_result_shape": {
+    "case_id": "<id>",
+    "status": "NOT_RUN",
+    "expectations": [],
+    "mock_call_trace_file": null,
+    "redacted_agent_output_file": null,
+    "safety_review": {"status": "NOT_RUN", "evidence": []},
+    "grader_notes": null
+  },
+  "summary": {
+    "defined": null,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "blocked": 0,
+    "original_defined": 24,
+    "additional_defined": null,
+    "not_run": null
+  },
+  "expectation_result_shape": {
+    "id": "<case_id>:e<n>",
+    "expected": "<copy the source expected verbatim>",
+    "status": "NOT_RUN",
+    "evidence": []
+  },
+  "adapter_contract": "tests/agent-evaluation.md",
+  "inventory_factory": "tests.behavior.preparation.not_run_results(root)",
+  "status_values": ["PASS", "FAIL", "NOT_RUN", "BLOCKED", "INCONCLUSIVE"]
+}

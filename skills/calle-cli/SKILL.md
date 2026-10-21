@@ -1,11 +1,12 @@
 ---
-name: calle
-description: Use CALL-E from skills.sh compatible agents through the calle CLI. Use for CALL-E setup checks, authentication recovery, phone call planning, placing real outbound calls, call status polling, summaries, details, and transcripts.
+name: calle-cli
+description: Use CALL-E through a trusted local calle CLI for CLI setup, authentication, legacy Plan/Run calls, status, transcripts, and recovery. Select for requests that choose the CLI workflow or an existing CLI run; not for native MCP or direct API Key workflows.
 ---
 
-# calle
+# calle-cli
 
-Use CALL-E from skills.sh compatible agents through the shared `calle` CLI.
+Use this Skill for the local CLI workflow or an existing CLI run. The Skill is
+named `calle-cli`; the shared executable remains `calle`.
 
 CALL-E can place real outbound phone calls. Always use the local CLI workflow,
 preserve user intent, and only start a call when the user clearly intends to

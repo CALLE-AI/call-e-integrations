@@ -119,6 +119,17 @@ Works in Claude Code, Codex, Cursor, and any agent that can run shell commands. 
 
 For manual setup, expand the table below or see the [full install guide](https://github.com/CALLE-AI/call-e-integrations/blob/main/docs/install/install-guide.md).
 
+For the standalone workflow that prefers MCP with API Key fallback under its
+[interface selection rules](docs/install/callev2.md#choose-the-interface),
+see [callev2 personal testing](docs/install/callev2.md). Business operations and updates
+use non-CLI host facilities. MCP setup prefers native host management, with a
+limited exception for the current host's official MCP management commands.
+
+The standalone CLI Skill is now `calle-cli`; existing users should follow the
+[explicit migration notice](docs/install/skills-sh-skill.md#existing-calle-users).
+`callev2` is a personal testing identity. The future official `calle` takeover
+remains subject to the [migration gates](docs/calle-skill-migration-plan.md).
+
 ### MCP
 
 CALL-E exposes a Streamable HTTP MCP endpoint. Any compatible MCP client can connect, authorize via OAuth, and run CALL-E with three tools.
@@ -467,18 +478,20 @@ Common issues covered:
 
 ## Repository Structure
 
-This is a multi-ecosystem integration monorepo. Each integration has its own package and marketplace entry point.
+This is a multi-ecosystem integration monorepo with packaged plugins and standalone Skills.
 
 | Path | Purpose |
 | --- | --- |
-| `packages/cli` | Shared `calle` CLI. Handles authentication, token caching, MCP tool discovery, and call workflow shortcuts. Used by all agent integrations. |
+| `packages/cli` | Shared `calle` CLI for CLI-based integrations. Handles authentication, token caching, MCP tool discovery, and call workflow shortcuts. |
 | `packages/core` | Shared core library used across packages. |
 | `packages/codex-plugin` | Codex plugin providing the `$calle` skill. |
 | `packages/claude-plugin` | Claude Code plugin providing the `/calle:calle` skill. |
 | `packages/cursor-plugin` | Cursor plugin bundling the MCP server config, `calle` skill, and real-call safety rule. |
 | `packages/openclaw-cli-skill` | OpenClaw CALL-E skill source. |
 | `packages/skills-sh-skill` | skills.sh compatible CALL-E skill package. |
-| `skills/calle/` | Portable `calle` skill for public skills.sh search and install. |
+| `skills/calle-cli/` | Portable CLI compatibility Skill; official installation uses `--skill calle-cli`. |
+| `skills/callev2/` | Personal testing candidate at version 2.0.0; standalone Skill that prefers host-managed OAuth MCP, with direct HTTPS/API Key fallback governed by the [interface selection rules](docs/install/callev2.md#choose-the-interface). |
+| `tests/` | Offline standalone Skill validation and Agent/mock scenario definitions; execution states are recorded separately. |
 | `examples/` | Runnable MCP client demos. |
 | `docs/` | Integration guides, install docs, and troubleshooting. |
 
@@ -519,6 +532,10 @@ pnpm check
 pnpm test
 pnpm pack:dry-run
 ```
+
+Standalone Skill checks also require Python 3.10+ and the development dependencies in
+`requirements-test.txt`. See [offline validation](tests/README.md) for isolated
+setup, test commands, and the separate Agent/mock evaluation status.
 
 <details>
 <summary>Package-specific checks</summary>

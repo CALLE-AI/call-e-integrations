@@ -1,0 +1,56 @@
+# Sources and verification status
+
+Initially compiled on 2026-10-13. Authentication sources reviewed on 2026-10-14. Host management preferences and update boundaries revised on 2026-10-15.
+
+## Evidence for this CALL-E MCP
+
+The user supplied `https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth` and specified OAuth.
+
+During initial compilation, ordinary webpage reading did not obtain content, and direct network access from that runtime also failed. The package does not embed an authenticated tool snapshot. Historical host tests do not establish the current connection, identity, schema, or permissions. This instruction revision makes no new CALL-E authentication or account requests; its documentation and offline checks do not establish that the server is offline or that OAuth is valid or expired.
+
+All business capabilities must therefore be discovered after connection; no invented server-specific function names are provided. Fictional tools in evals are solely offline behavioral evaluation fixtures.
+
+On 2026-10-15, the current Codex chat exposed seven CALL-E tool definitions:
+`plan_call`, `run_call`, `get_call_run`, `prepare_call`, `get_call`, `open_call`,
+and `get_call_transcript`. Their descriptions and input/output schemas were read
+without invoking any business tool. The user excluded the three legacy Plan/Run
+tools from this Skill. The [MCP tool policy](mcp.md#current-call-tools-and-legacy-exclusion)
+records that boundary and the observed Preparation/Call contract. This is a
+host-exposed metadata observation, not a complete server inventory or a live
+authentication, account, card-rendering, or execution test. Other hosts must
+discover their own current schemas and still apply the exclusion.
+
+The MCP call workflow is also aligned with `skills/agentic-call/SKILL.md` and
+the review cases in `.codex-plugin/plugin.json` from the user-supplied
+`call-e-8.0.0-agentic-draft.zip`. Its `.mcp.json` names the same server above.
+The draft specifies the four current tools, task plus known facts, server-owned
+clarification, revision-aware card editing, user Dial confirmation, existing-call
+queries, and card cancellation. It does not require an explicit `result_schema`.
+The ZIP contains instructions and metadata, not server implementation or live
+acceptance evidence. Its plugin version `8.0.0` does not change this standalone
+Skill's independent version, connection/update guidance, or API mode. The ZIP is
+provenance only; the installed Skill does not need access to it.
+
+## General format and protocol sources
+
+- [Agent Skills Specification](https://agentskills.io/specification): Skill directories, metadata, and progressive loading.
+- [MCP Tools, 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/server/tools): tool discovery, pagination, inputSchema, outputSchema, tool errors, and structured results.
+- [MCP Authorization, 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization): OAuth client responsibilities, metadata, and credential protection for HTTP MCP.
+- [Codex MCP management](https://learn.chatgpt.com/docs/extend/mcp) and [Claude Code MCP management](https://code.claude.com/docs/en/mcp): host-specific configuration and authentication entry points. Check the installed host's actual capabilities and permissions; these documents do not establish that a management tool is exposed in the current chat.
+
+The dated MCP specifications serve as general protocol references. They do not establish that this service declares support for those versions or that every host currently uses them.
+
+## Completed and outstanding work
+
+Completed: authored host OAuth connection guidance, dynamic tool mapping, a single-call workflow, and safe recovery rules. Version v0.1.2 added first-connection guidance, host checks after returning from the browser, tool refresh, read-only completion criteria, layered cleanup, and eight authentication scenarios for offline multi-turn evaluation. Actual reports govern structural check and Agent behavior evaluation status; definitions alone do not imply passing results.
+
+Version 0.2.0 merged both access paths into calle-connect, preferring MCP and selecting API fallback before execution based on confirmed capabilities. Update sources, authorized downloading, and full-directory validation are shared. MCP connection management prefers native host facilities, then permits verified official commands of the current host within the connection guidance. Business operations, API setup, and Skill updates remain non-CLI. This version identifies local source; it does not establish publication or a passed platform security audit.
+
+Not established by this revision: current CALL-E OAuth, the complete server tool inventory beyond the host-exposed definitions above, query/create/cancel permissions, identity, automatic token refresh, server-side revocation, live calls, or direct ZIP installation in a specific host. Prior test records remain scoped to their original host and run; they do not replace current discovery. `verified-on` identifies only the guidance review date.
+
+Version 2.0.0 uses the `callev2` name for personal testing. This changes the
+standalone Skill identity and update namespace while retaining the existing
+MCP and API business contracts. Existing host connections, private credential
+locations, and saved call records keep their original references. Earlier
+verification remains evidence for its recorded source and scope; this candidate
+has not completed a new release acceptance run.
