@@ -1,0 +1,238 @@
+{
+  "notice": "Synthetic preparation only. No Agent output, actual MCP discovery, authenticated request, or live call is represented here.",
+  "evaluation_status": "not_executed_on_an_agent",
+  "cases": [
+    {
+      "id": "c04-01",
+      "skill": "callev2",
+      "prompt": "Use the API Key interface for this task. Continue reading all existing events for the saved call without redialing.",
+      "tags": [
+        "event_pagination",
+        "deduplicate_event_ids",
+        "empty_page_cursor"
+      ],
+      "setup": {
+        "resource_id": "fixture-resource",
+        "saved_cursor": "fixture-event-0",
+        "interface_selection": "user_explicit"
+      },
+      "fixture_pages": [
+        {
+          "data": [
+            {
+              "id": "fixture-event-1"
+            },
+            {
+              "id": "fixture-event-2"
+            }
+          ],
+          "next_cursor": "fixture-page-2"
+        },
+        {
+          "data": [
+            {
+              "id": "fixture-event-2"
+            },
+            {
+              "id": "fixture-event-3"
+            }
+          ],
+          "next_cursor": null
+        },
+        {
+          "data": [],
+          "next_cursor": null
+        }
+      ],
+      "expected": [
+        "Use GET events with fixture-page-2 for the next page; do not derive it from a resource ID.",
+        "Deduplicate fixture-event-2, then preserve fixture-event-3 for later polling even after an empty page.",
+        "Do not infer completion from an empty page or create another call."
+      ],
+      "selected_transport": "api",
+      "turns": [
+        {
+          "prompt": ""
+        },
+        {
+          "prompt": "Read any new events once more from the last saved event cursor for the same existing call. Do not create or cancel a call."
+        }
+      ]
+    },
+    {
+      "id": "c04-02",
+      "skill": "callev2",
+      "prompt": "Use the API Key interface for this task. Explain the simulated create result just received; do not create another call.",
+      "tags": [
+        "accepted_not_success",
+        "billing_resource_id"
+      ],
+      "fixture_http_response": {
+        "status": 202,
+        "body": {
+          "id": "fixture-resource",
+          "call_id": "fixture-billing"
+        }
+      },
+      "expected": [
+        "Report accepted only; connected, result available and business success remain unconfirmed.",
+        "Save fixture-resource as the API resource ID and never use fixture-billing in resource paths.",
+        "Do not issue another create request."
+      ],
+      "selected_transport": "api",
+      "setup": {
+        "interface_selection": "user_explicit"
+      }
+    },
+    {
+      "id": "c04-03",
+      "skill": "callev2",
+      "prompt": "Use the API Key interface for this task. The simulated create request for the same call just returned 429. Handle it within the existing budget without redialing.",
+      "tags": [
+        "429",
+        "retry_after",
+        "preserve_identity"
+      ],
+      "setup": {
+        "original_journal": "present",
+        "call_id": null,
+        "creation_outcome": "unknown",
+        "remaining_seconds": 2,
+        "interface_selection": "user_explicit"
+      },
+      "fixture_http_response": {
+        "status": 429,
+        "headers": {
+          "Retry-After": "5"
+        },
+        "body": {
+          "error": {
+            "code": "rate_limited"
+          }
+        }
+      },
+      "expected": [
+        "Respect Retry-After; the current two-second budget is insufficient, so do not replay now.",
+        "Preserve the original body, key, account and environment without claiming that no call happened.",
+        "Do not fall back to MCP or promise background retries."
+      ],
+      "selected_transport": "api"
+    },
+    {
+      "id": "c04-04",
+      "skill": "callev2",
+      "prompt": "Use the API Key interface for this task. Query the existing call and explain the response; do not recreate it.",
+      "tags": [
+        "missing_fields",
+        "loose_response"
+      ],
+      "setup": {
+        "resource_id": "fixture-resource",
+        "interface_selection": "user_explicit"
+      },
+      "fixture_http_response": {
+        "status": 200,
+        "body": {
+          "future_server_field": true
+        }
+      },
+      "expected": [
+        "Report insufficient information for resource identity, execution status and result readiness.",
+        "Do not treat HTTP 200 or a permissive schema pass as a completed business result.",
+        "Allow an unknown response field without inventing missing known fields or creating a replacement."
+      ],
+      "selected_transport": "api"
+    },
+    {
+      "id": "c04-05",
+      "skill": "callev2",
+      "prompt": "Use the API Key interface for this task. Explain the unknown error from submitting the original call; do not create another call.",
+      "tags": [
+        "unknown_error",
+        "preserve_identity"
+      ],
+      "setup": {
+        "original_journal": "present",
+        "creation_outcome": "unknown",
+        "interface_selection": "user_explicit"
+      },
+      "fixture_http_response": {
+        "status": 598,
+        "body": {
+          "error": {
+            "code": "fixture_unknown_error"
+          }
+        }
+      },
+      "expected": [
+        "Preserve uncertainty and the original operation record; do not classify this as a documented pre-acceptance input rejection.",
+        "Report only the observed status and error code; do not invent service semantics or switch interfaces."
+      ],
+      "selected_transport": "api"
+    },
+    {
+      "id": "c04-06",
+      "skill": "callev2",
+      "prompt": "Use the API Key interface for this task. Use callev2 for an offline preview only, without sending any HTTP request. No phone number has been provided.",
+      "tags": [
+        "preview_no_http",
+        "credential_isolation"
+      ],
+      "setup": {
+        "http_tool": "available",
+        "credential": "SYNTHETIC_NOT_A_REAL_KEY",
+        "interface_selection": "user_explicit"
+      },
+      "expected": [
+        "Make no HTTP request, including a GET authentication check.",
+        "Keep the missing phone unresolved, show only a local preview and do not expose the synthetic credential."
+      ],
+      "selected_transport": "api"
+    },
+    {
+      "id": "c04-07",
+      "skill": "callev2",
+      "prompt": "Use the API Key interface for this task. A 202 response just arrived without a resource ID. Explain the status and preserve the recovery record; do not create another call.",
+      "tags": [
+        "accepted_not_success",
+        "missing_fields",
+        "preserve_identity"
+      ],
+      "setup": {
+        "original_journal": "present",
+        "interface_selection": "user_explicit"
+      },
+      "fixture_http_response": {
+        "status": 202,
+        "body": {
+          "call_id": "fixture-billing"
+        }
+      },
+      "expected": [
+        "Retain HTTP acceptance evidence while reporting the missing API resource ID; do not claim business success.",
+        "Keep the original body, key and environment; do not substitute the Billing ID, invent an ID or create a replacement."
+      ],
+      "selected_transport": "api"
+    },
+    {
+      "id": "c04-08",
+      "skill": "callev2",
+      "prompt": "Use the MCP interface for this task. Inspect the existing CALL-E MCP connection offline only; do not log in, configure a connection, or dial.",
+      "tags": [
+        "existing_connection_only",
+        "no_oauth",
+        "credential_isolation"
+      ],
+      "setup": {
+        "mcp_connection": "missing",
+        "host_configuration_ui": "available",
+        "interface_selection": "user_explicit"
+      },
+      "expected": [
+        "Report the missing existing connection without invoking OAuth or connection configuration.",
+        "Do not read API Key or token caches, fabricate discovered tools, or fall back to HTTP, SDK or CLI."
+      ],
+      "selected_transport": "mcp"
+    }
+  ]
+}

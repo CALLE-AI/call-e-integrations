@@ -61,14 +61,14 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
   });
 
   writeFile(
-    path.join(repoRoot, "skills", "calle", "SKILL.md"),
+    path.join(repoRoot, "skills", "calle-cli", "SKILL.md"),
     [
       "---",
-      "name: calle",
+      "name: calle-cli",
       "description: Test CALL-E skills.sh skill.",
       "---",
       "",
-      "# calle",
+      "# calle-cli",
       VALID_CLI_SELECTION_GUIDANCE,
       VALID_RECOVERY_GUIDANCE,
       "",
@@ -90,18 +90,18 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
   );
 
   writeFile(
-    path.join(repoRoot, "skills", "calle", "agents", "openai.yaml"),
+    path.join(repoRoot, "skills", "calle-cli", "agents", "openai.yaml"),
     [
       "interface:",
-      '  display_name: "calle"',
+      '  display_name: "calle-cli"',
       '  short_description: "CALL-E phone calls from agent skills"',
-      '  default_prompt: "Use $calle to place or check a CALL-E phone call."',
+      '  default_prompt: "Use $calle-cli to place or check a CALL-E phone call."',
       "",
     ].join("\n"),
   );
 
   writeFile(
-    path.join(repoRoot, "skills", "calle", "references", "commands.md"),
+    path.join(repoRoot, "skills", "calle-cli", "references", "commands.md"),
     [
       "# Commands",
       VALID_CLI_SELECTION_GUIDANCE,
@@ -137,7 +137,7 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
     [
       "# Install",
       "Install at user-level/global scope.",
-      "npx -y skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g",
+      "npx -y skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g",
       "",
     ].join("\n"),
   );
@@ -145,9 +145,9 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
     path.join(repoRoot, "docs", "install", "install-guide.md"),
     [
       "# Install",
-      "npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent <agent>",
-      "npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent codex",
-      "npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -g -y --agent <agent>",
+      "npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent <agent>",
+      "npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent codex",
+      "npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle-cli -g -y --agent <agent>",
       "",
     ].join("\n"),
   );
@@ -156,9 +156,9 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
     [
       "# Install",
       "user-level/global scope",
-      "npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent <agent>",
-      "npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent codex",
-      "npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -g -y --agent <agent>",
+      "npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent <agent>",
+      "npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent codex",
+      "npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle-cli -g -y --agent <agent>",
       "",
     ].join("\n"),
   );
@@ -166,7 +166,7 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
     path.join(repoRoot, "docs", "install", "troubleshooting.md"),
     [
       "# Troubleshooting",
-      "npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g",
+      "npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g",
       "",
     ].join("\n"),
   );
@@ -175,10 +175,10 @@ function createValidFixture(root, { packageVersion = "0.1.0", integrationVersion
     [
       "skills.sh",
       "packages/skills-sh-skill",
-      "skills/calle",
+      "skills/calle-cli",
       "user-level/global scope",
-      "npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent <agent>",
-      "npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -g -y --agent <agent>",
+      "npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent <agent>",
+      "npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle-cli -g -y --agent <agent>",
       "",
     ].join("\n"),
   );
@@ -196,27 +196,27 @@ test("allows root README without skills.sh integration entry points", () => {
   assert.deepEqual(checkSkillsShSkill({ packageRoot, repoRoot }), []);
 });
 
-test("reports a missing calle skill", () => {
+test("reports a missing calle-cli skill", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-skills-sh-skill-missing"));
-  fs.rmSync(path.join(repoRoot, "skills", "calle"), { recursive: true, force: true });
+  fs.rmSync(path.join(repoRoot, "skills", "calle-cli"), { recursive: true, force: true });
 
   const failures = checkSkillsShSkill({ packageRoot, repoRoot });
-  assert.ok(failures.some((failure) => failure.includes("skills/calle")));
+  assert.ok(failures.some((failure) => failure.includes("skills/calle-cli")));
 });
 
 test("reports a non-standard skill name", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-skills-sh-skill-bad-name"));
-  const skillFile = path.join(repoRoot, "skills", "calle", "SKILL.md");
+  const skillFile = path.join(repoRoot, "skills", "calle-cli", "SKILL.md");
   const source = fs.readFileSync(skillFile, "utf8");
-  fs.writeFileSync(skillFile, source.replace("name: calle", "name: Phone Call - CALL-E"));
+  fs.writeFileSync(skillFile, source.replace("name: calle-cli", "name: Phone Call - CALL-E"));
 
   const failures = checkSkillsShSkill({ packageRoot, repoRoot });
-  assert.ok(failures.some((failure) => failure.includes('frontmatter name must be "calle"')));
+  assert.ok(failures.some((failure) => failure.includes('frontmatter name must be "calle-cli"')));
 });
 
 test("reports stale integration attribution", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-skills-sh-skill-stale-attribution"));
-  const referenceFile = path.join(repoRoot, "skills", "calle", "references", "commands.md");
+  const referenceFile = path.join(repoRoot, "skills", "calle-cli", "references", "commands.md");
   const source = fs.readFileSync(referenceFile, "utf8");
   fs.writeFileSync(referenceFile, source.replaceAll("\"source\": \"skills_sh\"", "\"source\": \"openclaw\""));
 
@@ -237,8 +237,8 @@ test("reports stale integration version", () => {
 test("reports a duplicate package-local skill copy", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-skills-sh-skill-duplicate"));
   fs.cpSync(
-    path.join(repoRoot, "skills", "calle"),
-    path.join(packageRoot, "skills", "calle"),
+    path.join(repoRoot, "skills", "calle-cli"),
+    path.join(packageRoot, "skills", "calle-cli"),
     { recursive: true },
   );
 
@@ -250,7 +250,7 @@ test("reports skills.sh install docs missing global scope", () => {
   const { packageRoot, repoRoot } = createValidFixture(makeTempRoot("calle-skills-sh-skill-project-install"));
   const installDocPath = path.join(repoRoot, "docs", "install", "skills-sh-skill.md");
   const source = fs.readFileSync(installDocPath, "utf8");
-  fs.writeFileSync(installDocPath, source.replace(" --skill calle -g -y --agent <agent>", " --skill calle -y --agent <agent>"));
+  fs.writeFileSync(installDocPath, source.replace(" --skill calle-cli -g -y --agent <agent>", " --skill calle-cli -y --agent <agent>"));
 
   const failures = checkSkillsShSkill({ packageRoot, repoRoot });
   assert.ok(failures.some((failure) => failure.includes("global with -g")));
@@ -279,7 +279,7 @@ test("reports missing CLI guidance in the skill or command reference", (t) => {
       const root = makeTempRoot("calle-skills-sh-skill-missing-recovery");
       t.after(() => fs.rmSync(root, { recursive: true, force: true }));
       const { packageRoot, repoRoot } = createValidFixture(root);
-      const filePath = path.join(repoRoot, "skills/calle", fileName);
+      const filePath = path.join(repoRoot, "skills/calle-cli", fileName);
       const source = fs.readFileSync(filePath, "utf8");
       assert.ok(source.includes(snippet));
       fs.writeFileSync(filePath, source.replace(snippet, ""));
@@ -297,7 +297,7 @@ test("rejects bare calle and npx commands in the skill or command reference", (t
       t.after(() => fs.rmSync(root, { recursive: true, force: true }));
       const { packageRoot, repoRoot } = createValidFixture(root);
       assert.deepEqual(checkSkillsShSkill({ packageRoot, repoRoot }), []);
-      const filePath = path.join(repoRoot, "skills/calle", fileName);
+      const filePath = path.join(repoRoot, "skills/calle-cli", fileName);
       fs.appendFileSync(filePath, `\n\`\`\`bash\nenv CALLE_SOURCE=test ${command}\n\`\`\`\n`);
 
       const failures = checkSkillsShSkill({ packageRoot, repoRoot });
@@ -311,7 +311,7 @@ test("troubleshooting may omit installation but must keep any install example gl
   const doc = path.join(repoRoot, "docs", "install", "troubleshooting.md");
   fs.writeFileSync(doc, "See the installation guide.\n");
   assert.deepEqual(checkSkillsShSkill({ packageRoot, repoRoot }), []);
-  fs.writeFileSync(doc, "npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle\n");
+  fs.writeFileSync(doc, "npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli\n");
   assert.ok(checkSkillsShSkill({ packageRoot, repoRoot }).some((failure) =>
     failure.includes("troubleshooting.md must keep the skills.sh install example global")));
 });

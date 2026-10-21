@@ -1081,7 +1081,7 @@ const documentationProfiles = [
   { source: "claude", name: "claude_code_plugin", package: "claude-plugin", skill: "packages/claude-plugin/plugin/skills/calle", docs: ["docs/install/claude-plugin.md"] },
   { source: "cursor", name: "cursor_plugin", package: "cursor-plugin", skill: "packages/cursor-plugin/plugin/skills/calle", docs: ["docs/install/cursor-plugin.md"] },
   { source: "openclaw", name: "openclaw_cli_skill", package: "openclaw-cli-skill", skill: "packages/openclaw-cli-skill/skills/phone-call-calle", docs: ["docs/install/openclaw-cli-skill.md"] },
-  { source: "skills_sh", name: "skills_sh_skill", package: "skills-sh-skill", skill: "skills/calle", docs: ["docs/install/skills-sh-skill.md", "docs/install/CALL-E-installation-guide.md"] },
+  { source: "skills_sh", name: "skills_sh_skill", package: "skills-sh-skill", skill: "skills/calle-cli", docs: ["docs/install/skills-sh-skill.md", "docs/install/CALL-E-installation-guide.md"] },
   { source: "cli", name: "cli", package: "cli", docs: ["packages/cli/docs/cli-reference.md", "packages/cli/docs/cli-verification.md", "packages/cli/README.md", "docs/install/cli.md", "docs/install/install-guide.md", "docs/install/troubleshooting.md", "README.md"] },
 ];
 const documentedShells = process.env.CALLE_TEST_SHELL ? [process.env.CALLE_TEST_SHELL]

@@ -1,5 +1,21 @@
 # CALL-E Troubleshooting
 
+## Which standalone Skill is installed?
+
+The CLI compatibility entry is `calle-cli`; its executable remains `calle` and
+its authentication and recovery state remain on the original CLI path. Existing
+standalone `calle` users should follow the
+[explicit migration steps](skills-sh-skill.md#existing-calle-users). Do not fix a
+name mismatch by logging out, deleting credentials or recreating a pending call.
+Plugin-provided `calle` entries have their own installation lifecycle.
+
+The standalone MCP/API personal testing candidate is
+[`callev2` 2.0.0](callev2.md). Verify the loaded name/version after host reload,
+not just the directory on disk. `calle-connect` update checks cannot rename it
+or switch publisher automatically. An unavailable `callev2` update source means
+unknown update status; it does not authorize fetching a different Skill.
+The final official `calle` cutover is a separate migration gate.
+
 Use this guide when CALL-E installation, authentication, or tool verification
 fails in a local agent environment.
 

@@ -42,6 +42,19 @@ jobs:
       - name: Test Python OAuth example
         run: uv run --isolated --project examples/mcp-oauth-client/python pytest examples/mcp-oauth-client/python
 
+      - name: Install unified Skill test dependencies
+        run: |
+          uv venv .venv
+          uv pip install --python .venv/bin/python -r requirements-test.txt
+
+      - name: Test unified Skill offline
+        run: .venv/bin/python -m tests.run_offline
+
+      - name: Package standalone Skills
+        run: |
+          pnpm pack:skill:callev2
+          pnpm pack:skill:calle-cli
+
       - name: Test Python batch runner
         run: uv run --isolated --project examples/python-batch-runner pytest examples/python-batch-runner
 

@@ -1,8 +1,15 @@
-# Install The CALL-E skills.sh Skill
+# Install the calle-cli Compatibility Skill
 
-The skills.sh compatible integration path in this repository is the `calle`
-skill. Its source of truth lives at `skills/calle` so skills.sh can index the
-public skill page and search results directly from the repository root.
+This guide covers the CLI-based `calle-cli` skill. Its source of truth lives at
+`skills/calle-cli` so skills.sh can index the public skill page and search results
+directly from the repository root.
+
+For the standalone `callev2` Skill, which prefers MCP with API Key fallback,
+see [callev2 personal testing](./callev2.md) and its
+[interface selection rules](./callev2.md#choose-the-interface).
+Business operations and updates use non-CLI host facilities. MCP setup follows
+the [host management boundary](../../skills/callev2/references/connection.md),
+which permits a limited official host-command fallback.
 
 ## Install From GitHub
 
@@ -18,22 +25,39 @@ skill at user-level/global scope. Or run the equivalent command directly from
 the repository root source:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent <agent>
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent <agent>
 ```
 
 Replace `<agent>` with the target agent name, such as `codex`, `openclaw`, or
 another value supported by your local skills CLI.
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent codex
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent codex
 ```
 
 Or install the direct root skill path with the same user-level/global scope and
 the appropriate target agent:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -g -y --agent <agent>
+npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle-cli -g -y --agent <agent>
 ```
+
+## Existing calle users
+
+The standalone CLI Skill is now named `calle-cli`; the executable remains
+`calle`. Install `calle-cli` explicitly from the official repository using the
+command above, reload the host and verify `$calle-cli` in the intended scope.
+Then disable the old standalone `calle` entry only as part of the authorized
+migration. Preserve local edits, CLI authentication/configuration, cached state,
+call or run references and recovery records. Do not log out, delete tokens,
+convert identifiers, or replay an uncertain call as migration cleanup.
+
+This is not an automatic rename of installed copies. Plugin-provided `calle`
+Skills remain separate and must not be removed as if they were the old standalone
+copy. The private package still owns attribution
+`skills_sh/skills_sh_skill/0.1.0`; the Skill rename does not change it.
+The official GitHub command requires the migration source to have been published;
+local edits alone do not establish remote availability.
 
 ## CLI Availability
 
@@ -58,9 +82,9 @@ To authenticate before using the skill:
 pnpm --filter @call-e/skills-sh-skill check
 pnpm --filter @call-e/skills-sh-skill test
 pnpm --filter @call-e/skills-sh-skill pack:dry-run
-npx -y skills-ref validate ./skills/calle
-npx -y skills add ./skills/calle --list
-npx -y skills add https://github.com/CALLE-AI/call-e-integrations --skill calle --list
+npx -y skills-ref validate ./skills/calle-cli
+npx -y skills add ./skills/calle-cli --list
+npx -y skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli --list
 ```
 
 ## More

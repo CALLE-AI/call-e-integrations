@@ -33,8 +33,8 @@ const syncedInstallFiles = [
   "packages/openclaw-cli-skill/skills/phone-call-calle/SKILL.md",
   "packages/openclaw-cli-skill/skills/phone-call-calle/references/commands.md",
   "packages/skills-sh-skill/README.md",
-  "skills/calle/SKILL.md",
-  "skills/calle/references/commands.md",
+  "skills/calle-cli/SKILL.md",
+  "skills/calle-cli/references/commands.md",
 ];
 
 const codexLatestInstallFiles = new Set([
@@ -69,8 +69,8 @@ const skillsShSkillIntegrationFiles = new Set([
   "docs/install/CALL-E-installation-guide.md",
   "docs/install/skills-sh-skill.md",
   "packages/skills-sh-skill/README.md",
-  "skills/calle/SKILL.md",
-  "skills/calle/references/commands.md",
+  "skills/calle-cli/SKILL.md",
+  "skills/calle-cli/references/commands.md",
 ]);
 
 const claudeCliIntegrationFiles = new Set([

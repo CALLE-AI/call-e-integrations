@@ -7,19 +7,21 @@
     "pnpm": "10.18.3"
   },
   "scripts": {
-    "test": "pnpm -r --filter \"./packages/*\" run test",
+    "test": "node --test ./scripts/test/*.test.mjs && pnpm -r --filter \"./packages/*\" run test",
+    "test:skills:offline": "python -m tests.run_offline",
     "check": "pnpm run check:branch-name && pnpm run check:versions && node scripts/sync-agent-launchers.mjs --check && pnpm -r --filter \"./packages/*\" run check",
     "check:examples": "node ./scripts/check-examples.mjs",
     "check:branch-name": "node ./scripts/check-branch-name.mjs",
     "check:versions": "node ./scripts/check-manifest-versions.mjs && node ./scripts/sync-install-doc-versions.mjs --check",
     "branch:create": "node ./scripts/create-branch.mjs",
     "pack:skill": "node ./scripts/pack-skills.mjs",
-    "pack:skill:calle": "node ./scripts/pack-skills.mjs calle",
     "pack:dry-run": "pnpm -r --filter \"./packages/*\" run pack:dry-run",
     "changeset": "changeset",
     "version-packages": "changeset version && node ./scripts/sync-plugin-manifest-version.mjs && node ./scripts/sync-install-doc-versions.mjs",
     "publish-packages": "changeset publish",
-    "release": "pnpm run version-packages"
+    "release": "pnpm run version-packages",
+    "pack:skill:calle-cli": "node ./scripts/pack-skills.mjs --public calle-cli",
+    "pack:skill:callev2": "node ./scripts/pack-skills.mjs --public callev2"
   },
   "devDependencies": {
     "@call-e/core": "workspace:^",

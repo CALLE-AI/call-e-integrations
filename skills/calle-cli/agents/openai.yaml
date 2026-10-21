@@ -1,0 +1,4 @@
+interface:
+  display_name: "calle-cli"
+  short_description: "CALL-E calls and recovery through the local CLI"
+  default_prompt: "Use $calle-cli to place or check a CALL-E phone call through the local calle CLI."

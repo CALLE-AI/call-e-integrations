@@ -14,8 +14,8 @@ const DEFAULT_PACKAGE_ROOT = path.resolve(SCRIPT_DIR, "..");
 const DEFAULT_REPO_ROOT = path.resolve(DEFAULT_PACKAGE_ROOT, "../..");
 
 const EXPECTED_PACKAGE_NAME = "@call-e/skills-sh-skill";
-const EXPECTED_SKILL_DIR = "calle";
-const EXPECTED_SKILL_NAME = "calle";
+const EXPECTED_SKILL_DIR = "calle-cli";
+const EXPECTED_SKILL_NAME = "calle-cli";
 const EXPECTED_SOURCE = "\"source\": \"skills_sh\"";
 const EXPECTED_INTEGRATION = "\"name\": \"skills_sh_skill\"";
 
@@ -189,8 +189,8 @@ function checkSkill({ repoRoot, packageJson, failures }) {
 
   if (fs.existsSync(skillInterfaceFile)) {
     const skillInterfaceSource = fs.readFileSync(skillInterfaceFile, "utf8");
-    assert(/display_name:\s*"calle"/u.test(skillInterfaceSource), failures, `${displayPath(skillInterfaceFile)} must set interface.display_name to "calle".`);
-    assert(skillInterfaceSource.includes("Use $calle"), failures, `${displayPath(skillInterfaceFile)} default_prompt must mention $calle.`);
+    assert(/display_name:\s*"calle-cli"/u.test(skillInterfaceSource), failures, `${displayPath(skillInterfaceFile)} must set interface.display_name to "calle-cli".`);
+    assert(skillInterfaceSource.includes("Use $calle-cli"), failures, `${displayPath(skillInterfaceFile)} default_prompt must mention $calle-cli.`);
   }
 
   if (!fs.existsSync(referenceFile)) {
@@ -247,40 +247,40 @@ function checkRepoDocs({ repoRoot, failures }) {
   if (fs.existsSync(layoutPath)) {
     const layout = fs.readFileSync(layoutPath, "utf8");
     assert(layout.includes("packages/skills-sh-skill"), failures, "docs/agent-integration-layout.md must mention packages/skills-sh-skill.");
-    assert(layout.includes("skills/calle"), failures, "docs/agent-integration-layout.md must mention the skills.sh source at skills/calle.");
+    assert(layout.includes("skills/calle-cli"), failures, "docs/agent-integration-layout.md must mention the skills.sh source at skills/calle-cli.");
     assert(layout.includes("skills.sh"), failures, "docs/agent-integration-layout.md must describe the skills.sh skill boundary.");
     assert(layout.includes("user-level/global scope"), failures, "docs/agent-integration-layout.md must describe skills.sh installs as user-level/global scope.");
-    assert(layout.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent <agent>"), failures, "docs/agent-integration-layout.md must keep the repository-root skills.sh install global with -g.");
-    assert(layout.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -g -y --agent <agent>"), failures, "docs/agent-integration-layout.md must keep the direct skills.sh install global with -g.");
+    assert(layout.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent <agent>"), failures, "docs/agent-integration-layout.md must keep the repository-root skills.sh install global with -g.");
+    assert(layout.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle-cli -g -y --agent <agent>"), failures, "docs/agent-integration-layout.md must keep the direct skills.sh install global with -g.");
     assert(!layout.includes("packages/skills-sh-skill/skills"), failures, "docs/agent-integration-layout.md must not reference the removed package-local skills directory.");
   }
 
   if (fs.existsSync(stableInstallGuidePath)) {
     const stableInstallGuide = fs.readFileSync(stableInstallGuidePath, "utf8");
     assert(stableInstallGuide.includes("user-level/global scope"), failures, "docs/install/CALL-E-installation-guide.md must describe skills.sh installs as user-level/global scope.");
-    assert(stableInstallGuide.includes("npx -y skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g"), failures, "docs/install/CALL-E-installation-guide.md must keep the stable skills.sh install global with -g.");
+    assert(stableInstallGuide.includes("npx -y skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g"), failures, "docs/install/CALL-E-installation-guide.md must keep the stable skills.sh install global with -g.");
   }
 
   if (fs.existsSync(manualInstallGuidePath)) {
     const manualInstallGuide = fs.readFileSync(manualInstallGuidePath, "utf8");
-    assert(manualInstallGuide.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent <agent>"), failures, "docs/install/install-guide.md must keep the repository-root skills.sh install global with -g.");
-    assert(manualInstallGuide.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent codex"), failures, "docs/install/install-guide.md must keep the Codex skills.sh install global with -g.");
-    assert(manualInstallGuide.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -g -y --agent <agent>"), failures, "docs/install/install-guide.md must keep the direct skills.sh install global with -g.");
+    assert(manualInstallGuide.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent <agent>"), failures, "docs/install/install-guide.md must keep the repository-root skills.sh install global with -g.");
+    assert(manualInstallGuide.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent codex"), failures, "docs/install/install-guide.md must keep the Codex skills.sh install global with -g.");
+    assert(manualInstallGuide.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle-cli -g -y --agent <agent>"), failures, "docs/install/install-guide.md must keep the direct skills.sh install global with -g.");
   }
 
   if (fs.existsSync(installDocPath)) {
     const installDoc = fs.readFileSync(installDocPath, "utf8");
     assert(installDoc.includes("user-level/global scope"), failures, "docs/install/skills-sh-skill.md must describe skills.sh installs as user-level/global scope.");
-    assert(installDoc.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent <agent>"), failures, "docs/install/skills-sh-skill.md must keep the repository-root skills.sh install global with -g.");
-    assert(installDoc.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent codex"), failures, "docs/install/skills-sh-skill.md must keep the Codex skills.sh install global with -g.");
-    assert(installDoc.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -g -y --agent <agent>"), failures, "docs/install/skills-sh-skill.md must keep the direct skills.sh install global with -g.");
+    assert(installDoc.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent <agent>"), failures, "docs/install/skills-sh-skill.md must keep the repository-root skills.sh install global with -g.");
+    assert(installDoc.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent codex"), failures, "docs/install/skills-sh-skill.md must keep the Codex skills.sh install global with -g.");
+    assert(installDoc.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle-cli -g -y --agent <agent>"), failures, "docs/install/skills-sh-skill.md must keep the direct skills.sh install global with -g.");
     assert(!installDoc.includes("packages/skills-sh-skill/skills"), failures, "docs/install/skills-sh-skill.md must not reference the removed package-local skills directory.");
   }
 
   if (fs.existsSync(troubleshootingPath)) {
     const troubleshooting = fs.readFileSync(troubleshootingPath, "utf8");
     if (troubleshooting.includes("npx skills add")) {
-      assert(troubleshooting.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g"), failures, "docs/install/troubleshooting.md must keep the skills.sh install example global with -g.");
+      assert(troubleshooting.includes("npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g"), failures, "docs/install/troubleshooting.md must keep the skills.sh install example global with -g.");
     }
   }
 }

@@ -4,6 +4,13 @@ These steps are for AI agents installing CALL-E from the stable installation
 prompt. Some authentication steps require the user to finish authorization in a
 browser.
 
+This guide installs the CLI-based `calle-cli` skill. If the user selects the
+standalone MCP/API Skill or requires a workflow without a business CLI, follow
+[callev2 personal testing](./callev2.md). That Skill prefers MCP with API Key fallback
+under its [interface selection rules](./callev2.md#choose-the-interface).
+MCP setup prefers native host management and permits a limited official
+host-command fallback; an explicit no-CLI request disables that exception.
+
 ## Requirements
 
 Before installing, make sure the environment has:
@@ -14,14 +21,22 @@ Before installing, make sure the environment has:
 
 ## Step 1 Install The Skill
 
+<!-- sync-with: docs/install/skills-sh-skill.md#install-from-github -->
+
 Install the portable CALL-E skill at user-level/global scope.
 
 ```bash
-npx -y skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g
+npx -y skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g
 ```
 
-Reload or restart the agent according to its instructions so the `calle` skill
+Reload or restart the agent according to its instructions so the `calle-cli` skill
 is available.
+
+Existing standalone `calle` users must install `calle-cli` explicitly; this is
+not an automatic rename. Follow the [migration notice](skills-sh-skill.md#existing-calle-users)
+to preserve authentication, configuration and recovery records, and retire only
+the intended old standalone copy after verification. CLI executable `calle` and
+plugin-provided `calle` entries retain their names.
 
 ## Step 2 Ensure The CLI Is Available
 

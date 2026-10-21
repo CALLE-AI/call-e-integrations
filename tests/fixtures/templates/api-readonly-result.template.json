@@ -1,0 +1,16 @@
+{
+  "status": "NOT_RUN",
+  "checked_at": null,
+  "environment_base_url": null,
+  "method": "GET",
+  "path": "/v1/goals?limit=1",
+  "credential_value_saved": false,
+  "http_status": null,
+  "response_shape_summary": null,
+  "error_code": null,
+  "error_category": null,
+  "account_scope_verified": false,
+  "write_access_verified": false,
+  "calls_created": 0,
+  "redacted_evidence_file": null
+}

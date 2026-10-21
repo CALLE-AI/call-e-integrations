@@ -1,0 +1,39 @@
+{
+  "notice": "Offline-first handoff policy, not a server enforcement mechanism. Later explicit user authorization is required for account access and each live test.",
+  "default_mode": "offline",
+  "allow_authenticated_network": false,
+  "allow_write_operations": false,
+  "allow_live_calls": false,
+  "max_logical_calls_without_new_authorization": 0,
+  "max_logical_calls_per_explicitly_authorized_first_test": 1,
+  "allow_unscoped_cross_interface_fallback": false,
+  "mock_capability_fallback_requires_routing_scope": true,
+  "allow_cli_setup_auth_update_transport": false,
+  "allow_cli_business_transport": false,
+  "allow_sdk_business_transport": false,
+  "allow_real_credentials_in_fixtures": false,
+  "allow_mock_tools_to_delegate_to_network": false,
+  "read_polling_client_policy": {
+    "max_status_requests_per_monitoring_session": 120,
+    "first_query_delay_seconds": 0,
+    "subsequent_query_delays": [
+      {"query_ordinals": [2, 10], "seconds": 2},
+      {"query_ordinals": [11, 20], "seconds": 5},
+      {"query_ordinals": [21, 30], "seconds": 10},
+      {"query_ordinals": [31, null], "seconds": 20}
+    ],
+    "query_ordinals_include_transient_retries": true,
+    "preserve_session_count_and_phase_across_batches_and_interruption": true,
+    "explicit_continuation_after_cap_starts_new_session_at_saved_phase": true,
+    "continue_completed_execution_if_result_pending": true,
+    "terminal_result_statuses": ["available", "unavailable", "not_applicable"],
+    "max_consecutive_transient_retries": 3,
+    "reset_transient_retry_streak_after_valid_read": true,
+    "preserve_transient_failure_streak_across_batches_and_interruption": true,
+    "respect_retry_after_as_minimum": true,
+    "max_interruptible_wait_chunk_seconds": 30,
+    "max_progress_interval_seconds": 60,
+    "snapshot_only_status_reads": 1,
+    "notice": "Client scheduling policy only, not a service SLA or background permission. The cap includes the first read and every retry; the three-retry limit follows an initial failed read. At the cap preserve the original ID, latest state, session count, cumulative phase, and server not-before value without redialing or canceling."
+  }
+}

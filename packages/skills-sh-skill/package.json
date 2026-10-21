@@ -1,7 +1,7 @@
 {
   "name": "@call-e/skills-sh-skill",
   "version": "0.1.0",
-  "description": "skills.sh compatible CALL-E skill for outbound phone calls through the calle CLI.",
+  "description": "Validation package for the standalone calle-cli Skill using the local calle CLI.",
   "type": "module",
   "private": true,
   "license": "MIT",

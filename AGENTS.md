@@ -33,6 +33,12 @@ CALL-E Integrations is a multi-ecosystem agent integration monorepo.
 
 Productized OpenClaw skill source lives in `packages/openclaw-cli-skill/skills`.
 
+Before changing standalone Skill identities, install/update origins or migration
+checks, follow [the staged migration plan](docs/calle-skill-migration-plan.md).
+The current entries are `calle-cli` for CLI compatibility and `callev2` for MCP/API
+testing; CLI and plugin names remain `calle`. Preserve historical verification
+records and add new candidate evidence rather than relabeling earlier runs.
+
 ## Release Decision
 
 Before finishing any code, docs, package metadata, marketplace, plugin, or
@@ -52,6 +58,12 @@ Include the reason, affected package(s), and whether a changeset is needed.
 
 ## Repository Conventions
 
+- Use English for all repository-authored content, including code comments,
+  documentation, Skill instructions, examples, test prompts, and visible metadata.
+  Every new or rewritten passage must be in English; existing non-English text
+  is not a precedent for adding more. Check added and rewritten text before
+  finishing. This rule applies to repository files; communicate with the user
+  in their preferred language.
 - Follow existing package layout and scripts before adding new tooling.
 - Follow [docs/git-naming-conventions.md](./docs/git-naming-conventions.md)
   when naming branches, commits, monorepo package release tags, PR titles,
