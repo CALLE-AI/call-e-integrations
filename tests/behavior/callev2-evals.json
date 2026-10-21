@@ -1,6 +1,6 @@
 {
   "skill": "callev2",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "evaluation_status": "not_executed_on_an_agent",
   "notice": "Synthetic offline Agent behavior fixtures only. Original API/MCP IDs are retained with explicitly selected interfaces; routing and updates use separate mock scopes. No Agent execution, real credentials or live service results are represented.",
   "cases": [
@@ -4039,7 +4039,7 @@
     {
       "id": "api-polling-01",
       "skill": "callev2",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "selected_transport": "api",
       "mock_action_scope": "api_call",
       "execution_status": "NOT_RUN",
@@ -5516,7 +5516,7 @@
     {
       "id": "mcp-polling-01",
       "skill": "callev2",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "selected_transport": "mcp",
       "mock_action_scope": "mcp_call",
       "execution_status": "NOT_RUN",

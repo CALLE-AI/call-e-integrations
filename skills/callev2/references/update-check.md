@@ -31,7 +31,7 @@ Confirm that the response is a complete source file and its name matches the loc
 
 For a confirmed higher version, append one update notice to the normal response, for example:
 
-> A newer version of {current Skill name} is available: {local version} → {remote version}. Would you like to download it? You can also continue using the current version.
+> A newer version of {current Skill name} is available: {local version} → {remote version}. Would you like to download it? Downloading alone leaves your installed version unchanged.
 
 Include the official link from the local `metadata.source`. Report only versions actually read; do not invent release summaries without reliable change records. If the user has not replied, declines, or chooses later, continue the original task without repeated reminders in this session. If the user explicitly requested only update handling, wait for their download choice.
 
