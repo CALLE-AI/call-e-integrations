@@ -26,7 +26,7 @@ commands.
   install, migration and local ZIP guidance lives in `docs/install/callev2.md`.
   Keep `docs/install/calle-connect.md` and `docs/install/dual-skills.md` as
   pointers for earlier links. The current personal testing identity is `callev2`
-  with metadata/evaluation version `2.0.2`; the future official `calle` takeover
+  with metadata/evaluation version `2.0.3`; the future official `calle` takeover
   remains a separate gate in `docs/calle-skill-migration-plan.md`. The Skill's
   metadata version is independent of the CLI-based skills.sh package attribution.
   Shared routing and business workflow live in `SKILL.md`; MCP and API contracts

@@ -44,7 +44,7 @@ npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/
 
 ### callev2 Personal Testing
 
-The standalone MCP/API candidate uses `callev2` version `2.0.2`, separately from
+The standalone MCP/API candidate uses `callev2` version `2.0.3`, separately from
 `calle-cli` and plugin-provided `calle` Skills. Follow the
 [callev2 guide](callev2.md) to import the complete local source or ZIP, verify the
 loaded identity, and check the selected repository publication status. This staging
