@@ -2,7 +2,7 @@
 
 Originally recorded on 2026-10-20; staging authorization updated on 2026-10-21.
 
-**Current authorization: move the legacy standalone `calle` to `calle-cli` and
+**Initial staging authorization: move the legacy standalone `calle` to `calle-cli` and
 stage the MCP/API implementation as `callev2` version `2.0.0` for personal testing.
 The eventual official `calle` takeover remains a separate cutover.**
 
@@ -12,6 +12,13 @@ metadata, packaging, test and documentation changes for these two identities.
 It does not authorize publishing, replacing installed copies automatically,
 placing calls, or treating historical acceptance as acceptance of new names.
 The user will publish the prepared source when ready.
+
+Publication follow-up on 2026-10-21: the initial `2.0.0` source was published
+through PR #161. The user separately authorized publishing the `2.0.1` patch
+to verify same-name updates, while retaining the installed `2.0.0` test copy.
+This follow-up supersedes the initial publication restriction above; the formal
+`calle` cutover remains separate. The initial migration decision and evidence
+below retain their original `2.0.0` scope.
 
 The selected repository remains `CALLE-AI/call-e-integrations`. Personal testing
 means using `callev2` in the user's own host and account, not changing repository
@@ -28,7 +35,7 @@ tracks the renamed files separately. Later formal cutover requires its own evide
 
 | Surface | Authorized staged state | Later formal state |
 | --- | --- | --- |
-| MCP/API standalone Skill | `skills/callev2`, name/display `callev2`, invocation `$callev2`, metadata/evaluation version `2.0.0` | `skills/calle`, name/display `calle`, invocation `$calle`, only after the formal cutover gates |
+| MCP/API standalone Skill | `skills/callev2`, name/display `callev2`, invocation `$callev2`, metadata/evaluation version `2.0.1` | `skills/calle`, name/display `calle`, invocation `$calle`, only after the formal cutover gates |
 | Legacy standalone CLI Skill | `skills/calle-cli`, name/display `calle-cli`, invocation `$calle-cli` | Remain available as the compatibility and legacy-recovery entry |
 | Legacy CLI attribution | Private `@call-e/skills-sh-skill` owns `skills_sh/skills_sh_skill/0.1.0` | Preserve its independent version authority |
 | CLI executable/package | `calle` / `@call-e/cli` | Unchanged names and independent releases |
@@ -93,7 +100,7 @@ No removal date is set for the compatibility entry.
 | `packages/skills-sh-skill` | Remain the private owner of legacy CLI validation and attribution; assert the new `calle-cli` identity and paths. |
 | CLI integration tests | Retarget only the standalone legacy fixture; retain plugin identities and attribution. |
 | Root scripts, packer and CI | Package both `callev2` and `calle-cli`; remove obsolete `pack:skill:connect` and `pack:skill:calle` commands during staging. |
-| `tests/` | Use `tests/behavior/callev2-evals.json`, current Skill `callev2`, version `2.0.0` and selected update URLs; preserve stable scenario IDs and historical evidence. |
+| `tests/` | Use `tests/behavior/callev2-evals.json`, current Skill `callev2`, version `2.0.1` and selected update URLs; preserve stable scenario IDs and historical evidence. |
 | Current documentation | Synchronize layout, maintenance, install guides, root README and test guides. Keep the stable `docs/install/CALL-E-installation-guide.md` file and old-guide pointers. |
 
 The canonical candidate guide is [callev2](install/callev2.md); the old
@@ -189,7 +196,7 @@ Use `PASS`, `FAIL`, `NOT_RUN`, or `NOT_APPLICABLE` with a reason. Required
 | A01 | Current offline suite and actual Agent/mock scenarios pass for the behavior to be migrated; unexecuted scenarios are identified. | A |
 | A02 | Each claimed host/interface supports setup, required tools or HTTP, confirmation, result delivery and appropriate persistence. Record authorized live evidence separately from mocks. | A |
 | B01 | Directory, frontmatter, UI display and prompt match `callev2` and `calle-cli` during staging, then the formal `calle` candidate at cutover; a fresh host loads the intended entry. | B |
-| B02 | New metadata and evaluation version are `2.0.0`; source/update URLs target the selected identity and repository (`callev2` during staging, `calle` only at formal cutover). Legacy attribution matches its private package authority. | B |
+| B02 | Metadata and evaluation versions match the selected standalone release; source/update URLs target the selected identity and repository (`callev2` during staging, `calle` only at formal cutover). Legacy attribution matches its private package authority. | B |
 | B03 | Both ZIPs have the correct root directory and complete internal resources. The new MCP/API artifact contains no CLI launcher, stale legacy references, credentials, records or repository test fixtures. | B |
 | B04 | Synchronization and versioning checks preserve the separation on a clean working copy. Existing CLI/plugin tests remain valid; no unrelated payload/version changes appear. | B |
 | B05 | CLI users can install `calle-cli` and use the original configuration and recovery paths without forced logout or token conversion. Invalid credentials produce an honest auth result. | B |

@@ -168,7 +168,7 @@ class BehaviorPreparationTests(unittest.TestCase):
             fixture = case["fixture"]
             source = fixture["source_case"]
             self.assertEqual(source["execution_status"], "NOT_RUN")
-            self.assertEqual(source["version"], "2.0.0")
+            self.assertEqual(source["version"], "2.0.1")
             self.assertEqual(set(fixture["allowed_actions"]),
                              {"local.report", "journal.read", "journal.write", "host.mock_wait",
                               "http.GET" if transport == "api" else "mcp.get_call"})

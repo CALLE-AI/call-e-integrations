@@ -5,7 +5,7 @@ CALL-E calling workflows. It prefers host-managed OAuth MCP. Before business
 writes, it can select direct HTTPS with an API Key when the host explicitly lacks
 MCP support, the target MCP connection is confirmed not configured, or complete
 discovery confirms the required capability is missing. Authentication failure or
-cancellation does not trigger fallback. The source metadata version is `2.0.0`.
+cancellation does not trigger fallback. The source metadata version is `2.0.1`.
 The directory, Skill name and display name are `callev2`; invoke it as `$callev2`. This is the
 user-authorized personal testing identity; the later official `calle` takeover
 has not been completed.
@@ -227,7 +227,7 @@ merged version. Current test scope and execution states live in
 
 ## Optional source bundle
 
-The manual-publication source bundle is prepared at
+The initial `2.0.0` manual-publication source bundle was prepared at
 `dist/releases/callev2-2.0.0-skills-sh/`, containing only the complete
 `skills/callev2/` directory plus root `README.md` and `LICENSE`, preserving the
 repository path. That bundle is distinct from the host-import ZIP with top-level
