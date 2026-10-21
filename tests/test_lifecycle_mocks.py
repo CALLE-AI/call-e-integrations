@@ -200,6 +200,72 @@ class LifecycleMockTests(unittest.TestCase):
             "commit": resolved["commit"], "directory": "skills/callev2",
             "destination": "/fixture/downloads/callev2/new-copy"})
 
+    def metadata_arguments(self, nonce="0123456789abcdef"):
+        return {"url": SOURCE_URL + "?callev2_update_check=" + nonce,
+                "headers": {}, "follow_redirects": False}
+
+    def metadata_mock(self, responses):
+        source = copy.deepcopy(self.make("api-update-02").case)
+        source["setup"].pop("fixture_response")
+        source["setup"]["fixture_responses"] = responses
+        return LifecycleMock(source)
+
+    def test_metadata_fresh_retry_is_bounded_and_preserved_across_restore(self):
+        for transient in ({"status": 404}, {"status": 500}, {"status": 599},
+                          {"transport_error": "timeout"}):
+            with self.subTest(transient=transient):
+                mock = self.metadata_mock([transient, {"status": 503}])
+                self.assertEqual(mock.dispatch("update.mock_fetch_metadata", self.metadata_arguments()), transient)
+                restored = LifecycleMock.from_state(mock.case, json.loads(json.dumps(mock.export_state())))
+                with self.assertRaises(PermissionError):
+                    restored.dispatch("update.mock_fetch_metadata", self.metadata_arguments())
+                self.assertEqual(restored.dispatch("update.mock_fetch_metadata", self.metadata_arguments("fedcba9876543210")), {"status": 503})
+                exhausted = LifecycleMock.from_state(restored.case, json.loads(json.dumps(restored.export_state())))
+                with self.assertRaises(PermissionError):
+                    exhausted.dispatch("update.mock_fetch_metadata", self.metadata_arguments("1111111111111111"))
+                self.assertEqual(exhausted.metadata_fetch_count, 2)
+
+    def test_metadata_success_and_nonretryable_failures_never_authorize_another_read(self):
+        for response in ({"status": 200, "complete": True, "body": "invalid metadata"},
+                         {"status": 200, "complete": False}, {"status": 302}, {"status": 401},
+                         {"status": 403}, {"status": 429}, {"transport_error": "permission_denied"}):
+            with self.subTest(response=response):
+                mock = self.metadata_mock([response, {"status": 200}])
+                self.assertEqual(mock.dispatch("update.mock_fetch_metadata", self.metadata_arguments()), response)
+                with self.assertRaises(PermissionError):
+                    mock.dispatch("update.mock_fetch_metadata", self.metadata_arguments("fedcba9876543210"))
+                self.assertEqual(mock.metadata_fetch_count, 1)
+
+    def test_metadata_nonce_rejects_canonical_cached_url_and_unapproved_url_parts(self):
+        for url in (SOURCE_URL, SOURCE_URL + "?callev2_update_check=short",
+                    SOURCE_URL + "?callev2_update_check=0123456789ABCDEF",
+                    self.metadata_arguments()["url"] + "&customer=synthetic",
+                    self.metadata_arguments()["url"] + "#fragment",
+                    self.metadata_arguments()["url"].replace("https://", "https://user@"),
+                    self.metadata_arguments()["url"].replace("/callev2/", "/calle/")):
+            with self.subTest(url=url):
+                mock = self.metadata_mock([{"status": 200}])
+                with self.assertRaises(ValueError):
+                    mock.dispatch("update.mock_fetch_metadata", {**self.metadata_arguments(), "url": url})
+                self.assertEqual(mock.metadata_fetch_count, 0)
+
+    def test_only_explicit_new_check_resets_attempt_limit_and_never_reuses_a_nonce(self):
+        mock = self.metadata_mock([{"status": 404}, {"status": 503}])
+        source = copy.deepcopy(mock.case)
+        source["turns"] = [{"user": "What calls can you make?"}, {"user": "What else?"},
+                           {"user": "Explicitly check for an update again.", "fixture_explicit_update_check": True}]
+        mock = LifecycleMock(source)
+        mock.dispatch("update.mock_fetch_metadata", self.metadata_arguments())
+        mock.dispatch("update.mock_fetch_metadata", self.metadata_arguments("fedcba9876543210"))
+        mock.advance_turn(1)
+        with self.assertRaises(PermissionError):
+            mock.dispatch("update.mock_fetch_metadata", self.metadata_arguments("2222222222222222"))
+        restored = LifecycleMock.from_state(mock.case, json.loads(json.dumps(mock.export_state())))
+        restored.advance_turn(2)
+        with self.assertRaises(PermissionError):
+            restored.dispatch("update.mock_fetch_metadata", self.metadata_arguments())
+        self.assertEqual(restored.dispatch("update.mock_fetch_metadata", self.metadata_arguments("2222222222222222")), {"status": 404})
+
     def test_update_download_inspection_and_install_are_separate(self):
         mock = self.make("api-update-04")
         with offline_guard():
@@ -270,10 +336,10 @@ class LifecycleMockTests(unittest.TestCase):
         for hidden in ("fixture_response", "expected", "Explicitly check for a new version again now"):
             self.assertNotIn(hidden, initial)
         with self.assertRaises(PermissionError):
-            mock.dispatch("update.mock_fetch_metadata", {"url": SOURCE_URL, "headers": {}, "follow_redirects": False})
+            mock.dispatch("update.mock_fetch_metadata", self.metadata_arguments())
         restored = LifecycleMock.from_state(mock.case, json.loads(json.dumps(mock.export_state())))
         restored.advance_turn(1)
-        response = restored.dispatch("update.mock_fetch_metadata", {"url": SOURCE_URL, "headers": {}, "follow_redirects": False})
+        response = restored.dispatch("update.mock_fetch_metadata", self.metadata_arguments())
         self.assertEqual(response["status"], 200)
         self.assertNotIn("body", restored.public_state())
         with self.assertRaises(ValueError):

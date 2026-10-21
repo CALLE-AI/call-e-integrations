@@ -8,15 +8,16 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import json
 from pathlib import Path
 import sys
 from typing import Any
 
 from tests.offline import offline_guard
+from tests.behavior.update_metadata import SOURCE_URL, fetch_metadata, metadata_schema, metadata_state
 
 MCP_URL = "https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth"
-SOURCE_URL = "https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/skills/callev2/SKILL.md"
 NO_ARGUMENTS = {"type": "object", "properties": {}, "additionalProperties": False}
 
 
@@ -73,6 +74,7 @@ class FixtureDispatcher:
         self.files = dict(payload["skill_files"])
         self.trace: list[dict] = []
         self.stopped = False
+        self.metadata_state = metadata_state()
         self.setup = self.source.get("setup", {})
         self.journal = copy.deepcopy(self.setup.get("saved_record", self.setup.get("request_journal", {})))
         self.stateful = None
@@ -88,7 +90,16 @@ class FixtureDispatcher:
                              LifecycleMock(self.source, allowed_actions=list(self.allowed)))
         if self.stateful and payload.get("controller_state"):
             self.stateful.advance_turn(payload.get("turn_index", 0))
+        elif payload.get("controller_state"):
+            saved = payload["controller_state"]
+            if (saved.get("format") != "fixture-metadata-v1"
+                    or saved.get("source_sha256") != self._source_fingerprint()):
+                raise ValueError("Persisted metadata state belongs to a different source fixture")
+            self.metadata_state = copy.deepcopy(saved["metadata_state"])
         self.tools, self.actions = self._tools()
+
+    def _source_fingerprint(self):
+        return hashlib.sha256(json.dumps(self.source, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
     def _tools(self) -> tuple[list[dict], dict[str, str]]:
         tools = [{"name": "read_skill_file", "description": "Read a bundled Skill reference or asset by its exact relative path. This reads only the in-memory Skill snapshot; no filesystem access or execution.",
@@ -98,7 +109,7 @@ class FixtureDispatcher:
             "host.inspect_existing_connection": ("inspect_connection", "Read the synthetic host's existing non-secret CALL-E connection and capability metadata.", NO_ARGUMENTS),
             "host.mock_discovery": ("discover_tools", "Read one synthetic MCP discovery page. Pass its returned next_cursor to continue; null starts the first page.", object_schema({"cursor": {"type": ["string", "null"]}})),
             "journal.read": ("read_journal", "Read the synthetic private saved operation record; never reads credentials.", NO_ARGUMENTS),
-            "update.mock_fetch_metadata": ("fetch_public_metadata", "Anonymous native public HTTPS fetch in the fixture. No credentials are injected, no redirect is followed, and no real network occurs.", object_schema({"url": {"type": "string"}, "headers": {"type": "object"}, "follow_redirects": {"type": "boolean"}}, ("url", "headers", "follow_redirects"))),
+            "update.mock_fetch_metadata": ("fetch_public_metadata", "Anonymous native public HTTPS fetch in the fixture. No credentials are injected, no redirect is followed, and no real network occurs.", metadata_schema()),
         }
         stateful_actions = {spec["name"] for spec in self.stateful.tool_specs()} if self.stateful else set()
         for action, (name, description, schema) in helper_specs.items():
@@ -106,7 +117,7 @@ class FixtureDispatcher:
                 continue
             if action not in self.allowed:
                 continue
-            if action == "update.mock_fetch_metadata" and not self.setup.get("public_fetch"):
+            if action == "update.mock_fetch_metadata" and self.setup.get("public_fetch") in {None, "unavailable", "absent", False}:
                 continue
             tools.append({"name": name, "description": description, "inputSchema": schema})
             actions[name] = action
@@ -216,22 +227,30 @@ class FixtureDispatcher:
             page["schemas"] = [t for t in self.source.get("fixture_tools", []) if t["name"] in page.get("tool_names", [])]
             return page
         if action == "update.mock_fetch_metadata":
-            if arguments["url"] != SOURCE_URL or arguments["headers"] or arguments["follow_redirects"]:
-                raise PermissionError("Update request must use the exact official URL, empty headers and no redirects")
-            if "fixture_transport_error" in self.source:
-                return {"transport_error": self.source["fixture_transport_error"]}
-            response = self.source.get("fixture_response", self.setup.get("fixture_response"))
-            if response is None:
-                raise NotImplementedError("Fixture supplies no public metadata response")
-            return copy.deepcopy(response)
+            if self.setup.get("public_fetch") in {None, "unavailable", "absent", False}:
+                raise PermissionError("No anonymous public metadata reader is available")
+            responses = self.source.get("fixture_responses", self.setup.get("fixture_responses"))
+            if responses is None:
+                error = self.source.get("fixture_transport_error")
+                response = self.source.get("fixture_response", self.setup.get("fixture_response"))
+                responses = ([{"transport_error": error}] if error else [response])
+            return fetch_metadata(self.metadata_state, arguments, responses)
         raise NotImplementedError(f"No reviewed response handler for {action}")
 
     def snapshot(self) -> dict:
-        return self.stateful.snapshot() if self.stateful else {"journal": self.journal, "stopped": self.stopped}
+        return self.stateful.snapshot() if self.stateful else {
+            "journal": self.journal, "stopped": self.stopped,
+            "metadata_fetch_count": len(self.metadata_state["used_nonces"]),
+            "metadata_check_attempts": self.metadata_state["attempts"]}
 
     def controller_state(self) -> dict | None:
         """Trusted evaluator checkpoint, never returned by a model-visible tool."""
-        return self.stateful.export_state() if self.stateful else None
+        if self.stateful:
+            return self.stateful.export_state()
+        if self.source.get("mock_action_scope") == "skill_update":
+            return {"format": "fixture-metadata-v1", "source_sha256": self._source_fingerprint(),
+                    "metadata_state": copy.deepcopy(self.metadata_state)}
+        return None
 
 
 def serve(payload_path: Path, trace_path: Path) -> None:

@@ -162,7 +162,7 @@ intentionally exposes multiple CALL-E marketplaces in the same client UI.
 The [staged migration plan](calle-skill-migration-plan.md) records the authorized
 current layout: legacy `calle` becomes `calle-cli`, while the MCP/API candidate
 uses `callev2` with display name `callev2`, invocation `$callev2`, and metadata
-version `2.0.1` for personal testing. The later official `calle` takeover is not
+version `2.0.2` for personal testing. The later official `calle` takeover is not
 implemented by this staging step; final artifact and delivery gates still apply.
 
 `skills/callev2/` is distributed as a complete source directory and local

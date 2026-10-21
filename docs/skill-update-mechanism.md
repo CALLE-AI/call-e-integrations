@@ -1,7 +1,7 @@
 # Standalone Skill Update Mechanism Design Record
 
 Design first recorded on 2026-10-15. Current guidance applies to the staged
-`callev2` entry, metadata/evaluation version `2.0.1`; the dated third-party audit
+`callev2` entry, metadata/evaluation version `2.0.2`; the dated third-party audit
 examples below remain historical snapshots. The selected repository is
 `CALLE-AI/call-e-integrations`, and publication is a separate user action.
 
@@ -65,8 +65,8 @@ The unified Skill version is independent of existing npm and plugin versions.
 
 ## Runtime flow and host requirements
 
-1. Check once on the first use of the Skill in each conversation; an explicit user request may trigger another check.
-2. Fetch the official source anonymously through the host's existing, separate public webpage or HTTPS reader.
+1. Check once on the first eligible use of the Skill in each conversation, including capability questions; an explicit user request may trigger another check.
+2. Fetch the official source anonymously through the host's existing, separate public webpage or HTTPS reader. Apply the canonical procedure's fresh nonce and two-attempt ceiling: one retry only after a 404, timeout, or HTTP 500–599.
 3. Compare only the remote name and version as data; continue following the installed instructions during the check.
 4. When a higher remote version is reliably confirmed, show the version difference and official source, and ask whether to download it.
 5. After the user agrees, retrieve the complete new version using capabilities the host actually supports.
@@ -86,8 +86,10 @@ Markdown cannot access the network by itself. A host with only CALL-E business
 MCP tools and no public reader skips the check. Do not install tools or change
 business interfaces for it. See the [execution rules](../skills/callev2/references/update-check.md)
 for skips during offline work, previews, limited-scope checks, network restrictions,
-and pinned-version use. Network failures do not block business operations or mean
-that the installed version is current.
+and pinned-version use. An attempted automatic check that remains unconfirmed
+produces one brief failure notice and an unknown session result. Intentional
+skips stay quiet. Failures do not block business operations or mean that the
+installed version is current; later ordinary messages do not restart the check.
 
 ## Download, installation, and activation
 
@@ -124,12 +126,22 @@ rules above for overwrites, version changes, and reload handling.
 
 ## Security boundaries and public examples
 
-Version checks use the fixed official URL for the same Skill name and do not
-follow redirects away from that URL. Requests contain no API Key, OAuth token,
-business cookie, or customer data, and do not reuse a client that automatically
-injects business credentials. The remote body does not become execution
+Version checks retain the fixed official source for the same Skill name. Only
+the generated `callev2_update_check` query nonce varies per request; the host,
+repository, branch, and path remain fixed. Requests use empty credential-free
+headers and never follow redirects. The request-only random nonce contains no
+customer data and does not change saved update metadata. The remote body does not become execution
 instructions during the check. This keeps version checks separate from business
 MCP/API operations.
+
+The [2026-10-21 update-reader investigation](verification/callev2-update-reader-2026-10-21.md)
+records a reader-reported 404 and a later stale-version discrepancy. The
+publisher cannot purge an external reader's cache or prove its internal failure
+cause from those observations. Fresh requests and bounded retries address the
+observed read failure pattern without changing publisher or transport permissions.
+Installed versions before this repair retain their original checking procedure
+until the user installs the newer Skill; remote version data cannot replace
+their loaded instructions.
 
 The following source and skills.sh audit snapshots were verified on 2026-10-15.
 Each audit applies to its content at that time; it does not guarantee that the
@@ -166,7 +178,7 @@ requires review.
 ## Publication and validation limits
 
 The earlier MCP/API merge was tested as `calle-connect` version `0.2.0`.
-The current staging identity is `callev2` version `2.0.1`, with evaluation inputs
+The current staging identity is `callev2` version `2.0.2`, with evaluation inputs
 at `tests/behavior/callev2-evals.json`. Keep historical acceptance tied to its
 original names and hashes; new identity, source binding and host activation need
 candidate-specific evidence under the [migration gates](calle-skill-migration-plan.md).

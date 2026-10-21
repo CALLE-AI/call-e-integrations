@@ -17,10 +17,13 @@ from urllib.parse import parse_qs, urlsplit
 
 from jsonschema import Draft202012Validator
 
+from tests.behavior.update_metadata import (
+    SOURCE_URL, fetch_metadata, metadata_schema, metadata_state, start_explicit_check,
+)
+
 API_ORIGIN = "https://api.heycall-e.com"
 MCP_URL = "https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth"
 DASHBOARD = "https://dashboard.heycall-e.com"
-SOURCE_URL = "https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/skills/callev2/SKILL.md"
 REPOSITORY = "https://github.com/CALLE-AI/call-e-integrations"
 SKILL_DIRECTORY = "skills/callev2"
 
@@ -127,6 +130,7 @@ class LifecycleMock:
         self.staging_verified = self.setup.get("complete_confined_regular_files") is True
         self.installed_version = self.setup.get("installed_version")
         self.metadata_fetch_count = 0
+        self.metadata_state = metadata_state()
         self.download_count = 0
         self.install_count = 0
         self._supplement_setup()
@@ -191,6 +195,8 @@ class LifecycleMock:
         offset = self.initial_turn_offset
         self.turn = _copy(turns[index - offset]) if turns and index >= offset else {}
         self.setup = _merge(self.setup, self.turn.get("setup", {}))
+        if self.turn.get("fixture_explicit_update_check") is True:
+            start_explicit_check(self.metadata_state)
         self.http_count = 0
         self.bound_source = self.bound_source if index == 0 or self.case_id == "c04-01" else None
         if self.case_id == "mcp-current-01" and index == 1:
@@ -234,7 +240,9 @@ class LifecycleMock:
                       "preparation_count": self.preparation_count, "configuration_count": self.configuration_count,
                       "oauth_start_count": self.oauth_start_count, "bound_source": self.bound_source,
                       "deleted": self.deleted, "download_count": self.download_count,
-                      "install_count": self.install_count, "staging_verified": self.staging_verified})
+                      "install_count": self.install_count, "staging_verified": self.staging_verified,
+                      "metadata_fetch_count": self.metadata_fetch_count,
+                      "metadata_check_attempts": self.metadata_state["attempts"]})
 
     def export_state(self):
         """Controller persistence only, bound to the unchanged source fixture."""
@@ -291,8 +299,7 @@ class LifecycleMock:
                 return _copy(tool["inputSchema"])
             raise NotImplementedError("No source schema for this MCP operation")
         if action == "update.mock_fetch_metadata":
-            return _object({"url": {"const": SOURCE_URL}, "headers": {"type": "object", "maxProperties": 0},
-                            "follow_redirects": {"const": False}}, ("url", "headers", "follow_redirects"))
+            return metadata_schema()
         if action == "update.mock_resolve_commit":
             return _object({"source_url": {"const": SOURCE_URL}}, ("source_url",))
         if action == "update.mock_download_to_staging":
@@ -650,16 +657,18 @@ class LifecycleMock:
 
     def _update(self, action, args):
         if action == "update.mock_fetch_metadata":
-            if self.case_id == "connect-update-01" and self.turn_index == 0:
+            if self.setup.get("public_fetch") in {"unavailable", "absent", False}:
+                raise PermissionError("No anonymous public metadata reader is available")
+            if self.setup.get("session_metadata_check") == "already_completed" and not self.turn.get("fixture_explicit_update_check"):
                 raise PermissionError("An update check already occurred; no new explicit request exists")
-            if self.metadata_fetch_count > 0:
-                raise PermissionError("Only one metadata fetch is authorized in this scenario")
-            response = self._observation("fixture_response") or self.setup.get("fixture_response")
-            error = self._observation("fixture_transport_error")
-            if response is None and not error:
-                raise NotImplementedError("Missing metadata transport observation")
+            responses = self._observation("fixture_responses") or self.setup.get("fixture_responses")
+            if responses is None:
+                response = self._observation("fixture_response") or self.setup.get("fixture_response")
+                error = self._observation("fixture_transport_error")
+                responses = [response] if response is not None else ([{"transport_error": error}] if error else [])
+            result = fetch_metadata(self.metadata_state, args, responses)
             self.metadata_fetch_count += 1
-            return response if response is not None else {"transport_error": error}
+            return result
         if action == "update.mock_resolve_commit":
             if not self.setup.get("download_consent") or not self.setup.get("native_file_tools"):
                 raise PermissionError("Native download is not authorized and available")
