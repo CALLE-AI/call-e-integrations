@@ -31,6 +31,12 @@ Codex conversation must automatically report that newer version after an ordinar
 capability question. This authorization supersedes preservation of the older
 installed copy for this step; other local edits and business state remain intact.
 
+After the native-reader preflight passed, `2.0.4` was published through PR #165
+and installed from its fixed merge commit. The authorized `2.0.5` publication
+changes only packaged version metadata and synchronized current guidance. Keep
+the local `2.0.4` installation for a fresh-session test against public `2.0.5`;
+the final conversation must provide the actual update-notification evidence.
+
 The selected repository remains `CALLE-AI/call-e-integrations`. Personal testing
 means using `callev2` in the user's own host and account, not changing repository
 ownership. The selected source directory is `skills/callev2`; no personal fork
@@ -46,7 +52,7 @@ tracks the renamed files separately. Later formal cutover requires its own evide
 
 | Surface | Authorized staged state | Later formal state |
 | --- | --- | --- |
-| MCP/API standalone Skill | `skills/callev2`, name/display `callev2`, invocation `$callev2`, metadata/evaluation version `2.0.4` | `skills/calle`, name/display `calle`, invocation `$calle`, only after the formal cutover gates |
+| MCP/API standalone Skill | `skills/callev2`, name/display `callev2`, invocation `$callev2`, metadata/evaluation version `2.0.5` | `skills/calle`, name/display `calle`, invocation `$calle`, only after the formal cutover gates |
 | Legacy standalone CLI Skill | `skills/calle-cli`, name/display `calle-cli`, invocation `$calle-cli` | Remain available as the compatibility and legacy-recovery entry |
 | Legacy CLI attribution | Private `@call-e/skills-sh-skill` owns `skills_sh/skills_sh_skill/0.1.0` | Preserve its independent version authority |
 | CLI executable/package | `calle` / `@call-e/cli` | Unchanged names and independent releases |
@@ -111,7 +117,7 @@ No removal date is set for the compatibility entry.
 | `packages/skills-sh-skill` | Remain the private owner of legacy CLI validation and attribution; assert the new `calle-cli` identity and paths. |
 | CLI integration tests | Retarget only the standalone legacy fixture; retain plugin identities and attribution. |
 | Root scripts, packer and CI | Package both `callev2` and `calle-cli`; remove obsolete `pack:skill:connect` and `pack:skill:calle` commands during staging. |
-| `tests/` | Use `tests/behavior/callev2-evals.json`, current Skill `callev2`, version `2.0.4` and selected update URLs; preserve stable scenario IDs and historical evidence. |
+| `tests/` | Use `tests/behavior/callev2-evals.json`, current Skill `callev2`, version `2.0.5` and selected update URLs; preserve stable scenario IDs and historical evidence. |
 | Current documentation | Synchronize layout, maintenance, install guides, root README and test guides. Keep the stable `docs/install/CALL-E-installation-guide.md` file and old-guide pointers. |
 
 The canonical candidate guide is [callev2](install/callev2.md); the old
