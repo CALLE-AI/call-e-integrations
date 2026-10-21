@@ -2,7 +2,7 @@
 
 The `calle-api-key` and `calle-mcp-oauth` implementations were merged into
 `calle-connect`. The current personal testing candidate is
-[`callev2` 2.0.3](callev2.md); the official `calle` cutover is a later step.
+[`callev2` 2.0.4](callev2.md); the official `calle` cutover is a later step.
 
 Install the chosen replacement explicitly. Same-name update checks do not infer
 a renamed successor or authorize a change of publisher. Preserve credentials,

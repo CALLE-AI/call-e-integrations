@@ -490,7 +490,7 @@ This is a multi-ecosystem integration monorepo with packaged plugins and standal
 | `packages/openclaw-cli-skill` | OpenClaw CALL-E skill source. |
 | `packages/skills-sh-skill` | skills.sh compatible CALL-E skill package. |
 | `skills/calle-cli/` | Portable CLI compatibility Skill; official installation uses `--skill calle-cli`. |
-| `skills/callev2/` | Personal testing candidate at version 2.0.3; standalone Skill that prefers host-managed OAuth MCP, with direct HTTPS/API Key fallback governed by the [interface selection rules](docs/install/callev2.md#choose-the-interface). |
+| `skills/callev2/` | Personal testing candidate at version 2.0.4; standalone Skill that prefers host-managed OAuth MCP, with direct HTTPS/API Key fallback governed by the [interface selection rules](docs/install/callev2.md#choose-the-interface). |
 | `tests/` | Offline standalone Skill validation and Agent/mock scenario definitions; execution states are recorded separately. |
 | `examples/` | Runnable MCP client demos. |
 | `docs/` | Integration guides, install docs, and troubleshooting. |
