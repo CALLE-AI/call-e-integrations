@@ -1,6 +1,6 @@
 # Offline Agent Evaluation Adapters and Grading
 
-Current candidate identity is `callev2` with metadata/evaluation version `2.0.2`.
+Current candidate identity is `callev2` with metadata/evaluation version `2.0.3`.
 Scenario IDs remain stable across the rename. Earlier `calle-connect` records
 retain their original hashes and names; they do not prove that the renamed
 candidate, selected update origin or host installation has been accepted.
