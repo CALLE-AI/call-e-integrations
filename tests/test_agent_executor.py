@@ -98,10 +98,10 @@ class AgentExecutorTests(unittest.TestCase):
         for mutation in ({"headers": {"Authorization": "Bearer synthetic"}},
                          {"follow_redirects": True}, {"url": "https://attacker.invalid"}):
             dispatcher = self.dispatcher(self.source("api-update-02"))
-            arguments = {"url": SOURCE_URL, "headers": {}, "follow_redirects": False, **mutation}
+            arguments = {"url": SOURCE_URL + "?callev2_update_check=0123456789abcdef", "headers": {}, "follow_redirects": False, **mutation}
             self.assertTrue(dispatcher.call("fetch_public_metadata", arguments)["isError"])
         dispatcher = self.dispatcher(self.source("api-update-02"))
-        result = dispatcher.call("fetch_public_metadata", {"url": SOURCE_URL, "headers": {}, "follow_redirects": False})
+        result = dispatcher.call("fetch_public_metadata", {"url": SOURCE_URL + "?callev2_update_check=0123456789abcdef", "headers": {}, "follow_redirects": False})
         self.assertFalse(result["isError"])
         self.assertIn("Synthetic hostile text", result["content"][0]["text"])
         self.assertFalse(dispatcher.stopped)
@@ -114,6 +114,63 @@ class AgentExecutorTests(unittest.TestCase):
         self.assertEqual(len(second["tool_names"]), 1)
         self.assertIsNone(second["next_cursor"])
         self.assertTrue(dispatcher.call("discover_tools", {"cursor": "invented"})["isError"])
+
+    def test_bridge_metadata_fresh_retry_recovers_404_and_rejects_third_attempt(self):
+        source = self.source("api-update-02")
+        source["setup"].pop("fixture_response")
+        source["setup"]["fixture_responses"] = [{"status": 404}, {"status": 200, "body": "new version"}]
+        dispatcher = self.dispatcher(source)
+        for nonce, status in (("0123456789abcdef", 404), ("fedcba9876543210", 200)):
+            result = dispatcher.call("fetch_public_metadata", {
+                "url": SOURCE_URL + "?callev2_update_check=" + nonce, "headers": {}, "follow_redirects": False})
+            self.assertFalse(result["isError"])
+            self.assertEqual(json.loads(result["content"][0]["text"])["status"], status)
+        result = dispatcher.call("fetch_public_metadata", {
+            "url": SOURCE_URL + "?callev2_update_check=1111111111111111", "headers": {}, "follow_redirects": False})
+        self.assertTrue(result["isError"])
+
+    def test_bridge_metadata_rejects_cached_url_and_reused_nonce(self):
+        dispatcher = self.dispatcher(self.source("api-update-02"))
+        self.assertTrue(dispatcher.call("fetch_public_metadata", {
+            "url": SOURCE_URL, "headers": {}, "follow_redirects": False})["isError"])
+        source = self.source("api-update-02")
+        source["setup"]["fixture_response"] = {"status": 404}
+        dispatcher = self.dispatcher(source)
+        arguments = {"url": SOURCE_URL + "?callev2_update_check=0123456789abcdef", "headers": {}, "follow_redirects": False}
+        self.assertFalse(dispatcher.call("fetch_public_metadata", arguments)["isError"])
+        self.assertTrue(dispatcher.call("fetch_public_metadata", arguments)["isError"])
+
+    def test_bridge_metadata_restore_preserves_nonce_and_attempt_limits(self):
+        source = self.source("api-update-02")
+        source["setup"]["fixture_response"] = {"status": 404}
+        dispatcher = self.dispatcher(source)
+        arguments = {"url": SOURCE_URL + "?callev2_update_check=0123456789abcdef", "headers": {}, "follow_redirects": False}
+        self.assertFalse(dispatcher.call("fetch_public_metadata", arguments)["isError"])
+        payload = {"source": source, "allowed_actions": source["mock_allowed_actions"],
+                   "skill_files": {}, "controller_state": json.loads(json.dumps(dispatcher.controller_state()))}
+        reused = FixtureDispatcher(payload)
+        self.assertTrue(reused.call("fetch_public_metadata", arguments)["isError"])
+        restored = FixtureDispatcher(payload)
+        self.assertFalse(restored.call("fetch_public_metadata", {
+            **arguments, "url": SOURCE_URL + "?callev2_update_check=fedcba9876543210"})["isError"])
+        payload["controller_state"] = json.loads(json.dumps(restored.controller_state()))
+        exhausted = FixtureDispatcher(payload)
+        self.assertTrue(exhausted.call("fetch_public_metadata", {
+            **arguments, "url": SOURCE_URL + "?callev2_update_check=1111111111111111"})["isError"])
+        self.assertEqual(exhausted.snapshot()["metadata_fetch_count"], 2)
+
+    def test_bridge_metadata_never_retries_nontransient_results_or_exposes_sequences(self):
+        for response in ({"status": 200}, {"status": 401}, {"status": 403}, {"status": 429},
+                         {"status": 302}, {"transport_error": "permission_denied"}):
+            with self.subTest(response=response):
+                source = self.source("api-update-02")
+                source["setup"]["fixture_responses"] = [response, {"status": 200, "body": "hidden future"}]
+                self.assertNotIn("hidden future", json.dumps(public_setup(source)))
+                dispatcher = self.dispatcher(source)
+                arguments = {"url": SOURCE_URL + "?callev2_update_check=0123456789abcdef", "headers": {}, "follow_redirects": False}
+                self.assertFalse(dispatcher.call("fetch_public_metadata", arguments)["isError"])
+                self.assertTrue(dispatcher.call("fetch_public_metadata", {
+                    **arguments, "url": SOURCE_URL + "?callev2_update_check=fedcba9876543210"})["isError"])
 
     def test_polling_variant_does_not_inherit_other_response_sequence(self):
         variants = dict(scenario_instances(self.source("api-polling-01")))
@@ -130,6 +187,15 @@ class AgentExecutorTests(unittest.TestCase):
         self.assertEqual(len(update["turns"]), 2)
         self.assertEqual(update["turns"][1]["user"], "Maybe later.")
         self.assertEqual(len(onboarding["turns"]), 2)
+        for transport in ("api", "mcp"):
+            variants = dict(scenario_instances(self.source(f"{transport}-update-06")))
+            for name in ("first-use-404-recovery", "automatic-404-exhausted"):
+                with self.subTest(transport=transport, variant=name):
+                    source = normalized_turn_source(variants[name])
+                    self.assertEqual(len(source["turns"]), 3)
+                    self.assertEqual(source["turns"][0]["prompt"], "")
+                    self.assertEqual(source["turns"][1]["user"], source["prompt"])
+                    self.assertEqual(source["turns"][2]["user"], "Can it also retrieve call transcripts?")
 
     def test_acceptance_fixture_declares_its_limited_read_capability(self):
         dispatcher = self.dispatcher(self.source("api-onboarding-01"))

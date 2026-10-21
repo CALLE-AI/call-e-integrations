@@ -5,7 +5,7 @@ CALL-E calling workflows. It prefers host-managed OAuth MCP. Before business
 writes, it can select direct HTTPS with an API Key when the host explicitly lacks
 MCP support, the target MCP connection is confirmed not configured, or complete
 discovery confirms the required capability is missing. Authentication failure or
-cancellation does not trigger fallback. The source metadata version is `2.0.1`.
+cancellation does not trigger fallback. The source metadata version is `2.0.2`.
 The directory, Skill name and display name are `callev2`; invoke it as `$callev2`. This is the
 user-authorized personal testing identity; the later official `calle` takeover
 has not been completed.
@@ -165,8 +165,12 @@ Real calls require an explicit execution instruction.
 ## Check for updates during use
 
 The bundled [update procedure](../../skills/callev2/references/update-check.md)
-checks the matching publisher-approved GitHub `SKILL.md` once on first use in a conversation,
-using a separate anonymous public-fetch capability. It reads only the remote
+checks the matching publisher-approved GitHub `SKILL.md` once on first eligible use in a conversation,
+including capability questions, using a separate anonymous public-fetch capability.
+It adds a request-only freshness nonce on the same official path and permits
+one retry after a 404, timeout, or HTTP 500–599. Other failures do not trigger
+an alternate source. An attempted check that remains unknown produces one brief
+notice while the original task continues. It reads only the remote
 name and version as data. API Keys, OAuth tokens and customer data are never
 sent with that request, and remote instructions are not loaded during the check.
 
@@ -183,6 +187,9 @@ the source link is
 Neither URL may silently redirect to the future `calle` or old `calle-connect`
 identity. A missing or unreadable public source means update status is unknown.
 Verify the published content and same-name metadata before claiming delivery.
+An installed older version keeps its own checking instructions until updated;
+publishing a fix does not rewrite an installed copy or guarantee that an external
+reader has refreshed its cache.
 
 The update source follows public `main`, not a tagged release feed. Publishers
 must update `metadata.version` and the repository evaluation version together

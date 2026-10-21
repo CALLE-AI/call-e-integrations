@@ -1,6 +1,6 @@
 # Offline Agent Evaluation Adapters and Grading
 
-Current candidate identity is `callev2` with metadata/evaluation version `2.0.1`.
+Current candidate identity is `callev2` with metadata/evaluation version `2.0.2`.
 Scenario IDs remain stable across the rename. Earlier `calle-connect` records
 retain their original hashes and names; they do not prove that the renamed
 candidate, selected update origin or host installation has been accepted.
@@ -231,7 +231,15 @@ requests or Skill updates.
 Update mocks simulate only anonymous host web/HTTPS and file/Skill tools. They
 do not access real official URLs in fixtures or execute malicious bodies or
 scripts. Record all final request headers, destinations, and redirect attempts;
-also record the pinned commit, every source/destination path, file types,
+for metadata reads, also record the generated request nonce, check attempt count,
+and preceding transient error authorizing any second request. Require the exact
+official path and only one fresh 16-character lowercase hexadecimal query nonce.
+Reject nonce reuse, extra parameters, redirects, credential headers, and a third
+request; restoring mock state must preserve these limits. Recovered 404s and
+stale base-URL snapshots need distinct traces from persistent failures. An
+exhausted automatic check must deliver one unknown-status notice without
+blocking the original task or performing business requests.
+Also record the pinned commit, every source/destination path, file types,
 rejected out-of-bounds paths or symbolic links, and staged/installed/loaded
 versions. Downloads occur only in an in-memory file tree, and installation
 changes only simulated state. Do not report a successful download without a
