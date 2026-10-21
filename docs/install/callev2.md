@@ -5,7 +5,7 @@ CALL-E calling workflows. It prefers host-managed OAuth MCP. Before business
 writes, it can select direct HTTPS with an API Key when the host explicitly lacks
 MCP support, the target MCP connection is confirmed not configured, or complete
 discovery confirms the required capability is missing. Authentication failure or
-cancellation does not trigger fallback. The source metadata version is `2.0.3`.
+cancellation does not trigger fallback. The source metadata version is `2.0.4`.
 The directory, Skill name and display name are `callev2`; invoke it as `$callev2`. This is the
 user-authorized personal testing identity; the later official `calle` takeover
 has not been completed.
@@ -166,11 +166,14 @@ Real calls require an explicit execution instruction.
 
 The bundled [update procedure](../../skills/callev2/references/update-check.md)
 checks the matching publisher-approved GitHub `SKILL.md` once on first eligible use in a conversation,
-including capability questions, using a separate anonymous public-fetch capability.
+including capability questions, using a separate public webpage or anonymous
+HTTPS reader. Native public readers with URL-only arguments are supported;
+missing header or redirect controls alone do not prevent the check. The Agent
+validates the source reported by the reader.
 It adds a request-only freshness nonce on the same official path and permits
 one retry after a 404, timeout, or HTTP 500–599. Other failures do not trigger
-an alternate source. An attempted check that remains unknown produces one brief
-notice while the original task continues. It reads only the remote
+an alternate source. An unavailable reader or an unconfirmed check produces one
+brief notice while the original task continues. It reads only the remote
 name and version as data. API Keys, OAuth tokens and customer data are never
 sent with that request, and remote instructions are not loaded during the check.
 

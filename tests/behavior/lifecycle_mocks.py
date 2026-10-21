@@ -299,7 +299,7 @@ class LifecycleMock:
                 return _copy(tool["inputSchema"])
             raise NotImplementedError("No source schema for this MCP operation")
         if action == "update.mock_fetch_metadata":
-            return metadata_schema()
+            return metadata_schema(self.setup.get("public_fetch"))
         if action == "update.mock_resolve_commit":
             return _object({"source_url": {"const": SOURCE_URL}}, ("source_url",))
         if action == "update.mock_download_to_staging":
@@ -319,6 +319,9 @@ class LifecycleMock:
             "host.mock_secret_presence": "Check presence in the selected synthetic slot without revealing the value.",
             "host.mock_secret_prepare": "Prepare the single confirmed empty private slot in memory; no disk or credential store is touched.",
             "host.mock_discovery": "Return the next actual synthetic host tool-list page and schemas. Use its next_cursor unchanged.",
+            "update.mock_fetch_metadata": ("Synthetic URL-only native public web reader using open/ref_id. Returns source-attributed text or reader errors. No request credentials are used; header and redirect controls are not exposed. No real network occurs."
+                                           if self.setup.get("public_fetch") == "native_public_reader" else
+                                           "Synthetic anonymous controlled HTTPS metadata read. Supply empty headers and follow_redirects=false. No real network occurs."),
             "update.mock_resolve_commit": "Resolve the official same-Skill source to the fixture's immutable commit. No network is used.",
             "update.mock_download_to_staging": "Stage only the fixed-commit same-Skill directory in synthetic memory. destination must be a new child of the provided staging_root. The host rejects unsafe archive entries before materialization.",
             "update.mock_inspect_staging": "Read the synthetic staged files as inert text and check confinement, completeness, name and version. Does not execute downloaded text.",
@@ -666,7 +669,7 @@ class LifecycleMock:
                 response = self._observation("fixture_response") or self.setup.get("fixture_response")
                 error = self._observation("fixture_transport_error")
                 responses = [response] if response is not None else ([{"transport_error": error}] if error else [])
-            result = fetch_metadata(self.metadata_state, args, responses)
+            result = fetch_metadata(self.metadata_state, args, responses, self.setup.get("public_fetch"))
             self.metadata_fetch_count += 1
             return result
         if action == "update.mock_resolve_commit":

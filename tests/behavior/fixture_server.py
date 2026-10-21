@@ -105,11 +105,16 @@ class FixtureDispatcher:
         tools = [{"name": "read_skill_file", "description": "Read a bundled Skill reference or asset by its exact relative path. This reads only the in-memory Skill snapshot; no filesystem access or execution.",
                   "inputSchema": object_schema({"path": {"type": "string"}}, ("path",))}]
         actions = {"read_skill_file": "local.read_skill"}
+        native_reader = self.setup.get("public_fetch") == "native_public_reader"
         helper_specs = {
             "host.inspect_existing_connection": ("inspect_connection", "Read the synthetic host's existing non-secret CALL-E connection and capability metadata.", NO_ARGUMENTS),
             "host.mock_discovery": ("discover_tools", "Read one synthetic MCP discovery page. Pass its returned next_cursor to continue; null starts the first page.", object_schema({"cursor": {"type": ["string", "null"]}})),
             "journal.read": ("read_journal", "Read the synthetic private saved operation record; never reads credentials.", NO_ARGUMENTS),
-            "update.mock_fetch_metadata": ("fetch_public_metadata", "Anonymous native public HTTPS fetch in the fixture. No credentials are injected, no redirect is followed, and no real network occurs.", metadata_schema()),
+            "update.mock_fetch_metadata": (
+                "web_open" if native_reader else "fetch_public_metadata",
+                ("Synthetic URL-only native public web reader using open/ref_id. Returns source-attributed text or reader errors. No request credentials are used; header and redirect controls are not exposed. No real network occurs."
+                 if native_reader else "Anonymous controlled HTTPS fetch in the fixture. No credentials are injected, no redirect is followed, and no real network occurs."),
+                metadata_schema(self.setup.get("public_fetch"))),
         }
         stateful_actions = {spec["name"] for spec in self.stateful.tool_specs()} if self.stateful else set()
         for action, (name, description, schema) in helper_specs.items():
@@ -138,7 +143,7 @@ class FixtureDispatcher:
                 action = spec["name"]
                 if action in actions.values():
                     continue
-                name = action.replace(".", "_")
+                name = "web_open" if native_reader and action == "update.mock_fetch_metadata" else action.replace(".", "_")
                 tool = copy.deepcopy(spec)
                 tool["name"] = name
                 tools.append(tool)
@@ -183,7 +188,7 @@ class FixtureDispatcher:
             state.pop("trace", None)
             self.record("tool_result", tool_name=name, operation=action, result=result,
                         observed_state=state)
-            return {"content": [{"type": "text", "text": json.dumps(result)}],
+            return {"content": [{"type": "text", "text": result if isinstance(result, str) else json.dumps(result)}],
                     "isError": False}
         except (PermissionError, ValueError, NotImplementedError) as error:
             self.stopped = True
@@ -234,7 +239,7 @@ class FixtureDispatcher:
                 error = self.source.get("fixture_transport_error")
                 response = self.source.get("fixture_response", self.setup.get("fixture_response"))
                 responses = ([{"transport_error": error}] if error else [response])
-            return fetch_metadata(self.metadata_state, arguments, responses)
+            return fetch_metadata(self.metadata_state, arguments, responses, self.setup.get("public_fetch"))
         raise NotImplementedError(f"No reviewed response handler for {action}")
 
     def snapshot(self) -> dict:

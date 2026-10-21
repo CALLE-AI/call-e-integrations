@@ -1,6 +1,6 @@
 # Offline Agent Evaluation Adapters and Grading
 
-Current candidate identity is `callev2` with metadata/evaluation version `2.0.3`.
+Current candidate identity is `callev2` with metadata/evaluation version `2.0.4`.
 Scenario IDs remain stable across the rename. Earlier `calle-connect` records
 retain their original hashes and names; they do not prove that the renamed
 candidate, selected update origin or host installation has been accepted.
@@ -230,15 +230,25 @@ requests or Skill updates.
 
 Update mocks simulate only anonymous host web/HTTPS and file/Skill tools. They
 do not access real official URLs in fixtures or execute malicious bodies or
-scripts. Record all final request headers, destinations, and redirect attempts;
+scripts. Exercise both controlled HTTPS readers and native public readers with
+URL-only `open` arguments. The latter must expose no header or redirect controls
+and return source attribution outside the fetched document. For controlled HTTPS,
+an exact request/response binding with redirects disabled supplies transport
+attribution even when the response has no separate source field. Record supported
+request controls, destinations, reader-attributed sources, and redirect attempts;
 for metadata reads, also record the generated request nonce, check attempt count,
 and preceding transient error authorizing any second request. Require the exact
 official path and only one fresh 16-character lowercase hexadecimal query nonce.
-Reject nonce reuse, extra parameters, redirects, credential headers, and a third
-request; restoring mock state must preserve these limits. Recovered 404s and
+Reject nonce reuse, extra parameters, manually followed redirects, credential
+headers, and a third request; reject missing, conflicting, or different source
+attribution after a successful native read; restoring mock state must preserve these limits. Recovered 404s and
 stale base-URL snapshots need distinct traces from persistent failures. An
-exhausted automatic check must deliver one unknown-status notice without
-blocking the original task or performing business requests.
+exhausted automatic check or an unavailable public reader on an otherwise
+eligible first use must deliver one limitation notice without blocking the
+original task or performing business requests. Offline and other scope-based
+skips remain quiet. Mock results alone do not establish host compatibility: a
+real Codex first-use trace must show the public reader invocation, actual remote
+version, comparison, and required notice before claiming that path is accepted.
 Also record the pinned commit, every source/destination path, file types,
 rejected out-of-bounds paths or symbolic links, and staged/installed/loaded
 versions. Downloads occur only in an in-memory file tree, and installation
