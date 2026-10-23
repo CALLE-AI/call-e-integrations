@@ -162,7 +162,7 @@ intentionally exposes multiple CALL-E marketplaces in the same client UI.
 The [staged migration plan](calle-skill-migration-plan.md) records the authorized
 current layout: legacy `calle` becomes `calle-cli`, while the MCP/API candidate
 uses `callev2` with display name `callev2`, invocation `$callev2`, and metadata
-version `2.0.5` for personal testing. The later official `calle` takeover is not
+version `2.1.0` for personal testing. The later official `calle` takeover is not
 implemented by this staging step; final artifact and delivery gates still apply.
 
 `skills/callev2/` is distributed as a complete source directory and local
@@ -196,6 +196,14 @@ fallback is a pre-execution choice, not a retry for authentication errors or
 unknown write results. A call retains its original interface, account and
 endpoint unless interoperability has been verified. Records from a different
 endpoint are outside this production Skill's recovery scope.
+
+The current MCP workflow uses `prepare_call`, `start_call`, `open_call`,
+`get_call`, and `get_call_transcript`. Server clarification can use chat or real
+cards; card UI is optional. When the latest preparation is ready and execution
+is authorized, the Agent uses `start_call` without redundant confirmation.
+Planning and preview requests do not authorize execution. Cancellation requires
+supported card controls and is unavailable without them; missing UI does not
+permit legacy tools or an interface switch.
 
 The CLI compatibility entry is `skills/calle-cli`; keep its original CLI
 attribution, configuration and recovery behavior. CLI executable `calle` and

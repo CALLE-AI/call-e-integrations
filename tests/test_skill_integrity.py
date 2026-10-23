@@ -31,7 +31,7 @@ class SkillIntegrityTests(unittest.TestCase):
         metadata = yaml.safe_load((skill / "SKILL.md").read_text().split("---", 2)[1])
         interface = yaml.safe_load((skill / "agents/openai.yaml").read_text())["interface"]
         self.assertEqual(metadata["name"], skill.name)
-        self.assertEqual(metadata["metadata"]["version"], "2.0.5")
+        self.assertEqual(metadata["metadata"]["version"], "2.1.0")
         self.assertEqual(interface["display_name"], metadata["name"])
         self.assertIn("$callev2", interface["default_prompt"])
         self.assertGreaterEqual(len(interface["short_description"]), 25)

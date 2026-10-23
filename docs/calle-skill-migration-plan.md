@@ -48,11 +48,60 @@ limits for its original inputs. Preserve that record and all earlier hashes.
 The [staged migration verification record](verification/callev2-migration-2026-10-21.md)
 tracks the renamed files separately. Later formal cutover requires its own evidence.
 
+## Deferred final cutover decision (2026-10-23)
+
+This decision records the intended final state only. Continue testing `callev2`
+for now; do not rename, replace, install or delete any Skill as part of this
+documentation update. The formal cutover remains deferred until the user
+confirms that testing is complete and asks to proceed.
+
+After the existing acceptance gates are satisfied, perform the cutover in this
+order:
+
+1. Select the complete tested `callev2` source revision and preserve its version,
+   artifact hashes and recovery context.
+2. Retain `skills/calle-cli` as the legacy CLI compatibility and recovery entry.
+   Verify that users of the old standalone `calle` can use this entry while
+   preserving their CLI configuration and recovery records.
+3. Promote the complete new MCP/API implementation to `skills/calle`. Align the
+   directory, frontmatter, UI display, invocation, source/update URLs, packaging,
+   evaluation references and installation/migration guidance. Replace the old
+   standalone installed `calle` only within the selected installation scope;
+   replacing `SKILL.md` alone is insufficient.
+4. Verify the formal `calle` artifact, installation, loaded identity, workflow
+   and update source under Gates B and C. Preserve the tested candidate until
+   the replacement is verified.
+5. Finally, remove the installable `skills/callev2` testing entry and retire its
+   intended installed copies. Update current references and keep migration
+   links usable. Preserve historical verification records, immutable revisions
+   and call recovery context.
+
+The final standalone entries are `calle` for the new MCP/API workflow and
+`calle-cli` for the legacy CLI workflow; `callev2` is retired rather than kept as
+a permanent parallel testing entry. The CLI executable/package and plugin-owned
+`calle` Skills remain independently maintained.
+
+The user authorized a skills.sh source update on 2026-10-23. The `2.1.0`
+release candidate adds the current `start_call` flow for UI and non-UI hosts,
+retains the native-public-reader fixes from `2.0.5`, and preserves the existing
+`callev2` source/update namespace. This authorization covers publication of
+`callev2`; the formal `calle` migration and removal of `callev2` remain deferred.
+
+A follow-up publication request on the same day includes the external-content
+and single-call authorization hardening from `c758f3c`. Public `main` still
+exposes `2.0.5`, and the `2.1.0` source-release PR has not merged, so this fix
+ships in the first `2.1.0` publication rather than a separate `2.1.1` patch.
+The combined release retains the minor-release scope of UI/non-UI calling.
+Local validation is recorded in
+[the security verification record](verification/callev2-snyk-hardening-2026-10-23.md);
+the failed Snyk analysis does not establish that the earlier warnings cleared.
+Publication does not update installed copies or authorize the formal cutover.
+
 ## Identity and version ownership
 
 | Surface | Authorized staged state | Later formal state |
 | --- | --- | --- |
-| MCP/API standalone Skill | `skills/callev2`, name/display `callev2`, invocation `$callev2`, metadata/evaluation version `2.0.5` | `skills/calle`, name/display `calle`, invocation `$calle`, only after the formal cutover gates |
+| MCP/API standalone Skill | `skills/callev2`, name/display `callev2`, invocation `$callev2`, metadata/evaluation version `2.1.0` | `skills/calle`, name/display `calle`, invocation `$calle`, only after the formal cutover gates |
 | Legacy standalone CLI Skill | `skills/calle-cli`, name/display `calle-cli`, invocation `$calle-cli` | Remain available as the compatibility and legacy-recovery entry |
 | Legacy CLI attribution | Private `@call-e/skills-sh-skill` owns `skills_sh/skills_sh_skill/0.1.0` | Preserve its independent version authority |
 | CLI executable/package | `calle` / `@call-e/cli` | Unchanged names and independent releases |
@@ -81,12 +130,21 @@ metadata and current evaluation inputs. Source metadata targets:
 - Source: `https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/callev2`
 - Update: `https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/skills/callev2/SKILL.md`
 
-Keep production-only routing, native MCP preparation/cards and user Dial,
+Keep production-only routing, current MCP preparation/start and optional cards,
 API persistence/idempotency, original resource recovery, result waiting and final
 delivery behavior. Business operations and updates remain outside the CLI;
 the limited official host MCP management exception stays separate.
 Do not add a CLI launcher, credentials, operation records or repository-only
 evaluation fixtures to this artifact.
+
+Current MCP adaptation on 2026-10-23 uses `prepare_call`, `start_call`,
+`open_call`, `get_call`, and `get_call_transcript` in hosts with or without card
+UI. Relay server clarifications through chat or real cards. A ready preparation
+and an existing user execution instruction permit `start_call` without redundant
+confirmation; a planning, preview, setup, or read-only request does not. Card UI
+is optional for calling, while cancellation requires supported card controls.
+Missing UI alone does not permit legacy tools or API fallback. This adaptation does
+not advance the deferred official `calle` cutover or establish live acceptance.
 
 `pnpm pack:skill:callev2` builds `dist/skills/callev2.zip` with top-level
 `callev2/`. An optional manual-publication source bundle contains only the complete
@@ -117,7 +175,7 @@ No removal date is set for the compatibility entry.
 | `packages/skills-sh-skill` | Remain the private owner of legacy CLI validation and attribution; assert the new `calle-cli` identity and paths. |
 | CLI integration tests | Retarget only the standalone legacy fixture; retain plugin identities and attribution. |
 | Root scripts, packer and CI | Package both `callev2` and `calle-cli`; remove obsolete `pack:skill:connect` and `pack:skill:calle` commands during staging. |
-| `tests/` | Use `tests/behavior/callev2-evals.json`, current Skill `callev2`, version `2.0.5` and selected update URLs; preserve stable scenario IDs and historical evidence. |
+| `tests/` | Use `tests/behavior/callev2-evals.json`, current Skill `callev2`, version `2.1.0` and selected update URLs; preserve stable scenario IDs and historical evidence. |
 | Current documentation | Synchronize layout, maintenance, install guides, root README and test guides. Keep the stable `docs/install/CALL-E-installation-guide.md` file and old-guide pointers. |
 
 The canonical candidate guide is [callev2](install/callev2.md); the old
@@ -220,7 +278,7 @@ Use `PASS`, `FAIL`, `NOT_RUN`, or `NOT_APPLICABLE` with a reason. Required
 | B06 | At the later formal cutover, updating/replacing old standalone `calle` loads the new workflow without stale-file mixing, lost local edits or removal of another installation scope. | B |
 | B07 | Connect testers migrate explicitly, preserve configuration references and operation records, retire the correct tester copy and verify the new loaded version. | B |
 | B08 | Legacy IDs remain on CLI recovery; new MCP Call IDs and API records remain on their original interfaces. Unknown write outcomes never cause a second call. | B |
-| B09 | New MCP uses the real card, latest revision and user Dial action. Missing card support does not trigger a legacy tool or post-submission API fallback. | B |
+| B09 | New MCP relays server clarification through chat or real cards and uses `start_call` with the latest ready preparation when execution is authorized, without redundant confirmation. Verify hosts with and without card UI; cancellation requires supported card controls. Missing UI does not trigger a legacy tool or API fallback, and unknown writes stay on their original recovery path. | B |
 | B10 | API setup, production endpoint validation, secret injection and pre-write persistence work. Auth rejection, incomplete discovery and endpoint mismatch do not silently change credentials or routes. | B |
 | B11 | Result waiting and final delivery preserve the accepted contract, including pending results after call completion, interruptions and the documented ceiling. | B |
 | B12 | Standalone/plugin and project/global combinations resolve correctly or produce clear activation guidance. Explicit CLI requests do not execute through the new MCP/API path. | B |

@@ -132,9 +132,19 @@ remains subject to the [migration gates](docs/calle-skill-migration-plan.md).
 
 ### MCP
 
-CALL-E exposes a Streamable HTTP MCP endpoint. Any compatible MCP client can connect, authorize via OAuth, and run CALL-E with three tools.
+CALL-E supports Streamable HTTP MCP with OAuth. The standalone `callev2` workflow
+uses `https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth` and the current tools
+`prepare_call`, `start_call`, `open_call`, `get_call`, and `get_call_transcript`.
+Server clarification works through chat or optional cards. Once the latest
+preparation is ready and the user has authorized execution, the Agent uses
+`start_call` without redundant confirmation. Planning and preview requests do
+not authorize dialing. Cancellation requires supported card controls. See the
+[callev2 guide](docs/install/callev2.md#choose-the-interface) for routing and recovery.
 
-**Endpoint:**
+The legacy CLI and plugin integrations retain the separate Plan/Run contract
+below; `callev2` does not use those tools as a fallback.
+
+**Legacy endpoint:**
 
 ```text
 https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth
@@ -142,7 +152,7 @@ https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth
 
 **Transport:** Streamable HTTP
 
-**Tool flow:**
+**Legacy tool flow:**
 
 ```mermaid
 sequenceDiagram
@@ -163,7 +173,7 @@ sequenceDiagram
     end
 ```
 
-**Tools:**
+**Legacy tools:**
 
 | Tool | What it does |
 | --- | --- |
@@ -474,7 +484,7 @@ Common issues covered:
 
 - **Cursor network errors** — if setup works in your terminal but fails in the Cursor agent shell, see the [Cursor troubleshooting steps](docs/install/troubleshooting.md#cursor-agent-shell-returns-connect-tunnel-failed-response-403).
 - **`calle auth login` failures** — fetch failures, login errors, and token cache issues.
-- **Missing MCP tools** — how to confirm that `plan_call`, `run_call`, and `get_call_run` are available after install.
+- **Missing legacy MCP tools** — how to confirm that `plan_call`, `run_call`, and `get_call_run` are available for CLI and legacy MCP integrations. For `callev2`, follow its [current tool policy](skills/callev2/references/mcp.md#current-call-tools-and-legacy-exclusion).
 
 ## Repository Structure
 
@@ -490,7 +500,7 @@ This is a multi-ecosystem integration monorepo with packaged plugins and standal
 | `packages/openclaw-cli-skill` | OpenClaw CALL-E skill source. |
 | `packages/skills-sh-skill` | skills.sh compatible CALL-E skill package. |
 | `skills/calle-cli/` | Portable CLI compatibility Skill; official installation uses `--skill calle-cli`. |
-| `skills/callev2/` | Personal testing candidate at version 2.0.5; standalone Skill that prefers host-managed OAuth MCP, with direct HTTPS/API Key fallback governed by the [interface selection rules](docs/install/callev2.md#choose-the-interface). |
+| `skills/callev2/` | Personal testing candidate at version 2.1.0; standalone Skill that prefers host-managed OAuth MCP, with direct HTTPS/API Key fallback governed by the [interface selection rules](docs/install/callev2.md#choose-the-interface). |
 | `tests/` | Offline standalone Skill validation and Agent/mock scenario definitions; execution states are recorded separately. |
 | `examples/` | Runnable MCP client demos. |
 | `docs/` | Integration guides, install docs, and troubleshooting. |

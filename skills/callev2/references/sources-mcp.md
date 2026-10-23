@@ -31,6 +31,30 @@ acceptance evidence. Its plugin version `8.0.0` does not change this standalone
 Skill's independent version, connection/update guidance, or API mode. The ZIP is
 provenance only; the installed Skill does not need access to it.
 
+### Current tool contract observed on 2026-10-23
+
+The current Codex chat exposed `start_call` alongside `prepare_call`, `open_call`,
+`get_call`, `get_call_transcript` and the three excluded legacy tools. Its input
+is `preparation_id` plus `revision`; its output contains the existing Call
+snapshot. The updated `prepare_call` description directs an authorized ready
+preparation to `start_call` without an additional confirmation, and routes
+server-owned clarifications through chat or the real card. Cards are optional
+for execution through this tool. This supersedes the earlier card-only workflow;
+it does not authorize dialing for previews, setup checks or prepare-only tasks.
+
+Local service source and its 2026-10-22 specification were also inspected. The
+tool and card Dial share preparation submission, current-revision checks and a
+durable idempotency key per preparation. Existing accepted Calls are recovered
+using that same preparation identity. A new preparation has a new identity and
+is not a retry. The exposed tools still contain no MCP cancellation operation.
+
+This is host-metadata and local-source evidence. The source tests cover
+non-card start, ownership, readiness, revision conflicts and duplicate submission,
+but this Skill update does not execute those service tests or establish deployed
+execution, current OAuth, account permissions, card rendering or a successful
+live call. Other hosts must discover their own schemas and tool approval controls.
+No local service checkout is needed to install or use this Skill.
+
 ## General format and protocol sources
 
 - [Agent Skills Specification](https://agentskills.io/specification): Skill directories, metadata, and progressive loading.

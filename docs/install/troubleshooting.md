@@ -10,7 +10,7 @@ name mismatch by logging out, deleting credentials or recreating a pending call.
 Plugin-provided `calle` entries have their own installation lifecycle.
 
 The standalone MCP/API personal testing candidate is
-[`callev2` 2.0.5](callev2.md). Verify the loaded name/version after host reload,
+[`callev2` 2.1.0](callev2.md). Verify the loaded name/version after host reload,
 not just the directory on disk. `calle-connect` update checks cannot rename it
 or switch publisher automatically. An unavailable `callev2` update source means
 unknown update status; it does not authorize fetching a different Skill.
