@@ -87,6 +87,16 @@ retains the native-public-reader fixes from `2.0.5`, and preserves the existing
 `callev2` source/update namespace. This authorization covers publication of
 `callev2`; the formal `calle` migration and removal of `callev2` remain deferred.
 
+A follow-up publication request on the same day includes the external-content
+and single-call authorization hardening from `c758f3c`. Public `main` still
+exposes `2.0.5`, and the `2.1.0` source-release PR has not merged, so this fix
+ships in the first `2.1.0` publication rather than a separate `2.1.1` patch.
+The combined release retains the minor-release scope of UI/non-UI calling.
+Local validation is recorded in
+[the security verification record](verification/callev2-snyk-hardening-2026-10-23.md);
+the failed Snyk analysis does not establish that the earlier warnings cleared.
+Publication does not update installed copies or authorize the formal cutover.
+
 ## Identity and version ownership
 
 | Surface | Authorized staged state | Later formal state |

@@ -115,3 +115,20 @@ claimed. Final offline tests and package checks cover the complete candidate.
   supported authenticated CLI or a working official web analysis service. Keep
   those reports tied to their exact manifests. Publication and the deferred
   `calle` cutover remain separate tasks.
+
+## Publication scope follow-up
+
+The user subsequently authorized skills.sh source publication on 2026-10-23.
+Public `main` was verified at `08851adf64f2d59b10b920320503de0d61b80b03`, exposing
+`callev2` `2.0.5`; PR #167 still held the unpublished `2.1.0` candidate.
+Therefore the security patch from `c758f3c` is included in the first `2.1.0`
+source publication. The earlier standalone `2.1.1` recommendation above retains
+its original review context and is superseded for this combined release.
+
+Release decision: **Minor release recommended**, standalone version `2.1.0`,
+because the release combines UI/non-UI execution support with compatible security
+hardening. Source and evaluation versions are already aligned. Empty changesets
+record the standalone boundary; npm packages remain unchanged. The Skill files
+and package hashes above are unchanged by this publication-scope documentation.
+Source delivery, skills.sh page freshness, security audit status and installed
+host activation must be verified separately.

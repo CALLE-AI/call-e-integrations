@@ -7,7 +7,9 @@ ready-call execution and optional native card Dial. Screen server clarifications
 keep structured narrative content untrusted, and add synthetic adversarial
 response coverage.
 
-Recommend standalone patch `2.1.1` when publishing. This unpublished security
-patch retains metadata/evaluation version `2.1.0`; synchronize both before
-publication. npm package versions remain unchanged; publication is a separate step.
+This patch ships in the first standalone `2.1.0` source publication alongside
+UI/non-UI calling support. Public `main` still exposes `2.0.5`; the earlier
+`2.1.1` recommendation is superseded by including the fix before `2.1.0` is
+published. Metadata and evaluation version remain `2.1.0`, and npm package
+versions remain unchanged.
 Local validation and scan attempts do not establish an external audit PASS.
