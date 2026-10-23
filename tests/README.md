@@ -115,8 +115,8 @@ migrated.
 
 ## Behavior Evaluation Status
 
-The inventory contains **116 formal Agent + mock-tool scenarios**:
-96 [repository scenarios](behavior/callev2-evals.json),
+The inventory contains **122 formal Agent + mock-tool scenarios**:
+102 [repository scenarios](behavior/callev2-evals.json),
 12 [extra scenarios](extra-behavior-cases.json), and
 8 [round-one scenarios](behavior/round-1-cases.json).
 The dated record contains actual model execution and independent review evidence;
@@ -125,7 +125,7 @@ for results and remaining gaps. A generated NOT_RUN inventory is not a current
 execution report, and neither a completed turn nor a mock unit test is a PASS.
 The repository suite preserves the original 30 API and 27 MCP IDs and adds 14 routing
 cases, 1 unified update-source case, 1 MCP preview case with a missing ID, and
-9 host management boundary cases, 6 current MCP tool-selection cases, and
+9 host management boundary cases, 12 current MCP tool-selection and execution cases, and
 3 public endpoint cases, 3 first-use API onboarding cases, and
 2 automatic monitoring groups with 44 independent variants, including an actual
 second-turn resumption after a host interruption for each interface.
@@ -184,11 +184,13 @@ updates outside the management exception. Real subprocess blocking is unchanged.
 
 Current MCP cases exclude `plan_call`, `run_call`, and `get_call_run`, including
 host-prefixed aliases, even for read-only verification or recovery. A separate
-`mock_action_scope: mcp_call` admits only explicitly listed current preparation
-and query actions plus local journal/discovery actions. One scenario authorizes
-a saved `prepare_call` write; a simulated user Dial event remains separate from
-Agent actions. Other cases cover missing cards, uncertain preparation responses,
-Call resource identifiers, and preview limits. `route-14` preserves the main
+`mock_action_scope: mcp_call` admits only explicitly listed current preparation,
+start and query actions plus local journal/discovery actions. Authorized ready
+calls use `start_call` with or without native cards. A simulated user Dial event
+shares the same preparation and remains separate from Agent actions. Cases cover
+clarification, current revisions, uncertain start recovery, Dial races, missing
+capabilities, cancellation limits, resource identifiers and preview/prepare-only
+boundaries. `route-14` preserves the main
 API fallback conditions when complete discovery finds only prohibited legacy
 tools and no related write has occurred. The fixture data does not execute
 advertised tools; the isolated dispatcher interprets supported synthetic

@@ -548,6 +548,10 @@ class BehaviorPreparationTests(unittest.TestCase):
                 self.catalog_for_synthetic_case({**source, "mock_action_scope": scope,
                                                 "selected_transport": transport,
                                                 "mock_allowed_actions": ["mcp.prepare_call"]})
+            with self.subTest(scope=scope, action="start_call"), self.assertRaises(ValueError):
+                self.catalog_for_synthetic_case({**source, "mock_action_scope": scope,
+                                                "selected_transport": transport,
+                                                "mock_allowed_actions": ["mcp.start_call"]})
 
     def test_current_mcp_cases_preserve_write_recovery_and_preview_ceilings(self):
         catalog = {case["id"]: case for case in build_catalog(ROOT)}
@@ -565,6 +569,12 @@ class BehaviorPreparationTests(unittest.TestCase):
                          ["local.preview", "local.report"])
         self.assertIn("http.GET", catalog["route-14"]["fixture"]["allowed_actions"])
         self.assertNotIn("mcp.prepare_call", catalog["route-14"]["fixture"]["allowed_actions"])
+        for number in range(7, 12):
+            fixture = catalog[f"mcp-current-{number:02}"]["fixture"]
+            self.assertIn("mcp.start_call", fixture["allowed_actions"])
+            self.assertNotIn("http.POST", fixture["allowed_actions"])
+        for case_id in ("mcp-current-01", "mcp-current-03", "mcp-current-05", "mcp-current-06", "mcp-current-12"):
+            self.assertNotIn("mcp.start_call", catalog[case_id]["fixture"]["allowed_actions"])
 
     def test_preview_fixtures_cannot_gain_default_read_or_discovery_actions(self):
         catalog = {case["id"]: case for case in build_catalog(ROOT)}

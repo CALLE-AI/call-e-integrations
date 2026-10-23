@@ -126,14 +126,23 @@ the callback, connection state and loaded tools before claiming readiness.
 The standalone Skill excludes the legacy MCP tools `plan_call`, `run_call`, and
 `get_call_run`, including namespaced forms and aliases. It uses the current
 Preparation/Call workflow when exposed: `prepare_call` receives the user's task
-and known facts, returns the real clarification/confirmation card, and the user
-clicks Dial on its latest ready revision. Standard preparation does not require
+and known facts. Relay the server's clarification questions in chat or show its
+real cards when the host supports them. Standard preparation does not require
 a custom `result_schema`. Reopen with `preparation_id`; revise with that ID,
-the current `revision`, and `user_input`. Use `open_call`, `get_call`, and
-`get_call_transcript` for the resulting Call resource; cancellation stays in the
-card. Poll results only while `result_status` is `pending`. Legacy tools are
-not a fallback for missing tools or cards and cannot be used for read-only checks
-or recovery. Follow the [MCP tool policy](../../skills/callev2/references/mcp.md#current-call-tools-and-legacy-exclusion)
+the current `revision`, and `user_input`. When the latest preparation is ready
+and the user has authorized execution, use `start_call` with its current
+references and discovered schema without asking for the same confirmation again.
+Planning, preview, setup, and read-only requests do not authorize `start_call`.
+
+The five current tools are `prepare_call`, `start_call`, `open_call`, `get_call`,
+and `get_call_transcript`. Cards are optional for preparation and starting an
+authorized call; missing card UI alone does not justify API fallback. Use the
+Call resource tools for progress, results, and transcripts, polling results only
+while `result_status` is `pending`. Cancellation uses supported card controls;
+it is unavailable through this workflow in a host without those controls. Do not
+invent a cancellation tool or switch interfaces to cancel. Legacy tools are not
+a fallback and cannot be used for read-only checks or recovery. Follow the
+[MCP tool policy](../../skills/callev2/references/mcp.md#current-call-tools-and-legacy-exclusion)
 for current tool selection, ID handling, and existing interface-selection limits.
 See [concrete MCP arguments](../../skills/callev2/references/mcp.md#concrete-tool-arguments)
 for new preparations, reopening, and chat corrections.

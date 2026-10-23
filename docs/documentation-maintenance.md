@@ -46,6 +46,13 @@ commands.
   across the entry point, connection verification, manual tests, and repository
   scenarios. Discovery does not override the exclusion. Other integration
   products retain their separately maintained tool guidance.
+  The current tools are `prepare_call`, `start_call`, `open_call`, `get_call`,
+  and `get_call_transcript`. Keep server clarification in chat or optional cards,
+  authorized execution of a ready preparation through `start_call` without
+  redundant confirmation, and no-UI cancellation limits synchronized. Card UI
+  is not a prerequisite for placing an authorized call. Setup, read-only checks,
+  planning, and previews do not authorize execution; missing UI does not trigger
+  legacy tools or API fallback.
 - Standalone Skill evaluation definitions live in
   `tests/behavior/callev2-evals.json`, outside the installable Skill source
   and ZIP. Keep their version aligned with `skills/callev2/SKILL.md`.

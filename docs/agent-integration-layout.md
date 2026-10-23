@@ -197,6 +197,14 @@ unknown write results. A call retains its original interface, account and
 endpoint unless interoperability has been verified. Records from a different
 endpoint are outside this production Skill's recovery scope.
 
+The current MCP workflow uses `prepare_call`, `start_call`, `open_call`,
+`get_call`, and `get_call_transcript`. Server clarification can use chat or real
+cards; card UI is optional. When the latest preparation is ready and execution
+is authorized, the Agent uses `start_call` without redundant confirmation.
+Planning and preview requests do not authorize execution. Cancellation requires
+supported card controls and is unavailable without them; missing UI does not
+permit legacy tools or an interface switch.
+
 The CLI compatibility entry is `skills/calle-cli`; keep its original CLI
 attribution, configuration and recovery behavior. CLI executable `calle` and
 ecosystem marketplace/plugin identities remain unchanged. The personal candidate

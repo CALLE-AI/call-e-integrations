@@ -42,7 +42,7 @@ MCP_CALL_MOCK_ACTIONS = {
     "local.preview", "local.report", "journal.read", "journal.write",
     "host.mock_wait",
     "host.inspect_existing_connection", "host.mock_discovery",
-    "mcp.prepare_call", "mcp.get_call", "mcp.open_call", "mcp.get_call_transcript",
+    "mcp.prepare_call", "mcp.start_call", "mcp.get_call", "mcp.open_call", "mcp.get_call_transcript",
 }
 API_CALL_MOCK_ACTIONS = {
     "local.preview", "local.report", "journal.read", "journal.write",

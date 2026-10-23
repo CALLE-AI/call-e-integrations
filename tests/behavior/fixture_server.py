@@ -189,7 +189,7 @@ class FixtureDispatcher:
             self.record("tool_result", tool_name=name, operation=action, result=result,
                         observed_state=state)
             return {"content": [{"type": "text", "text": result if isinstance(result, str) else json.dumps(result)}],
-                    "isError": False}
+                    "isError": isinstance(result, dict) and result.get("isError") is True}
         except (PermissionError, ValueError, NotImplementedError) as error:
             self.stopped = True
             self.record("tool_result", tool_name=name, operation=action,

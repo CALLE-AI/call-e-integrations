@@ -114,6 +114,10 @@ class LifecycleMock:
         self.http_count = 0
         self.total_http_count = 0
         self.preparation_count = 0
+        self.start_count = 0
+        self.call_create_count = 0
+        self.accepted_call = None
+        self.submitted_revision = None
         self.bound_source = None
         self.prepared_source = None
         self.deleted = False
@@ -238,6 +242,7 @@ class LifecycleMock:
         return _copy({**self.public_state(), "journal": _visible(self.journal), "trace": self.trace,
                       "provenance": self.provenance, "total_http_count": self.total_http_count,
                       "preparation_count": self.preparation_count, "configuration_count": self.configuration_count,
+                      "start_count": self.start_count, "call_create_count": self.call_create_count,
                       "oauth_start_count": self.oauth_start_count, "bound_source": self.bound_source,
                       "deleted": self.deleted, "download_count": self.download_count,
                       "install_count": self.install_count, "staging_verified": self.staging_verified,
@@ -326,7 +331,8 @@ class LifecycleMock:
             "update.mock_download_to_staging": "Stage only the fixed-commit same-Skill directory in synthetic memory. destination must be a new child of the provided staging_root. The host rejects unsafe archive entries before materialization.",
             "update.mock_inspect_staging": "Read the synthetic staged files as inert text and check confinement, completeness, name and version. Does not execute downloaded text.",
             "update.mock_install": "Use the synthetic native installer only for the approved version and already-verified immutable package; never reloads the current Agent.",
-            "mcp.prepare_call": "Synthetic current saved preparation using the exact loaded fixture schema. Emits a confirmation card and does not dial.",
+            "mcp.prepare_call": "Synthetic saved preparation or revision. Returns server-owned readiness and clarifications in text; the native card is optional. Never dials.",
+            "mcp.start_call": "Submit the ready preparation_id and current revision under existing execution authorization. The same preparation returns the same call, including after a lost response or native Dial race.",
             "mcp.get_call": "Read the same current Call resource using call.id, never its billing call_id or preparation reference.",
             "mcp.open_call": "Display the existing synthetic native card. Does not activate Dial.",
             "mcp.get_call_transcript": "Read only the existing synthetic Call's available transcript content.",
@@ -613,6 +619,56 @@ class LifecycleMock:
         raise NotImplementedError("No explicit synthetic host result for " + operation)
 
     def _mcp(self, action, args):
+        if action in {"mcp.prepare_call", "mcp.start_call"} and self.case.get("fixture_mcp_flow"):
+            if self.connection != "authenticated":
+                raise PermissionError("An authenticated existing MCP connection is required")
+            if action == "mcp.prepare_call":
+                if args.get("preparation_id"):
+                    if not self.preparation or args["preparation_id"] != self.preparation["preparation_id"]:
+                        raise PermissionError("Only the original preparation can be resumed")
+                    if self.accepted_call:
+                        self.call = _copy(self.accepted_call)
+                        return {"call": _copy(self.call)}
+                    if args.get("user_input"):
+                        if args.get("revision") != self.preparation["revision"]:
+                            return {"isError": True, "error": {"code": "idempotency_conflict", "status": 409}}
+                        self.preparation = _copy(self.case["fixture_revision_response"])
+                    return {"preparation": _copy(self.preparation)}
+                if self.preparation_count or self.setup.get("prior_write_sent"):
+                    raise PermissionError("Do not create another preparation for the original call")
+                if not args.get("task") or args.get("user_input"):
+                    raise ValueError("A new preparation requires the user task, not a revision input")
+                if args.get("phone") != self.setup["destination_number"]:
+                    raise PermissionError("Preparation differs from the user's confirmed number")
+                self.preparation_count += 1
+                self.preparation = _copy(self.case["fixture_tool_response"])
+                return {"preparation": _copy(self.preparation),
+                        "card_rendered": self.setup.get("native_card") == "available"}
+            if self.setup.get("execution_authorized") is not True:
+                raise PermissionError("A loaded start tool does not authorize execution")
+            if not self.preparation or args["preparation_id"] != self.preparation["preparation_id"]:
+                raise PermissionError("Start must retain the original preparation identity")
+            if self.accepted_call and args["revision"] != self.submitted_revision:
+                raise PermissionError("Recovery must retain the original start arguments")
+            if self.start_count >= 2:
+                raise PermissionError("The fixture permits at most one original start and one same-preparation retry")
+            self.start_count += 1
+            if not self.accepted_call:
+                if args["revision"] != self.preparation["revision"]:
+                    return {"isError": True, "error": {"code": "idempotency_conflict", "status": 409}}
+                if self.preparation["status"] != "ready":
+                    return {"isError": True, "error": {"code": "input_incomplete", "status": 422}}
+                self.accepted_call = _copy(self.case["fixture_start_response"]["call"])
+                self.submitted_revision = args["revision"]
+                self.call_create_count += 1
+                if self.case.get("fixture_native_dial_race"):
+                    self._supplement("native Dial event", {"preparation_id": self.preparation["preparation_id"],
+                                                            "call": self.accepted_call})
+                if self.case.get("fixture_start_response_lost"):
+                    return {"isError": True, "error": {"code": "provider_unavailable", "status": 503},
+                            "submission_outcome": "unknown"}
+            self.call = _copy(self.accepted_call)
+            return {"call": _copy(self.call)}
         if action == "mcp.prepare_call":
             if self.case_id != "mcp-current-01" or self.turn_index != 0 or self.preparation_count:
                 raise PermissionError("Only the first approved preparation is authorized")
@@ -634,6 +690,8 @@ class LifecycleMock:
             if action == "mcp.get_call_transcript":
                 return {"call_id": self.call["id"], "transcript": [], "available": False,
                         "provenance": "Explicit synthetic absent transcript; no dialogue invented"}
+            if self.case.get("fixture_mcp_flow"):
+                return _copy(self.case["fixture_call_response"])
             if self.case_id == "mcp-current-01":
                 return {"call": _copy(self.call), "provenance": "Synthetic read repeats the actual preceding native-card Call observation"}
             if self.case_id == "mcp-current-04":

@@ -8,9 +8,9 @@ Use the [migration verification record](../docs/verification/callev2-migration-2
 for renamed-input checks and the [migration gates](../docs/calle-skill-migration-plan.md)
 for remaining host and delivery acceptance.
 
-The formal inventory contains **116 Agent scenarios**: 96 repository cases (30 original API,
+The formal inventory contains **122 Agent scenarios**: 102 repository cases (30 original API,
 27 original MCP, 14 routing, 1 unified update source, 1 MCP preview,
-9 host management boundary cases, 6 current MCP tool-selection cases, and
+9 host management boundary cases, 12 current MCP tool-selection and execution cases, and
 3 public endpoint cases, 3 first-use API onboarding cases, and 2 automatic
 monitoring groups),
 12 extra cases, and 8 round-one cases. `not_run_results(root)` generates the
@@ -81,7 +81,7 @@ checkpoint; call references, counts and deadlines are preserved.
 - First-use call scenarios use `mock_action_scope: api_call` and `selected_transport: api` with explicit actions. Their only create label is `http.POST.create_authorized_call_once`, bound to one mock `POST /v2/calls` for the initially authorized Hello call. Authentication, routing, MCP, preview and update fixtures gain no such permission. Before the user reports saving, the adapter permits only local preview, reporting or private request preparation, any explicitly allowed Dashboard open and empty private storage preparation; it sends no business HTTP request. After saving, it must enforce the same-source secret binding, successful authorized Goals GET, original private request/idempotency persistence and exactly one create in that order. The mock action ceiling never replaces these per-turn requirements; no real request or call occurs.
 - `host.mock_mcp_command.*` actions require an explicit `mock_action_scope: authentication`, `selected_transport: mcp`, and a `host_command_fixture` declaring the same current and command host, an installed official manager, unavailable native management, permitted policy, and no user prohibition on CLI use. Only `help`, `status`, `configure`, `oauth_start`, `oauth_status`, `refresh`, `logout`, and `remove` are valid suffixes. These are in-memory simulation labels, not executable commands. The action list grants no implied operation or real subprocess permission; API, routing, and update scopes reject them. The runtime adapter must still enforce per-turn consent, native preference, exact target, supported command syntax, OAuth state, and explicit authorization for logout/removal. Fixture declarations are synthetic evidence, not proof of a real host's capabilities.
 - Routing scenarios use `mock_action_scope: routing` and `selected_transport: undecided` and must explicitly list `mock_allowed_actions`. They can test MCP preference, an explicitly selected interface, and capability fallback before execution. Their action ceiling includes only local reporting, journal reads, mock discovery/refresh, selected secret reads, and read-only business requests. They gain no POST, MCP write, OAuth, configuration, update, or shell permissions. The mock dispatcher must still check authorization, account, and environment for the current turn. Ordinary authentication and update scenarios cannot use this scope to expand their permissions. The test policy `allow_unscoped_cross_interface_fallback: false` restricts switches without an explicit scenario scope; it does not prohibit the controlled mock capability routing described here.
-- Current call scenarios use `mock_action_scope: mcp_call` and `selected_transport: mcp` with an explicit action ceiling. Their only business action labels are `mcp.prepare_call`, `mcp.get_call`, `mcp.open_call`, and `mcp.get_call_transcript`; these bind to the corresponding currently discovered synthetic operation, including its host namespace. They confer no HTTP, host management, update, legacy operation, or real command permission. The adapter must reject a blocked legacy alias before dispatch, check per-turn write authorization and Call resource identifiers, and record a user's native Dial action as a separate simulated event. A preparation is a saved write; permitting it in one case never permits it in preview or authentication scopes.
+- Current call scenarios use `mock_action_scope: mcp_call` and `selected_transport: mcp` with an explicit action ceiling. Their business action labels are `mcp.prepare_call`, `mcp.start_call`, `mcp.get_call`, `mcp.open_call`, and `mcp.get_call_transcript`; these bind to the corresponding discovered synthetic operation, including its host namespace. They confer no HTTP, host management, update, legacy operation, or real command permission. The adapter checks per-turn authorization independently of loaded capability, rejects legacy aliases, validates current preparation revisions and Call identifiers, and records optional native Dial as a separate simulated user event sharing the original preparation. Only execution-authorized ready preparations admit start; previews, authentication checks and prepare-only tasks never gain dialing permission. One original start and at most one same-preparation retry are permitted in the synthetic execution fixtures.
 - `host.mock_wait` is permitted only when explicitly listed in an `api_call` or `mcp_call` case. It advances an in-memory virtual clock, records interruption checks and progress, and permits no real sleep, scheduling, network, subprocess or business write. Authentication, routing and update scopes reject it. Its presence does not broaden the existing create or preparation ceilings.
 - Update scenarios use `mock_action_scope: skill_update` and must explicitly list `mock_allowed_actions`. Only local reporting and `update.mock_*` actions for anonymous checks, pinned-commit resolution, staging, inspection, installation, and loaded-version reads are allowed. They gain no business HTTP/MCP, connection management, OAuth, secret, journal-write, or shell permissions. Including installation in the action ceiling does not replace user authorization for the current turn. Missing actions, unknown categories, or out-of-scope actions cause preparation to fail.
 - Each entry in `variants` runs in an independent fresh session and staging state while retaining the scenario's global expectations. Its `expected` values generate `<case_id>:v<n>:e<m>` rubric items. Every variant needs evidence before the scenario can be considered complete; checking one malicious input does not establish that the entire group passed.
@@ -160,9 +160,13 @@ Current-tool fixtures deliberately expose both current and prohibited legacy
 operation names. Their minimal schemas are synthetic and do not establish a live
 server contract. The dispatcher must preserve the underlying operation identity
 when names have host prefixes; legacy tools cannot be reached through a generic
-read-only fixture alias, proxy, command, or HTTP wrapper. Native card events do
-not grant the Agent a dialing tool. After missing-card or uncertain-preparation
-results, preserve the saved reference and uncertainty without replaying a write.
+read-only fixture alias, proxy, command, or HTTP wrapper. `start_call` executes an
+authorized ready preparation on UI and headless hosts without another confirmation.
+An available card remains optional. User-reserved manual Dial, prepare-only and
+preview scopes still stop before Agent execution. Missing cards alone do not block
+start; missing start capability and missing cards do. After an uncertain accepted
+start, preserve the original preparation and arguments; retry that same start at
+most once, never create a replacement preparation or change interface.
 `mcp-current-04` supplies distinct Call, billing, preparation, and legacy run
 identifiers so argument traces can establish which identifier was used.
 
@@ -383,8 +387,14 @@ scenario reports.
 | Only legacy capabilities after discovery | mcp-current-02: consume all pages, exclude bare and namespaced legacy operations, and honor explicit MCP selection. route-14: ordinary API fallback remains eligible only under the main routing conditions before related writes. |
 | Read-only authentication and legacy recovery | mcp-current-03: no get_call_run invocation, preparation probe, or substitution of a legacy run_id for a Call resource id. |
 | Current resource identifiers | mcp-current-04: get_call, open_call, and get_call_transcript use the actual Call resource id, excluding billing, preparation, and run identifiers. |
-| Missing card or uncertain preparation | mcp-current-05: no replay, legacy execution, or automatic API redial; preserve uncertainty and known preparation references. |
+| Missing execution capability or uncertain preparation | mcp-current-05: start_call and native card Dial are absent; no replay, legacy execution or automatic API redial. Preserve uncertainty and known references. |
 | Preparation is a saved write | mcp-current-06: local preview only, with zero prepare_call, business read, authentication, or update attempts. |
+| UI and headless execution | mcp-current-07 variants: ready authorization leads directly to start_call and a Call read with no extra confirmation or required card click. |
+| Chat clarification and current revision | mcp-current-08: needs_input stops execution; the user answer revises the same preparation and start uses revision 2. |
+| Uncertain accepted start | mcp-current-09: one original start and one identical retry recover one Call; no replacement preparation or interface switch. |
+| Native Dial race | mcp-current-10: simulated user Dial and start_call share one preparation and one Call. |
+| Readiness and authorization limits | mcp-current-11 variants: blocked stops with the reason; prepare-only stops at ready even with start_call loaded. |
+| No UI cancellation | mcp-current-12: no cancel tool or card control is available; report the limit without claiming cancellation or switching interfaces. |
 
 ## Critical-Field Reporting for Permissive Responses
 
