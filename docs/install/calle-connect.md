@@ -1,7 +1,7 @@
 # Earlier calle-connect Installation Guide
 
 The standalone MCP/API implementation is now staged as
-[`callev2` 2.0.5 for personal testing](callev2.md). Follow that guide for current
+[`callev2` 2.1.0 for personal testing](callev2.md). Follow that guide for current
 source installation, capability requirements, packaging and update-origin status.
 The eventual official `calle` takeover remains subject to the
 [migration gates](../calle-skill-migration-plan.md).

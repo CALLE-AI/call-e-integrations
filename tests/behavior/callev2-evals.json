@@ -1,6 +1,6 @@
 {
   "skill": "callev2",
-  "version": "2.0.5",
+  "version": "2.1.0",
   "evaluation_status": "not_executed_on_an_agent",
   "notice": "Synthetic offline Agent behavior fixtures only. Original API/MCP IDs are retained with explicitly selected interfaces; routing and updates use separate mock scopes. No Agent execution, real credentials or live service results are represented.",
   "cases": [
@@ -5084,7 +5084,7 @@
     {
       "id": "api-polling-01",
       "skill": "callev2",
-      "version": "2.0.5",
+      "version": "2.1.0",
       "selected_transport": "api",
       "mock_action_scope": "api_call",
       "execution_status": "NOT_RUN",
@@ -6561,7 +6561,7 @@
     {
       "id": "mcp-polling-01",
       "skill": "callev2",
-      "version": "2.0.5",
+      "version": "2.1.0",
       "selected_transport": "mcp",
       "mock_action_scope": "mcp_call",
       "execution_status": "NOT_RUN",
@@ -8761,8 +8761,8 @@
         "Use only the discovered current operations and the original preparation_id and latest revision; exclude all three legacy tools despite their visibility.",
         "Create at most one preparation and one underlying Call. start_call acceptance is not evidence of ringing, answering or a successful conversation. Read the actual Call resource ID afterward.",
         "When execution is authorized and the preparation is ready, invoke start_call without another chat confirmation or a required native-card click.",
-        "The first start response is a synthetic 503 after acceptance. Preserve uncertainty and retry start_call at most once using exactly the original preparation_id and revision; do not rerun new preparation or switch interfaces.",
-        "Recover the existing Call, then read its status. The synthetic service records exactly one underlying Call despite two start attempts."
+        "The first start response is a synthetic 503 after acceptance. Preserve uncertainty and first reopen the original preparation using its preparation_id; do not create a replacement preparation or switch interfaces.",
+        "Reopening returns the existing accepted Call. Read that Call's status without another start attempt; the service records one preparation, one start attempt and one underlying Call. Retry start_call at most once with its original arguments only if recovery instead returns the same ready revision without an existing Call and execution remains authorized."
       ],
       "fixture_start_response_lost": true
     },

@@ -7,9 +7,9 @@ clarifications can be answered in chat, while explicit prepare-only and
 card-Dial requests retain their execution boundaries. Recovery reuses the
 original preparation and Call; legacy tools remain excluded.
 
-Minor release recommended for the standalone Skill because this adds a supported
-execution capability. Publish under a new standalone version (suggested `2.1.0`)
-after aligning source/evaluation versions and completing acceptance; do not
-replace an already published version's contents. This record does not bump
-versions, publish, replace installed Skills, or perform the deferred `calle`
-cutover. The CLI and ecosystem plugin packages are unaffected.
+Standalone minor release `2.1.0` adds this execution capability and preserves
+the native-public-reader update fixes from `2.0.5`. Source/evaluation versions
+and current version guidance are aligned for the user-authorized skills.sh
+source publication. Do not replace an already published version's contents.
+The deferred `calle` cutover and installed copies are outside this release.
+The CLI and ecosystem plugin packages are unaffected.

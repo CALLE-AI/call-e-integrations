@@ -93,6 +93,13 @@ class McpStartFlowTests(unittest.TestCase):
         self.assertIsNone(mock.public_state()["saved_call"])
         with self.assertRaises(PermissionError):
             self.prepare(mock)
+        reopened = LifecycleMock.from_state(mock.case, mock.export_state())
+        existing = reopened.dispatch("mcp.prepare_call", {
+            "preparation_id": preparation["preparation_id"]})
+        self.assertEqual(existing["call"]["id"], "call_fixture9")
+        read = reopened.dispatch("mcp.get_call", {"call_id": existing["call"]["id"]})
+        self.assertEqual(read["call"]["result_status"], "not_applicable")
+        self.assertEqual((reopened.preparation_count, reopened.start_count, reopened.call_create_count), (1, 1, 1))
         restored = LifecycleMock.from_state(mock.case, mock.export_state())
         with self.assertRaises(PermissionError):
             self.start(restored, {**preparation, "revision": 2})

@@ -50,8 +50,10 @@ placeholders. A `start_call` preview requires its preparation ID and revision;
 it is not a direct task-to-dial tool. No preview invokes business tools, including
 preparation or reads. Do not substitute an excluded or unrelated dialing tool.
 
-Cards are optional when `start_call` is available. Before a new saved preparation,
-check the discovered execution capability. If complete discovery confirms that
+Cards are optional when `start_call` is available. Before saving a preparation
+for a new request that includes execution, check the discovered execution
+capability. A preparation-only request needs the discovered `prepare_call`, not
+an execution tool or card. If complete discovery confirms that
 `start_call` is missing but the host can present the real card and its Dial
 control, the card can still execute the preparation. If neither route is usable,
 report the gap before a business write; the main Skill's initial interface

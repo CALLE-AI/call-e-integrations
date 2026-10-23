@@ -1,6 +1,6 @@
 # Offline Agent Evaluation Adapters and Grading
 
-Current candidate identity is `callev2` with metadata/evaluation version `2.0.5`.
+Current candidate identity is `callev2` with metadata/evaluation version `2.1.0`.
 Scenario IDs remain stable across the rename. Earlier `calle-connect` records
 retain their original hashes and names; they do not prove that the renamed
 candidate, selected update origin or host installation has been accepted.
@@ -391,7 +391,7 @@ scenario reports.
 | Preparation is a saved write | mcp-current-06: local preview only, with zero prepare_call, business read, authentication, or update attempts. |
 | UI and headless execution | mcp-current-07 variants: ready authorization leads directly to start_call and a Call read with no extra confirmation or required card click. |
 | Chat clarification and current revision | mcp-current-08: needs_input stops execution; the user answer revises the same preparation and start uses revision 2. |
-| Uncertain accepted start | mcp-current-09: one original start and one identical retry recover one Call; no replacement preparation or interface switch. |
+| Uncertain accepted start | mcp-current-09: reopen the original preparation and read its existing Call with no second start; a same-argument retry is allowed only when recovery instead returns the unchanged ready preparation without a Call. No replacement preparation or interface switch. |
 | Native Dial race | mcp-current-10: simulated user Dial and start_call share one preparation and one Call. |
 | Readiness and authorization limits | mcp-current-11 variants: blocked stops with the reason; prepare-only stops at ready even with start_call loaded. |
 | No UI cancellation | mcp-current-12: no cancel tool or card control is available; report the limit without claiming cancellation or switching interfaces. |

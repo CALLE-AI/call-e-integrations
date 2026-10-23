@@ -99,8 +99,10 @@ Key acceptance criteria:
 - Use host OAuth when renewed login is needed; do not request tokens in chat.
   Tool discovery, successful reading and execution authorization are distinct.
 - If `start_call` is confirmed missing, use a supported real card-Dial route
-  when available. If neither route exists, report the gap before preparation;
-  retain the main Skill's initial API selection and no-legacy restrictions.
+  when available. For a request that includes execution, if neither route exists,
+  report the gap before preparation; retain the main Skill's initial API
+  selection and no-legacy restrictions. Preparation-only requests can still use
+  an available `prepare_call` and must stop without execution.
 
 ## F. First connection and read-only integration check
 

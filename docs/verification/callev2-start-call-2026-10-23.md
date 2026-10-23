@@ -78,3 +78,38 @@ cancellation still requires usable supported card controls.
   release boundary without an npm package bump.
 - Publication and installation were not performed. Existing `calle`,
   `calle-cli` and installed `callev2` copies remain on their current paths.
+
+
+## 2.1.0 source-release preparation
+
+The user authorized publishing the current `callev2` to its existing skills.sh
+source on 2026-10-23. The candidate was rebased onto public `main`
+`08851adf64f2d59b10b920320503de0d61b80b03` (`2.0.5`), retaining the native public
+reader and update-acceptance fixes. Current Skill/evaluation metadata and version
+guidance now use `2.1.0`. Earlier input hashes and 256-test results above retain
+their original working-copy scope.
+
+After integration, 265 offline tests pass. `pnpm check`, `pnpm test` with the
+same temporary real-npm entry point described above, `pnpm pack:dry-run`, and
+both standalone Skill packaging commands pass. The `callev2` ZIP contains 19
+source-identical files with valid CRCs. No CLI, plugin or `calle-cli` source
+changes are included.
+
+Independent integration review identified two guidance/fixture inconsistencies:
+execution-capability preflight must not block preparation-only requests, and
+an accepted-response-loss scenario must reopen the original preparation and
+read its existing Call instead of requiring another start attempt. Both were
+corrected; the complete 265-test offline suite passed again. The idempotent
+retry remains bounded and uses only the original preparation and arguments.
+
+| Release-candidate input | SHA-256 |
+| --- | --- |
+| `skills/callev2/SKILL.md` | `c8d10fa3ab7ba1f30d2051e30d4d1400ecb2ab2a834e4bb6590dc5c0096138b1` |
+| `skills/callev2/references/mcp.md` | `4094229e225f4413418d15be0563ce8e28110a76847bf14354dbd3a5d0b44e87` |
+| `tests/behavior/callev2-evals.json` | `f3c9d3a2f0363a564fcb6e22a218f80b457600ac0e6593fd7129fd9465d9ac3d` |
+| `dist/skills/callev2.zip` | `0cccedd73e685da9a2f71a81861cd6e7fb6ed99ab16a227b94fb3acc813fda28` |
+
+Publication is complete only after public `main` exposes this candidate.
+Source delivery, skills.sh page freshness, local installation, host activation
+and live-call acceptance remain separate checks. This release preparation does
+not install a local Skill, place a call, or perform the deferred `calle` cutover.
