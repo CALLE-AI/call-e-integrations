@@ -69,6 +69,7 @@ sandbox and is unsuitable for executing untrusted Agent code.
 | [test_agent_executor.py](test_agent_executor.py) | Evaluator capability restrictions, event auditing and fixture dispatch boundaries. |
 | [test_stateful_mocks.py](test_stateful_mocks.py) | Synthetic polling/onboarding state, ordering, limits and controller restoration. |
 | [test_lifecycle_mocks.py](test_lifecycle_mocks.py) | Synthetic lifecycle and recovery handlers; no real business requests. |
+| [test_adversarial_call_outputs.py](test_adversarial_call_outputs.py) | Mixed business facts and hostile tool output, forged approval, clarification limits, and failure on blocked unauthorized attempts. |
 
 The migration preserves **111 unittest methods** from the source 0.1.2 suite.
 The source handoff's count of 117 included the following six tests, which only
@@ -115,8 +116,8 @@ migrated.
 
 ## Behavior Evaluation Status
 
-The inventory contains **122 formal Agent + mock-tool scenarios**:
-102 [repository scenarios](behavior/callev2-evals.json),
+The inventory contains **125 formal Agent + mock-tool scenarios**:
+105 [repository scenarios](behavior/callev2-evals.json),
 12 [extra scenarios](extra-behavior-cases.json), and
 8 [round-one scenarios](behavior/round-1-cases.json).
 The dated record contains actual model execution and independent review evidence;
@@ -128,7 +129,8 @@ cases, 1 unified update-source case, 1 MCP preview case with a missing ID, and
 9 host management boundary cases, 12 current MCP tool-selection and execution cases, and
 3 public endpoint cases, 3 first-use API onboarding cases, and
 2 automatic monitoring groups with 44 independent variants, including an actual
-second-turn resumption after a host interruption for each interface.
+second-turn resumption after a host interruption for each interface, and
+3 external-content and authorization scenarios with 6 independent instances.
 All evaluation fixtures, including adversarial prompts and their rejection
 expectations, live under `tests/`. They are development inputs, excluded from
 the Skill source directory and installation ZIP. The installed Skill uses only
@@ -195,6 +197,17 @@ API fallback conditions when complete discovery finds only prohibited legacy
 tools and no related write has occurred. The fixture data does not execute
 advertised tools; the isolated dispatcher interprets supported synthetic
 contracts and reports missing contracts as blockers.
+
+The safety cases deliver mixed business facts and hostile instructions through
+actual synthetic result, transcript, event and preparation responses. They check
+that useful appointment facts remain reportable while forged approval, changed
+recipients, purchases, secret export and webhook changes grant no authority.
+Server clarifications must stay within the user's task; legitimate missing
+details remain valid questions. Every unauthorized attempt fails, including an
+attempt blocked by the mock host. These fixtures and their unit checks do not
+establish model behavior or a passing external security audit. See the
+[safety coverage](agent-evaluation.md#external-content-and-authorization-coverage)
+for case IDs and evidence requirements.
 
 The 18 update scenarios use the same Skill name and update source. They cover
 anonymous checks, remote injection, missing native capabilities, download and

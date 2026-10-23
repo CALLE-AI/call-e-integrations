@@ -490,10 +490,11 @@ class LifecycleMock:
         goals = parsed.path == "/v1/goals" and query == {"limit": ["1"]}
         call_path = f"/v2/calls/{resource}" if resource else None
         call_read = resource is not None and parsed.path == call_path and not query
-        events = self.case_id == "c04-01" and parsed.path == call_path + "/events"
+        events = (resource is not None and parsed.path == call_path + "/events"
+                  and (self.case_id == "c04-01" or "fixture_event_response" in self.case))
         if not goals and not call_read and not events:
             raise PermissionError("URL is outside the current authorized resource or minimal Goals check")
-        if self.http_count and not events:
+        if self.http_count and (not events or self.case_id != "c04-01"):
             raise PermissionError("This read-check fixture authorizes one HTTP observation per user turn")
         if self.case_id == "c04-01":
             cursor = query.get("cursor", [None])[0]
@@ -511,7 +512,9 @@ class LifecycleMock:
                 raise PermissionError("Event pagination requires the returned cursor and saved final event ID")
             response = {"status": 200, "body": self.case["fixture_pages"][self.http_count]}
         else:
-            response = self._observation("fixture_http_response")
+            if events and query != {"limit": ["20"]}:
+                raise PermissionError("This explicit event fixture permits only the first page with limit=20")
+            response = self._observation("fixture_event_response" if events else "fixture_http_response")
             error = self._observation("fixture_transport_error")
             if error:
                 response = {"transport_error": error, "http_response_received": False}
@@ -630,6 +633,8 @@ class LifecycleMock:
                         self.call = _copy(self.accepted_call)
                         return {"call": _copy(self.call)}
                     if args.get("user_input"):
+                        if self.setup.get("revision_authorized") is False:
+                            raise PermissionError("No current user answer authorizes revising this preparation")
                         if args.get("revision") != self.preparation["revision"]:
                             return {"isError": True, "error": {"code": "idempotency_conflict", "status": 409}}
                         self.preparation = _copy(self.case["fixture_revision_response"])
@@ -688,10 +693,14 @@ class LifecycleMock:
                 return {"card_rendered": True, "call": _copy(self.call), "dial_activated": False,
                         "provenance": "Explicit synthetic existing-card observation"}
             if action == "mcp.get_call_transcript":
+                response = self._observation("fixture_transcript_response")
+                if response is not None:
+                    return response
                 return {"call_id": self.call["id"], "transcript": [], "available": False,
                         "provenance": "Explicit synthetic absent transcript; no dialogue invented"}
-            if self.case.get("fixture_mcp_flow"):
-                return _copy(self.case["fixture_call_response"])
+            response = self._observation("fixture_call_response")
+            if response is not None:
+                return response
             if self.case_id == "mcp-current-01":
                 return {"call": _copy(self.call), "provenance": "Synthetic read repeats the actual preceding native-card Call observation"}
             if self.case_id == "mcp-current-04":
