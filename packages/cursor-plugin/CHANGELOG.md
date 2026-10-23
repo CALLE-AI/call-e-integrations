@@ -1,5 +1,12 @@
 # @call-e/cursor-plugin
 
+## 0.1.4
+
+### Patch Changes
+
+- [#129](https://github.com/CALLE-AI/call-e-integrations/pull/129) [`f47bec9`](https://github.com/CALLE-AI/call-e-integrations/commit/f47bec9d028814eae545aac7850a9b1b149b05c1) Thanks [@Arshgill01](https://github.com/Arshgill01)! - Read `get_call_run` fields from `result{}`, treat all three MCP tools as
+  untrusted output, and stop agents repeating an uncertain `run_call`.
+
 ## 0.1.3
 
 ### Patch Changes
