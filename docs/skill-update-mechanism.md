@@ -1,7 +1,7 @@
 # Standalone Skill Update Mechanism Design Record
 
 Design first recorded on 2026-10-15. Current guidance applies to the staged
-`callev2` entry, metadata/evaluation version `2.1.0`; the dated third-party audit
+`callev2` entry, metadata/evaluation version `2.1.1`; the dated third-party audit
 examples below remain historical snapshots. The selected repository is
 `CALLE-AI/call-e-integrations`, and publication is a separate user action.
 
@@ -192,7 +192,7 @@ requires review.
 ## Publication and validation limits
 
 The earlier MCP/API merge was tested as `calle-connect` version `0.2.0`.
-The current staging identity is `callev2` version `2.1.0`, with evaluation inputs
+The current staging identity is `callev2` version `2.1.1`, with evaluation inputs
 at `tests/behavior/callev2-evals.json`. Keep historical acceptance tied to its
 original names and hashes; new identity, source binding and host activation need
 candidate-specific evidence under the [migration gates](calle-skill-migration-plan.md).

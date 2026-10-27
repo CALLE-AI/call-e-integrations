@@ -162,7 +162,7 @@ intentionally exposes multiple CALL-E marketplaces in the same client UI.
 The [staged migration plan](calle-skill-migration-plan.md) records the authorized
 current layout: legacy `calle` becomes `calle-cli`, while the MCP/API candidate
 uses `callev2` with display name `callev2`, invocation `$callev2`, and metadata
-version `2.1.0` for personal testing. The later official `calle` takeover is not
+version `2.1.1` for personal testing. The later official `calle` takeover is not
 implemented by this staging step; final artifact and delivery gates still apply.
 
 `skills/callev2/` is distributed as a complete source directory and local
@@ -180,7 +180,7 @@ do not establish publication, indexing, host activation, or renamed-artifact acc
 Connect verification records remain tied to their original hashes.
 
 This customer Skill supports production only. Its fixed MCP endpoint is
-`https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth`, and its fixed API base URL
+`https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth`, and its fixed API base URL
 is `https://api.heycall-e.com`. Setup uses those endpoints without an environment
 selection. Resolve any different saved endpoint before sending credentials or
 requests; changing a URL does not authorize reusing credentials from that URL.

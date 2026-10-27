@@ -26,7 +26,7 @@ commands.
   install, migration and local ZIP guidance lives in `docs/install/callev2.md`.
   Keep `docs/install/calle-connect.md` and `docs/install/dual-skills.md` as
   pointers for earlier links. The current personal testing identity is `callev2`
-  with metadata/evaluation version `2.1.0`; the future official `calle` takeover
+  with metadata/evaluation version `2.1.1`; the future official `calle` takeover
   remains a separate gate in `docs/calle-skill-migration-plan.md`. The Skill's
   metadata version is independent of the CLI-based skills.sh package attribution.
   Shared routing and business workflow live in `SKILL.md`; MCP and API contracts
@@ -36,7 +36,7 @@ commands.
   explicit interface choice, incomplete discovery, authentication failures and
   unknown write outcomes synchronized with evaluation scenarios.
   This customer Skill supports production only, with fixed MCP endpoint
-  `https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth` and API base URL
+  `https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth` and API base URL
   `https://api.heycall-e.com`. Keep setup, templates, manual checks, and repository
   scenarios aligned: no environment-selection prompts or alternative service
   endpoints. Existing configuration mismatches require resolution before sending

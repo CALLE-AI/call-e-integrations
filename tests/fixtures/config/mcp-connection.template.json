@@ -1,6 +1,6 @@
 {
   "notice": "Connection intent only; NOT an importable host configuration or verified service metadata.",
-  "server_url": "https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth",
+  "server_url": "https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth",
   "authentication_expected": "oauth",
   "authentication_source": "user-provided",
   "transport": null,

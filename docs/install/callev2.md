@@ -5,13 +5,13 @@ CALL-E calling workflows. It prefers host-managed OAuth MCP. Before business
 writes, it can select direct HTTPS with an API Key when the host explicitly lacks
 MCP support, the target MCP connection is confirmed not configured, or complete
 discovery confirms the required capability is missing. Authentication failure or
-cancellation does not trigger fallback. The source metadata version is `2.1.0`.
+cancellation does not trigger fallback. The source metadata version is `2.1.1`.
 The directory, Skill name and display name are `callev2`; invoke it as `$callev2`. This is the
 user-authorized personal testing identity; the later official `calle` takeover
 has not been completed.
 
 This customer Skill uses production only: the fixed MCP endpoint is
-`https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth`, and the fixed API base URL
+`https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth`, and the fixed API base URL
 is `https://api.heycall-e.com`. Setup does not ask the user to select an
 environment or offer alternative endpoints. An existing configuration pointing
 elsewhere must be resolved before credentials or business requests are sent;
@@ -115,7 +115,7 @@ their host's supported interface. Do not invent a hosted ZIP URL.
 | A write was submitted but its outcome is unknown | Recover through the original interface; do not create the same call through API fallback. |
 
 For MCP, follow [connection lifecycle](../../skills/callev2/references/connection.md).
-Its endpoint is `https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth`. Let the
+Its endpoint is `https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth`. Let the
 current host manage OAuth and use its actual discovered tools and schemas. Codex
 uses its own MCP management facilities; Claude Code uses its own. Check the
 installed host's capabilities and syntax instead of assuming a common command

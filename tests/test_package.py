@@ -21,7 +21,7 @@ except ImportError:  # unittest discovery with tests as the start directory
     from diagnostics import ROOT, collect_observations, expand_local, load_contract, request_validator, resolve_pointer, synthetic_request
 
 SKILLS = ("callev2",)
-MCP_URL = "https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth"
+MCP_URL = "https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth"
 BASE_URLS = {"https://api.heycall-e.com"}
 
 

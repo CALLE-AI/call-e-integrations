@@ -4,7 +4,7 @@ Initially compiled on 2026-10-13. Authentication sources reviewed on 2026-10-14.
 
 ## Evidence for this CALL-E MCP
 
-The user supplied `https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth` and specified OAuth.
+The user initially supplied `https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth` and specified OAuth. The earlier observations below remain scoped to that endpoint.
 
 During initial compilation, ordinary webpage reading did not obtain content, and direct network access from that runtime also failed. The package does not embed an authenticated tool snapshot. Historical host tests do not establish the current connection, identity, schema, or permissions. This instruction revision makes no new CALL-E authentication or account requests; its documentation and offline checks do not establish that the server is offline or that OAuth is valid or expired.
 
@@ -54,6 +54,17 @@ but this Skill update does not execute those service tests or establish deployed
 execution, current OAuth, account permissions, card rendering or a successful
 live call. Other hosts must discover their own schemas and tool approval controls.
 No local service checkout is needed to install or use this Skill.
+
+### Production endpoint selected on 2026-10-27
+
+The user selected `https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth`
+as this Skill's fixed production MCP target. Local service source routes both
+OAuth entry points through the same gateway and exposes the same five Agentic
+tools and card resources. This source inspection does not verify deployed
+behavior, current OAuth, account permissions, or host rendering. Discover the
+tools through the selected host connection; existing connections and saved call
+references retain their original endpoint until explicitly resolved under the
+[connection guidance](connection.md).
 
 ## General format and protocol sources
 

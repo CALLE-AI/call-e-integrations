@@ -5,10 +5,10 @@ description: >-
 compatibility: >-
   MCP requires host-managed remote MCP, OAuth, and real tool discovery; cards are optional when start_call is exposed. Prefer native connection management; an existing official host MCP command may manage the connection lifecycle. API requires HTTPS tools or a trusted runtime with secure credential injection. Updates require anonymous public reads. Business calls and Skill updates do not use a CLI.
 metadata:
-  version: "2.1.0"
+  version: "2.1.1"
   update-source: "https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/skills/callev2/SKILL.md"
   source: "https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/callev2"
-  verified-on: "2026-10-23"
+  verified-on: "2026-10-27"
   verification-scope: "host-tool-metadata-local-source-and-offline-only; no-account-authentication"
   interface: "mcp-preferred-api-key-fallback"
   tool-schema-status: "runtime-discovery-required"
@@ -18,7 +18,7 @@ metadata:
 
 ## Execution boundaries
 
-This customer-facing Skill uses production services only: MCP at `https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth` and API at `https://api.heycall-e.com`. Use these fixed targets without asking the user to select an environment. Validate existing connection/configuration metadata against the selected target; if it points elsewhere, stop and explain the configuration mismatch. Do not send credentials there, silently rebind them, or redirect an existing call to production.
+This customer-facing Skill uses production services only: MCP at `https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth` and API at `https://api.heycall-e.com`. Use these fixed targets without asking the user to select an environment. Validate existing connection/configuration metadata against the selected target; if it points elsewhere, stop and explain the configuration mismatch. Do not send credentials there, silently rebind them, or redirect an existing call to production.
 
 Business operations use only MCP tools actually exposed by the host or direct HTTPS through a trusted tool/runtime with secure credential injection. **Do not use a business CLI, business SDK, shell command, subprocess, or terminal MCP proxy to make business requests.** Do not install clients, dependencies, or helper proxies.
 

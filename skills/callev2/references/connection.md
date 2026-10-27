@@ -4,7 +4,7 @@
 
 | Item | Value or status |
 | --- | --- |
-| MCP URL | https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth |
+| MCP URL | https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth |
 | Authentication | OAuth specified by the user; initiated and managed by the host. |
 | Business tool inventory / namespace | Discover after connection and apply the [MCP tool policy](mcp.md#current-call-tools-and-legacy-exclusion); host prefixes may vary. |
 | OAuth issuer / scopes / client registration | Unverified; let the host discover them rather than prepopulating values. |

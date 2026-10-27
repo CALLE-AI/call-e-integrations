@@ -168,7 +168,7 @@ class BehaviorPreparationTests(unittest.TestCase):
             fixture = case["fixture"]
             source = fixture["source_case"]
             self.assertEqual(source["execution_status"], "NOT_RUN")
-            self.assertEqual(source["version"], "2.1.0")
+            self.assertEqual(source["version"], "2.1.1")
             self.assertEqual(set(fixture["allowed_actions"]),
                              {"local.report", "journal.read", "journal.write", "host.mock_wait",
                               "http.GET" if transport == "api" else "mcp.get_call"})
@@ -300,7 +300,7 @@ class BehaviorPreparationTests(unittest.TestCase):
         self.assertEqual(mismatch["allowed_actions"], ["local.report", "journal.read"])
         connected = cases["mcp-production-01"]["fixture"]
         self.assertEqual(connected["source_case"]["setup"]["server_url"],
-                         "https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth")
+                         "https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth")
         self.assertEqual(connected["allowed_actions"],
                          ["local.report", "host.inspect_existing_connection", "host.mock_discovery"])
 

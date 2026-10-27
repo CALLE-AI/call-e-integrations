@@ -133,7 +133,7 @@ remains subject to the [migration gates](docs/calle-skill-migration-plan.md).
 ### MCP
 
 CALL-E supports Streamable HTTP MCP with OAuth. The standalone `callev2` workflow
-uses `https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth` and the current tools
+uses `https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth` and the current tools
 `prepare_call`, `start_call`, `open_call`, `get_call`, and `get_call_transcript`.
 Server clarification works through chat or optional cards. Once the latest
 preparation is ready and the user has authorized execution, the Agent uses
@@ -500,7 +500,7 @@ This is a multi-ecosystem integration monorepo with packaged plugins and standal
 | `packages/openclaw-cli-skill` | OpenClaw CALL-E skill source. |
 | `packages/skills-sh-skill` | skills.sh compatible CALL-E skill package. |
 | `skills/calle-cli/` | Portable CLI compatibility Skill; official installation uses `--skill calle-cli`. |
-| `skills/callev2/` | Personal testing candidate at version 2.1.0; standalone Skill that prefers host-managed OAuth MCP, with direct HTTPS/API Key fallback governed by the [interface selection rules](docs/install/callev2.md#choose-the-interface). |
+| `skills/callev2/` | Personal testing candidate at version 2.1.1; standalone Skill that prefers host-managed OAuth MCP, with direct HTTPS/API Key fallback governed by the [interface selection rules](docs/install/callev2.md#choose-the-interface). |
 | `tests/` | Offline standalone Skill validation and Agent/mock scenario definitions; execution states are recorded separately. |
 | `examples/` | Runnable MCP client demos. |
 | `docs/` | Integration guides, install docs, and troubleshooting. |
