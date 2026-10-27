@@ -22,7 +22,7 @@ from tests.behavior.update_metadata import (
 )
 
 API_ORIGIN = "https://api.heycall-e.com"
-MCP_URL = "https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth"
+MCP_URL = "https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth"
 DASHBOARD = "https://dashboard.heycall-e.com"
 REPOSITORY = "https://github.com/CALLE-AI/call-e-integrations"
 SKILL_DIRECTORY = "skills/callev2"

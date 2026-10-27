@@ -17,7 +17,7 @@ from typing import Any
 from tests.offline import offline_guard
 from tests.behavior.update_metadata import SOURCE_URL, fetch_metadata, metadata_schema, metadata_state
 
-MCP_URL = "https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth"
+MCP_URL = "https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth"
 NO_ARGUMENTS = {"type": "object", "properties": {}, "additionalProperties": False}
 
 

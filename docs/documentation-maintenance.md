@@ -36,7 +36,7 @@ commands.
   explicit interface choice, incomplete discovery, authentication failures and
   unknown write outcomes synchronized with evaluation scenarios.
   This customer Skill supports production only, with fixed MCP endpoint
-  `https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth` and API base URL
+  `https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth` and API base URL
   `https://api.heycall-e.com`. Keep setup, templates, manual checks, and repository
   scenarios aligned: no environment-selection prompts or alternative service
   endpoints. Existing configuration mismatches require resolution before sending

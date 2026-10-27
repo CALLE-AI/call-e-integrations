@@ -1,6 +1,6 @@
 {
   "template_notice": "This is a local diagnostic template, not a host configuration or an observed tools/list response.",
-  "server_url": "https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth",
+  "server_url": "https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth",
   "authentication_expected": "oauth",
   "authentication_source": "user-provided",
   "observed_at": null,

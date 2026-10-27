@@ -15,7 +15,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 
 API_ORIGIN = "https://api.heycall-e.com"
-MCP_ORIGIN = "https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth"
+MCP_ORIGIN = "https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth"
 DASHBOARD = "https://dashboard.heycall-e.com"
 _POLLING = {"api-04", "api-polling-01", "mcp-polling-01"}
 _ONBOARDING = {f"api-onboarding-{number:02d}" for number in range(1, 4)}

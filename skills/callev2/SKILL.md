@@ -18,7 +18,7 @@ metadata:
 
 ## Execution boundaries
 
-This customer-facing Skill uses production services only: MCP at `https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth` and API at `https://api.heycall-e.com`. Use these fixed targets without asking the user to select an environment. Validate existing connection/configuration metadata against the selected target; if it points elsewhere, stop and explain the configuration mismatch. Do not send credentials there, silently rebind them, or redirect an existing call to production.
+This customer-facing Skill uses production services only: MCP at `https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth` and API at `https://api.heycall-e.com`. Use these fixed targets without asking the user to select an environment. Validate existing connection/configuration metadata against the selected target; if it points elsewhere, stop and explain the configuration mismatch. Do not send credentials there, silently rebind them, or redirect an existing call to production.
 
 Business operations use only MCP tools actually exposed by the host or direct HTTPS through a trusted tool/runtime with secure credential injection. **Do not use a business CLI, business SDK, shell command, subprocess, or terminal MCP proxy to make business requests.** Do not install clients, dependencies, or helper proxies.
 

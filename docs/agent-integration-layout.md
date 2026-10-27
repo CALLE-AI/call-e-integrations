@@ -180,7 +180,7 @@ do not establish publication, indexing, host activation, or renamed-artifact acc
 Connect verification records remain tied to their original hashes.
 
 This customer Skill supports production only. Its fixed MCP endpoint is
-`https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth`, and its fixed API base URL
+`https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth`, and its fixed API base URL
 is `https://api.heycall-e.com`. Setup uses those endpoints without an environment
 selection. Resolve any different saved endpoint before sending credentials or
 requests; changing a URL does not authorize reusing credentials from that URL.

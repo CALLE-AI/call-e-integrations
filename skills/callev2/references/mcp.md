@@ -8,7 +8,7 @@ updates, and the separately selected API path keep their own instructions.
 The target server is:
 
 ```text
-https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth
+https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth
 ```
 
 Reuse the host's existing connection and loaded tool definitions when they

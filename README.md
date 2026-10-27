@@ -133,7 +133,7 @@ remains subject to the [migration gates](docs/calle-skill-migration-plan.md).
 ### MCP
 
 CALL-E supports Streamable HTTP MCP with OAuth. The standalone `callev2` workflow
-uses `https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth` and the current tools
+uses `https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth` and the current tools
 `prepare_call`, `start_call`, `open_call`, `get_call`, and `get_call_transcript`.
 Server clarification works through chat or optional cards. Once the latest
 preparation is ready and the user has authorized execution, the Agent uses
