@@ -86,3 +86,19 @@ Release decision remains **Patch release recommended** for an independent
 standalone `callev2` endpoint correction. The empty changeset
 `.changeset/callev2-openagent-oauth.md` records it; no npm package bump, metadata
 version change, publication or installed-copy update is performed here.
+
+## Authorized 2.1.1 publication follow-up
+
+After the endpoint checks above, remote `main` confirmed that `2.1.0` had already
+been published through PR #167. The user then authorized source publication of
+this endpoint correction as standalone patch `2.1.1`. Current metadata,
+evaluation versions and version guidance were synchronized; synthetic update
+versions and the earlier evidence above were preserved.
+
+The final `2.1.1` source passed `pnpm check`, all 269 offline tests, both
+standalone packaging commands, and ZIP/source equality and CRC checks. The
+19-file `callev2.zip` SHA-256 is
+`2d54720b7ee89d254b21e3fd0df51d499359a97d2a12dd7ec351960bf207e6ba`.
+The earlier model scenarios were not rerun for the version/date-only Skill
+metadata change; their original inputs remain available separately. PR CI and
+public delivery must be verified against the final pushed revision.

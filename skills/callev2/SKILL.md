@@ -5,10 +5,10 @@ description: >-
 compatibility: >-
   MCP requires host-managed remote MCP, OAuth, and real tool discovery; cards are optional when start_call is exposed. Prefer native connection management; an existing official host MCP command may manage the connection lifecycle. API requires HTTPS tools or a trusted runtime with secure credential injection. Updates require anonymous public reads. Business calls and Skill updates do not use a CLI.
 metadata:
-  version: "2.1.0"
+  version: "2.1.1"
   update-source: "https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/skills/callev2/SKILL.md"
   source: "https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/callev2"
-  verified-on: "2026-10-23"
+  verified-on: "2026-10-27"
   verification-scope: "host-tool-metadata-local-source-and-offline-only; no-account-authentication"
   interface: "mcp-preferred-api-key-fallback"
   tool-schema-status: "runtime-discovery-required"

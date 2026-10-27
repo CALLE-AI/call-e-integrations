@@ -88,20 +88,31 @@ retains the native-public-reader fixes from `2.0.5`, and preserves the existing
 `callev2`; the formal `calle` migration and removal of `callev2` remain deferred.
 
 A follow-up publication request on the same day includes the external-content
-and single-call authorization hardening from `c758f3c`. Public `main` still
-exposes `2.0.5`, and the `2.1.0` source-release PR has not merged, so this fix
-ships in the first `2.1.0` publication rather than a separate `2.1.1` patch.
+and single-call authorization hardening from `c758f3c`. At that point, public
+`main` still exposed `2.0.5` and the `2.1.0` source-release PR had not merged,
+so the fix was included in the first `2.1.0` publication rather than a separate
+patch.
 The combined release retains the minor-release scope of UI/non-UI calling.
 Local validation is recorded in
 [the security verification record](verification/callev2-snyk-hardening-2026-10-23.md);
 the failed Snyk analysis does not establish that the earlier warnings cleared.
 Publication does not update installed copies or authorize the formal cutover.
 
+Publication follow-up on 2026-10-27: `2.1.0` was published through PR #167.
+The user authorized the `2.1.1` patch to switch the fixed production MCP target
+to `https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth`. This publication
+preserves the five-tool workflow, historical endpoint evidence, installed
+copies and deferred formal `calle` cutover. The
+[endpoint verification record](verification/callev2-openagent-oauth-2026-10-27.md)
+captures the pre-versioning checks and their limits; publication requires
+checking the final `2.1.1` source and artifact separately. GitHub source delivery
+and skills.sh indexing remain separate observations.
+
 ## Identity and version ownership
 
 | Surface | Authorized staged state | Later formal state |
 | --- | --- | --- |
-| MCP/API standalone Skill | `skills/callev2`, name/display `callev2`, invocation `$callev2`, metadata/evaluation version `2.1.0` | `skills/calle`, name/display `calle`, invocation `$calle`, only after the formal cutover gates |
+| MCP/API standalone Skill | `skills/callev2`, name/display `callev2`, invocation `$callev2`, metadata/evaluation version `2.1.1` | `skills/calle`, name/display `calle`, invocation `$calle`, only after the formal cutover gates |
 | Legacy standalone CLI Skill | `skills/calle-cli`, name/display `calle-cli`, invocation `$calle-cli` | Remain available as the compatibility and legacy-recovery entry |
 | Legacy CLI attribution | Private `@call-e/skills-sh-skill` owns `skills_sh/skills_sh_skill/0.1.0` | Preserve its independent version authority |
 | CLI executable/package | `calle` / `@call-e/cli` | Unchanged names and independent releases |
@@ -175,7 +186,7 @@ No removal date is set for the compatibility entry.
 | `packages/skills-sh-skill` | Remain the private owner of legacy CLI validation and attribution; assert the new `calle-cli` identity and paths. |
 | CLI integration tests | Retarget only the standalone legacy fixture; retain plugin identities and attribution. |
 | Root scripts, packer and CI | Package both `callev2` and `calle-cli`; remove obsolete `pack:skill:connect` and `pack:skill:calle` commands during staging. |
-| `tests/` | Use `tests/behavior/callev2-evals.json`, current Skill `callev2`, version `2.1.0` and selected update URLs; preserve stable scenario IDs and historical evidence. |
+| `tests/` | Use `tests/behavior/callev2-evals.json`, current Skill `callev2`, version `2.1.1` and selected update URLs; preserve stable scenario IDs and historical evidence. |
 | Current documentation | Synchronize layout, maintenance, install guides, root README and test guides. Keep the stable `docs/install/CALL-E-installation-guide.md` file and old-guide pointers. |
 
 The canonical candidate guide is [callev2](install/callev2.md); the old
