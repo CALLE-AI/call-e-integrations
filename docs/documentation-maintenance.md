@@ -22,12 +22,12 @@ commands.
 - Productized OpenClaw skill source lives in
   `packages/openclaw-cli-skill/skills`.
 - The skills.sh CLI compatibility Skill source lives in `skills/calle-cli`.
-- The standalone MCP-first Skill source lives in `skills/callev2`; its
-  install, migration and local ZIP guidance lives in `docs/install/callev2.md`.
-  Keep `docs/install/calle-connect.md` and `docs/install/dual-skills.md` as
-  pointers for earlier links. The current personal testing identity is `callev2`
-  with metadata/evaluation version `2.1.1`; the future official `calle` takeover
-  remains a separate gate in `docs/calle-skill-migration-plan.md`. The Skill's
+- The standalone MCP-first Skill source lives in `skills/calle`; its
+  install, migration and local ZIP guidance lives in `docs/install/calle.md`.
+  Keep `docs/install/callev2.md`, `docs/install/calle-connect.md` and
+  `docs/install/dual-skills.md` as pointers for earlier links. The canonical
+  identity is `calle` with metadata/evaluation version `2.0.0`; the cutover scope
+  is recorded in `docs/calle-skill-migration-plan.md`. The Skill's
   metadata version is independent of the CLI-based skills.sh package attribution.
   Shared routing and business workflow live in `SKILL.md`; MCP and API contracts
   stay in their own references. Shared result-waiting behavior and phased polling
@@ -41,7 +41,7 @@ commands.
   scenarios aligned: no environment-selection prompts or alternative service
   endpoints. Existing configuration mismatches require resolution before sending
   credentials or requests; credentials must not be silently reused at a new URL.
-  The MCP tool policy in `skills/callev2/references/mcp.md` excludes the
+  The MCP tool policy in `skills/calle/references/mcp.md` excludes the
   legacy Plan/Run tools from this standalone Skill; keep that exclusion aligned
   across the entry point, connection verification, manual tests, and repository
   scenarios. Discovery does not override the exclusion. Other integration
@@ -60,31 +60,31 @@ commands.
   execution of an unchanged authorized ready call and explicit wait/card-Dial
   instructions. Local tests and scan attempts do not establish an audit PASS.
 - Standalone Skill evaluation definitions live in
-  `tests/behavior/callev2-evals.json`, outside the installable Skill source
-  and ZIP. Keep their version aligned with `skills/callev2/SKILL.md`.
+  `tests/behavior/calle-evals.json`, outside the installable Skill source
+  and ZIP. Keep their version aligned with `skills/calle/SKILL.md`.
   Keep synthetic adversarial fixtures in repository tests, and keep bundled
   instructions and manual testing guides free of links to repository-only files.
   Moving fixtures does not establish that Agent scenarios were executed or that
   a security audit passed.
 - Standalone Skill update checks read the same Skill's publisher-approved public
-  `SKILL.md` on `main`. For `callev2`, the confirmed publisher/repository is
-  `CALLE-AI/call-e-integrations`, using `skills/callev2`; never substitute the
-  old Connect or future official `calle` URL. Keep `metadata.update-source` and `metadata.source` aligned with the
+  `SKILL.md` on `main`. For the standalone `calle`, the confirmed publisher/repository
+  is `CALLE-AI/call-e-integrations`, using `skills/calle`; do not substitute a
+  retired testing identity or different publisher. Keep `metadata.update-source` and `metadata.source` aligned with the
   Skill directory, and change its version when publishing changed behavior.
   The canonical bundled update procedure is
-  `skills/callev2/references/update-check.md`; it covers both interfaces with
+  `skills/calle/references/update-check.md`; it covers both interfaces with
   one version and source. Keep fresh request nonces, the two-attempt limit,
   retryable failure set, and unavailable/unknown-result notices aligned with the
   update evaluation fixtures. Cover both controlled HTTPS and URL-only native
   public readers, including reader-attributed source validation; do not assume
   a host exposes headers or redirect controls. The canonical source metadata remains query-free.
-  Renaming an entry requires a migration notice: an old
-  same-name update check cannot discover a replacement automatically.
+  Same-name update checks do not discover renamed entries. Migration of installed
+  `callev2` testing copies is explicitly outside this cutover's scope.
   Design rationale, public examples, dated audit findings, and rollout limits
   live in `docs/skill-update-mechanism.md`; keep it aligned with the bundled
   procedure without treating historical audit results as current guarantees.
   Standalone business operations, API setup and updates use non-CLI facilities.
-  MCP connection management follows `skills/callev2/references/connection.md`:
+  MCP connection management follows `skills/calle/references/connection.md`:
   reuse existing connections, prefer the current host's permitted native
   facilities, and allow its already-installed official MCP management commands
   only within the defined exception. Keep connection guidance and evaluation
@@ -97,6 +97,9 @@ commands.
 - The legacy `calle-cli` Skill keeps CLI executable `calle`, private package
   attribution `skills_sh/skills_sh_skill/<version>`, authentication and recovery
   paths. Plugin names and package-scoped `calle` Skills are separate surfaces.
+- The stable `docs/install/CALL-E-installation-guide.md` defaults to `calle`
+  `2.0.0` and must remain at that path. Codex MCP is the initial live acceptance
+  baseline; API and other clients must identify unexecuted live checks.
 - Repository-local Codex helper skills live in `.agents/skills/`.
 
 ## Update Workflow

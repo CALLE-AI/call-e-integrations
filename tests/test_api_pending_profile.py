@@ -15,7 +15,7 @@ URL = API_ORIGIN + "/v2/calls/" + CALL_ID
 
 
 def source_case():
-    cases = json.loads((ROOT / "tests/behavior/callev2-evals.json").read_text())["cases"]
+    cases = json.loads((ROOT / "tests/behavior/calle-evals.json").read_text())["cases"]
     return next(case for case in cases if case["id"] == "api-04")
 
 

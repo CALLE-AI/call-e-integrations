@@ -1,11 +1,11 @@
 # Standalone Skill Update Mechanism Design Record
 
-Design first recorded on 2026-10-15. Current guidance applies to the staged
-`callev2` entry, metadata/evaluation version `2.1.1`; the dated third-party audit
-examples below remain historical snapshots. The selected repository is
-`CALLE-AI/call-e-integrations`, and publication is a separate user action.
+Design first recorded on 2026-10-15. Current guidance applies to the canonical
+standalone `calle` entry, metadata/evaluation version `2.0.0`; the dated
+third-party audit examples below remain historical snapshots. The selected
+repository is `CALLE-AI/call-e-integrations`.
 
-The proposed mechanism lets an Agent read the version from the official remote
+The mechanism lets an Agent read the version from the official remote
 `SKILL.md` when using an installed Skill, compare it with the local version, and
 ask whether the user wants to download a newer version. Business operations
 prefer MCP; API Key fallback is selected only before business writes, when the
@@ -19,15 +19,15 @@ The unified Skill keeps one set of update metadata and one check entry point.
 Both interfaces share the same version and download directory. This document
 records design choices, examples, and pending validation; it does not establish
 public availability or cross-host validation. The bundled
-[version check and download procedure](../skills/callev2/references/update-check.md)
-defines the execution rules. See the [callev2 installation guide](install/callev2.md)
+[version check and download procedure](../skills/calle/references/update-check.md)
+defines the execution rules. See the [calle installation guide](install/calle.md)
 for installation, interface selection, migration, and packaging.
 
 Business operations, API setup, Skill installation and updates use non-CLI host
 facilities. MCP connection setup and authentication prefer the current host's
 native management capabilities; a limited exception permits its already-installed
 official MCP management commands under the
-[connection lifecycle](../skills/callev2/references/connection.md).
+[connection lifecycle](../skills/calle/references/connection.md).
 That exception does not apply to version checks, downloads or installation and
 does not bypass explicit user limits or host permission denials. Repository
 development and testing commands do not expand the runtime exception.
@@ -47,7 +47,7 @@ notifications as an automatic update feature provided by skills.sh.
 | Remote version | `metadata.version` in the remote frontmatter, with `name` also validated |
 
 The unified check URL is the
-[remote callev2 SKILL.md](https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/skills/callev2/SKILL.md).
+[remote calle SKILL.md](https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/skills/calle/SKILL.md).
 This is the intended official source path; changes in the current workspace do
 not establish that the URL is already publicly readable.
 
@@ -60,7 +60,7 @@ are reported as unconfirmed according to the execution rules.
 
 Read the version only from frontmatter; do not repeat a hard-coded current version
 in the body. Keep the repository evaluation version in
-`tests/behavior/callev2-evals.json` synchronized when publishing.
+`tests/behavior/calle-evals.json` synchronized when publishing.
 The unified Skill version is independent of existing npm and plugin versions.
 
 ## Runtime flow and host requirements
@@ -73,7 +73,7 @@ The unified Skill version is independent of existing npm and plugin versions.
 
 Example notification:
 
-> A new version of callev2 is available: {local version} → {remote version}.
+> A new version of calle is available: {local version} → {remote version}.
 > Would you like to download it? You can also keep using the current version.
 
 If the user has not replied, declines, or defers, continue the original authorized
@@ -86,7 +86,7 @@ Markdown cannot access the network by itself. A host with only CALL-E business
 MCP tools and no public reader reports once that an otherwise eligible check
 cannot run. A host-native public reader with URL-only arguments is sufficient;
 missing header or redirect controls do not disqualify it. Do not install tools
-or change business interfaces for a check. See the [execution rules](../skills/callev2/references/update-check.md)
+or change business interfaces for a check. See the [execution rules](../skills/calle/references/update-check.md)
 for skips during offline work, previews, limited-scope checks, network restrictions,
 and pinned-version use. An unavailable or unconfirmed check produces one brief
 limitation notice and an unknown session result. Scope-based skips stay quiet;
@@ -129,7 +129,7 @@ rules above for overwrites, version changes, and reload handling.
 ## Security boundaries and public examples
 
 Version checks retain the fixed official source for the same Skill name. Only
-the generated `callev2_update_check` query nonce varies per request; the host,
+the generated `calle_update_check` query nonce varies per request; the host,
 repository, branch, and path remain fixed. Do not attach user credentials or
 customer data. Dedicated HTTPS readers use empty custom headers and disabled
 redirects when those controls exist. URL-only native public readers delegate
@@ -192,10 +192,13 @@ requires review.
 ## Publication and validation limits
 
 The earlier MCP/API merge was tested as `calle-connect` version `0.2.0`.
-The current staging identity is `callev2` version `2.1.1`, with evaluation inputs
-at `tests/behavior/callev2-evals.json`. Keep historical acceptance tied to its
-original names and hashes; new identity, source binding and host activation need
-candidate-specific evidence under the [migration gates](calle-skill-migration-plan.md).
+The canonical identity is `calle` version `2.0.0`, adopting the `callev2`
+`2.1.1` implementation, with evaluation inputs at `tests/behavior/calle-evals.json`.
+Keep historical acceptance tied to its original names and hashes; source binding
+and host activation need candidate-specific evidence under the
+[migration gates](calle-skill-migration-plan.md). The initial live acceptance
+baseline is Codex MCP. API and other clients must identify unexecuted live checks
+explicitly, without treating offline checks or publication as live acceptance.
 These definitions, including synthetic adversarial fixtures, are outside the
 installable Skill directory and ZIP. The bundled manual testing guides do not
 load repository-only fixtures. This separation reduces unnecessary test content
@@ -227,29 +230,25 @@ mechanism can an Agent discover later versions through this flow. It is an
 in-conversation mechanism dependent on host tools and Agent execution, with no
 guarantee that it triggers every time on every platform.
 
-## Migrate earlier entries explicitly
+## Identity and compatibility boundaries
 
-The previous `calle-api-key` and `calle-mcp-oauth` entries were merged into
-`calle-connect`. Testers now select `callev2` explicitly. Their checks accept only the same-name source in local
-configuration and cannot infer that `callev2` is a successor. If the old URL
-is missing or the remote name changes, they can only report an unconfirmed status;
-remote text cannot authorize changing the update source.
+The canonical standalone `calle` starts at `2.0.0`. The preceding `callev2`
+identity and version sequence remain historical testing provenance. Installed
+`callev2` migration, transitional releases and cross-name updater support are
+outside this cutover's scope. Same-name checks still validate the configured
+identity; missing or mismatched public content produces unknown status rather
+than authorizing a different source.
 
-Users with installed old copies need migration guidance. In a user-authorized
-migration, install the complete `callev2`, disable the old entries, reload
-the host, and check the actually loaded version. Earlier copies without check
-instructions also need one manual migration. Preserve user changes, credentials,
-call records, and idempotency keys, without replaying calls. Active calls continue
-using the interface, account, and environment that created them.
+The legacy standalone CLI entry remains available as `calle-cli`. Users retaining
+that workflow follow its [compatibility installation guide](install/skills-sh-skill.md#existing-calle-users).
+Preserve CLI attribution, authentication/configuration, call/run references and
+recovery paths. The canonical MCP/API Skill, CLI executable and plugin-owned
+`calle` entries have independent version and installation lifecycles.
 
 The unified entry shares only the business workflow and version. MCP tools are
 discovered from actual runtime capabilities; API operations retain their own
-contract and API Key. MCP/API identifiers, accounts, and idempotency semantics
-have not been verified as interoperable, so authentication failures, permission
-denials, cancelled authorization, and unknown write outcomes cannot trigger an
-automatic switch. This Skill merge requires no MCP or API service changes.
-
-The standalone legacy CLI entry is separately renamed to `calle-cli`. Keep its
-CLI attribution and auth/recovery paths; it is not a same-name update of the new
-MCP/API implementation. The eventual official `calle` takeover is another
-explicit cutover, not a redirect or automatic rename of `callev2`.
+contract and API Key. MCP/API identifiers, accounts and idempotency semantics
+have not been verified as interoperable. Authentication failures, permission
+denials, cancelled authorization and unknown write outcomes do not trigger an
+automatic switch. Active calls retain their original interface, account and
+endpoint. This Skill cutover requires no MCP or API service change.

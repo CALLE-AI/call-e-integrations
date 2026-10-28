@@ -11,9 +11,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-SKILLS = ("callev2",)
+SKILLS = ("calle",)
 EVALUATION_SOURCES = (
-    ("tests/behavior/callev2-evals.json", "callev2"),
+    ("tests/behavior/calle-evals.json", "calle"),
     ("tests/extra-behavior-cases.json", None),
     ("tests/behavior/round-1-cases.json", None),
 )

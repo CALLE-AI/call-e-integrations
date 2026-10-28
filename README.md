@@ -27,7 +27,7 @@ New users receive 100 free credits (US$1) when they sign up. See the [website FA
 **The fastest path — paste this into any AI agent (Claude Code, Codex, Cursor, and more):**
 
 ```text
-Install CALL-E for me: https://open.heycall-e.com/document/mcp-archive/CALL-E-installation-guide.md
+Install CALL-E for me: https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/docs/install/CALL-E-installation-guide.md
 ```
 
 Your agent handles the rest.
@@ -113,36 +113,38 @@ Choose the integration path that fits your use case:
 
 **Paste this single prompt into your agent for automatic setup:**
 ```text
-Install CALL-E for me: https://open.heycall-e.com/document/mcp-archive/CALL-E-installation-guide.md
+Install CALL-E for me: https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/docs/install/CALL-E-installation-guide.md
 ```
-Works in Claude Code, Codex, Cursor, and any agent that can run shell commands. The linked guide stays up to date, so the prompt never changes.
+The linked guide installs the standalone `calle` 2.0.0 Skill and selects the
+host-supported connection path. The initial live acceptance baseline is Codex
+MCP; API and other clients identify unexecuted live checks separately.
 
 For manual setup, expand the table below or see the [full install guide](https://github.com/CALLE-AI/call-e-integrations/blob/main/docs/install/install-guide.md).
 
 For the standalone workflow that prefers MCP with API Key fallback under its
-[interface selection rules](docs/install/callev2.md#choose-the-interface),
-see [callev2 personal testing](docs/install/callev2.md). Business operations and updates
+[interface selection rules](docs/install/calle.md#choose-the-interface),
+see [calle installation](docs/install/calle.md). Business operations and updates
 use non-CLI host facilities. MCP setup prefers native host management, with a
 limited exception for the current host's official MCP management commands.
 
-The standalone CLI Skill is now `calle-cli`; existing users should follow the
-[explicit migration notice](docs/install/skills-sh-skill.md#existing-calle-users).
-`callev2` is a personal testing identity. The future official `calle` takeover
-remains subject to the [migration gates](docs/calle-skill-migration-plan.md).
+The standalone Skill is now `calle` version `2.0.0`. Users retaining the legacy
+CLI workflow can install `calle-cli` through the
+[compatibility guide](docs/install/skills-sh-skill.md#existing-calle-users).
+Plugin-owned `calle` Skills have independent installation and release lifecycles.
 
 ### MCP
 
-CALL-E supports Streamable HTTP MCP with OAuth. The standalone `callev2` workflow
+CALL-E supports Streamable HTTP MCP with OAuth. The standalone `calle` workflow
 uses `https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth` and the current tools
 `prepare_call`, `start_call`, `open_call`, `get_call`, and `get_call_transcript`.
 Server clarification works through chat or optional cards. Once the latest
 preparation is ready and the user has authorized execution, the Agent uses
 `start_call` without redundant confirmation. Planning and preview requests do
 not authorize dialing. Cancellation requires supported card controls. See the
-[callev2 guide](docs/install/callev2.md#choose-the-interface) for routing and recovery.
+[calle guide](docs/install/calle.md#choose-the-interface) for routing and recovery.
 
 The legacy CLI and plugin integrations retain the separate Plan/Run contract
-below; `callev2` does not use those tools as a fallback.
+below; the standalone `calle` does not use those tools as a fallback.
 
 **Legacy endpoint:**
 
@@ -484,7 +486,7 @@ Common issues covered:
 
 - **Cursor network errors** — if setup works in your terminal but fails in the Cursor agent shell, see the [Cursor troubleshooting steps](docs/install/troubleshooting.md#cursor-agent-shell-returns-connect-tunnel-failed-response-403).
 - **`calle auth login` failures** — fetch failures, login errors, and token cache issues.
-- **Missing legacy MCP tools** — how to confirm that `plan_call`, `run_call`, and `get_call_run` are available for CLI and legacy MCP integrations. For `callev2`, follow its [current tool policy](skills/callev2/references/mcp.md#current-call-tools-and-legacy-exclusion).
+- **Missing legacy MCP tools** — how to confirm that `plan_call`, `run_call`, and `get_call_run` are available for CLI and legacy MCP integrations. For the standalone `calle`, follow its [current tool policy](skills/calle/references/mcp.md#current-call-tools-and-legacy-exclusion).
 
 ## Repository Structure
 
@@ -500,7 +502,7 @@ This is a multi-ecosystem integration monorepo with packaged plugins and standal
 | `packages/openclaw-cli-skill` | OpenClaw CALL-E skill source. |
 | `packages/skills-sh-skill` | skills.sh compatible CALL-E skill package. |
 | `skills/calle-cli/` | Portable CLI compatibility Skill; official installation uses `--skill calle-cli`. |
-| `skills/callev2/` | Personal testing candidate at version 2.1.1; standalone Skill that prefers host-managed OAuth MCP, with direct HTTPS/API Key fallback governed by the [interface selection rules](docs/install/callev2.md#choose-the-interface). |
+| `skills/calle/` | Canonical standalone Skill at version 2.0.0; prefers host-managed OAuth MCP, with direct HTTPS/API Key fallback governed by the [interface selection rules](docs/install/calle.md#choose-the-interface). |
 | `tests/` | Offline standalone Skill validation and Agent/mock scenario definitions; execution states are recorded separately. |
 | `examples/` | Runnable MCP client demos. |
 | `docs/` | Integration guides, install docs, and troubleshooting. |

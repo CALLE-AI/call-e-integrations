@@ -197,11 +197,11 @@ class LifecycleMockTests(unittest.TestCase):
     def stage(self, mock):
         resolved = mock.dispatch("update.mock_resolve_commit", {"source_url": SOURCE_URL})
         return mock.dispatch("update.mock_download_to_staging", {
-            "commit": resolved["commit"], "directory": "skills/callev2",
-            "destination": "/fixture/downloads/callev2/new-copy"})
+            "commit": resolved["commit"], "directory": "skills/calle",
+            "destination": "/fixture/downloads/calle/new-copy"})
 
     def metadata_arguments(self, nonce="0123456789abcdef"):
-        return {"url": SOURCE_URL + "?callev2_update_check=" + nonce,
+        return {"url": SOURCE_URL + "?calle_update_check=" + nonce,
                 "headers": {}, "follow_redirects": False}
 
     def metadata_mock(self, responses):
@@ -237,12 +237,12 @@ class LifecycleMockTests(unittest.TestCase):
                 self.assertEqual(mock.metadata_fetch_count, 1)
 
     def test_metadata_nonce_rejects_canonical_cached_url_and_unapproved_url_parts(self):
-        for url in (SOURCE_URL, SOURCE_URL + "?callev2_update_check=short",
-                    SOURCE_URL + "?callev2_update_check=0123456789ABCDEF",
+        for url in (SOURCE_URL, SOURCE_URL + "?calle_update_check=short",
+                    SOURCE_URL + "?calle_update_check=0123456789ABCDEF",
                     self.metadata_arguments()["url"] + "&customer=synthetic",
                     self.metadata_arguments()["url"] + "#fragment",
                     self.metadata_arguments()["url"].replace("https://", "https://user@"),
-                    self.metadata_arguments()["url"].replace("/callev2/", "/calle/")):
+                    self.metadata_arguments()["url"].replace("/calle/", "/callev2/")):
             with self.subTest(url=url):
                 mock = self.metadata_mock([{"status": 200}])
                 with self.assertRaises(ValueError):
@@ -284,14 +284,14 @@ class LifecycleMockTests(unittest.TestCase):
         self.assertIn("scripts/install.sh", [item["path"] for item in inspection["files"]])
         self.assertEqual(changed.install_count, 0)
 
-    def test_callev2_update_cannot_fetch_or_stage_another_skill_identity(self):
+    def test_calle_update_cannot_fetch_or_stage_another_skill_identity(self):
         with offline_guard():
-            for other in ("calle", "calle-cli", "calle-connect"):
+            for other in ("callev2", "calle-cli", "calle-connect"):
                 with self.subTest(other=other):
                     check = self.make("api-update-01")
                     with self.assertRaises(ValueError):
                         check.dispatch("update.mock_fetch_metadata", {
-                            "url": SOURCE_URL.replace("/callev2/", f"/{other}/"),
+                            "url": SOURCE_URL.replace("/calle/", f"/{other}/"),
                             "headers": {}, "follow_redirects": False})
                     self.assertEqual(check.metadata_fetch_count, 0)
                     download = self.make("api-update-04")
@@ -299,7 +299,7 @@ class LifecycleMockTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         download.dispatch("update.mock_download_to_staging", {
                             "commit": resolved["commit"], "directory": f"skills/{other}",
-                            "destination": "/fixture/downloads/callev2/new-copy"})
+                            "destination": "/fixture/downloads/calle/new-copy"})
                     self.assertEqual(download.download_count, 0)
                     self.assertEqual(download.install_count, 0)
 

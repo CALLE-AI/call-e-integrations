@@ -108,11 +108,81 @@ captures the pre-versioning checks and their limits; publication requires
 checking the final `2.1.1` source and artifact separately. GitHub source delivery
 and skills.sh indexing remain separate observations.
 
+## Formal version decision (2026-10-28)
+
+This section governs the formal cutover where earlier tester-installation
+requirements or live acceptance scope differ. Earlier staging history remains
+unchanged.
+
+The user confirmed that the formal standalone `calle` release will be `2.0.0`.
+The published `callev2` `2.1.1` implementation is the proposed source baseline;
+its testing identity and historical version records remain unchanged. The
+canonical identity starts its own release sequence rather than inheriting the
+testing identity's version number.
+
+The user excluded migration of installed `callev2` copies from this cutover.
+No transitional release, cross-name updater support or `callev2`-to-`calle`
+installation migration acceptance is required. Preserve the historical testing
+records. Validation of the final `calle` candidate and the legacy standalone
+`calle` compatibility route remain in scope.
+
+The user also confirmed the following formal-cutover decisions:
+
+- The root README and stable installation guide will default to installing
+  `calle` `2.0.0`. Keep `docs/install/CALL-E-installation-guide.md` at its stable
+  path and retain `calle-cli` as the legacy compatibility entry.
+- The initial live acceptance baseline is the complete Codex MCP workflow:
+  authentication, server clarification, authorized dialing, result delivery,
+  and Skill update and rollback verification. API and other clients must
+  explicitly identify any live checks that remain unexecuted; do not describe
+  them as having passed this baseline. Applicable offline and artifact checks
+  remain required.
+
+These decisions settle the design choices discussed in the interview. They
+record the intended implementation and acceptance scope; no cutover,
+installed-copy replacement, publication or service operation is executed by
+this documentation update. Real call acceptance still requires a user-defined
+recipient, task and execution authorization.
+
+See the [integration identity glossary](../GLOSSARY.md) for the distinction
+between the canonical, testing and compatibility identities.
+
+## Formal cutover implementation and publication (2026-10-28)
+
+After confirming the design above, the user authorized implementing the
+canonical `calle` `2.0.0` cutover and publishing the standalone Skills. This
+supersedes earlier deferral and publication restrictions for this cutover.
+The source baseline is published `callev2` `2.1.1` at commit
+`ebab87942034cebbdde308a099c8aa1f92c7ebdc`.
+
+Promote the complete source tree to `skills/calle`, align its metadata,
+evaluation inputs, packaging and installation guidance, and retire the
+installable `skills/callev2` entry. Keep `skills/calle-cli` and independently
+versioned CLI/plugin payloads intact. Old installation-guide URLs remain
+documentation pointers. Migration of installed `callev2` copies stays excluded.
+
+Publish the accepted source through a reviewed pull request and successful CI,
+then verify public `main`, fixed-revision installation and skills.sh discovery
+separately. Record immutable release tag `skills/calle@2.0.0` and the complete
+ZIP artifacts under the standalone convention in
+[Git naming rules](git-naming-conventions.md#tags). This is a standalone major
+release with an empty Changeset record; no npm package version bump is needed.
+
+The authorization to publish does not supply a test-call recipient or task.
+Record any unexecuted live acceptance explicitly; do not infer live acceptance
+from offline checks, source publication or installation.
+
+The user subsequently selected source publication first, with real-call
+acceptance explicitly left unverified. Publish the validated source and
+artifacts under that scope; do not make a real call or block source publication
+on the missing live-call inputs. The Codex MCP baseline remains the target for
+later live acceptance rather than a claimed completed release check.
+
 ## Identity and version ownership
 
-| Surface | Authorized staged state | Later formal state |
+| Surface | Previous staged state | Authorized formal state |
 | --- | --- | --- |
-| MCP/API standalone Skill | `skills/callev2`, name/display `callev2`, invocation `$callev2`, metadata/evaluation version `2.1.1` | `skills/calle`, name/display `calle`, invocation `$calle`, only after the formal cutover gates |
+| MCP/API standalone Skill | `skills/callev2`, name/display `callev2`, invocation `$callev2`, metadata/evaluation version `2.1.1` | `skills/calle`, name/display `calle`, invocation `$calle`, metadata/evaluation version `2.0.0`, only after the formal cutover gates |
 | Legacy standalone CLI Skill | `skills/calle-cli`, name/display `calle-cli`, invocation `$calle-cli` | Remain available as the compatibility and legacy-recovery entry |
 | Legacy CLI attribution | Private `@call-e/skills-sh-skill` owns `skills_sh/skills_sh_skill/0.1.0` | Preserve its independent version authority |
 | CLI executable/package | `calle` / `@call-e/cli` | Unchanged names and independent releases |
@@ -130,7 +200,7 @@ assume a prerelease such as `2.0.0-rc.1` is supported; use explicit candidate
 revisions for testing. Once published, a version's artifact contents must remain
 immutable. A change to a separately named Skill still needs an explicit migration.
 
-## Authorized implementation now
+## Earlier staging implementation
 
 ### callev2 candidate
 
@@ -276,6 +346,12 @@ This plan does not assign PASS to renamed artifacts or published delivery.
 Record evidence, candidate revision, host/version and outcome for each row.
 Use `PASS`, `FAIL`, `NOT_RUN`, or `NOT_APPLICABLE` with a reason. Required
 `FAIL` or `NOT_RUN` results block the corresponding gate.
+
+Apply the [2026-10-28 scope clarification](#formal-version-decision-2026-10-28)
+when selecting formal-cutover acceptance conditions: migration of installed
+`callev2` copies is excluded and must not become a release gate. The initial
+live acceptance baseline is Codex MCP; record unexecuted API and other-client
+live checks explicitly rather than claiming that the entire matrix passed.
 
 | ID | Acceptance requirement | Gate |
 | --- | --- | --- |

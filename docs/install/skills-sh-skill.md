@@ -4,25 +4,18 @@ This guide covers the CLI-based `calle-cli` skill. Its source of truth lives at
 `skills/calle-cli` so skills.sh can index the public skill page and search results
 directly from the repository root.
 
-For the standalone `callev2` Skill, which prefers MCP with API Key fallback,
-see [callev2 personal testing](./callev2.md) and its
-[interface selection rules](./callev2.md#choose-the-interface).
+For the default standalone `calle` 2.0.0 Skill, which prefers MCP with API Key fallback,
+see [calle installation](./calle.md) and its
+[interface selection rules](./calle.md#choose-the-interface).
 Business operations and updates use non-CLI host facilities. MCP setup follows
-the [host management boundary](../../skills/callev2/references/connection.md),
+the [host management boundary](../../skills/calle/references/connection.md),
 which permits a limited official host-command fallback.
 
 ## Install From GitHub
 
-For most users, the recommended path is to ask the agent to install the skill:
-
-```text
-Install CALL-E for me: https://open.heycall-e.com/document/mcp-archive/CALL-E-installation-guide.md
-```
-
-The stable prompt points to the latest
-[CALL-E installation guide](./CALL-E-installation-guide.md) and installs the
-skill at user-level/global scope. Or run the equivalent command directly from
-the repository root source:
+The [stable installation prompt](./CALL-E-installation-guide.md) defaults to the
+new MCP/API `calle` Skill. To retain the CLI workflow, explicitly select the
+compatibility entry:
 
 ```bash
 npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent <agent>
@@ -44,9 +37,9 @@ npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/
 
 ## Existing calle users
 
-The standalone CLI Skill is now named `calle-cli`; the executable remains
-`calle`. Install `calle-cli` explicitly from the official repository using the
-command above, reload the host and verify `$calle-cli` in the intended scope.
+The legacy standalone CLI Skill is named `calle-cli`; the executable remains
+`calle`. The canonical standalone `calle` now uses the MCP/API workflow. Install
+`calle-cli` explicitly from the official repository using the command above, reload the host and verify `$calle-cli` in the intended scope.
 Then disable the old standalone `calle` entry only as part of the authorized
 migration. Preserve local edits, CLI authentication/configuration, cached state,
 call or run references and recovery records. Do not log out, delete tokens,

@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ASSETS = ROOT / "skills/callev2/assets"
+ASSETS = ROOT / "skills/calle/assets"
 
 
 def requests(path):
@@ -42,7 +42,7 @@ class HttpTemplateTests(unittest.TestCase):
         self.assertEqual(json.loads(body), json.loads((ASSETS / "hello-call.request.json").read_text()))
 
     def test_default_testing_http_links_only_resolve_to_reads(self):
-        path = ROOT / "skills/callev2/references/testing-api.md"
+        path = ROOT / "skills/calle/references/testing-api.md"
         # The default section precedes A (the later, explicitly authorized stages).
         intro = path.read_text().split("## A.", 1)[0]
         links = re.findall(r"\]\(([^)]+\.http)\)", intro)

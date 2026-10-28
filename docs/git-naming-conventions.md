@@ -214,6 +214,17 @@ v1.3.0-beta.2
 
 Avoid tagging a single package release as a generic `v<version>`, because tag names are unique within one repository. If multiple packages each release `0.1.0`, generic version tags create ambiguity or conflicts.
 
+Root-distributed standalone Skills use an independent immutable release tag:
+
+```text
+skills/<skill-name>@<major>.<minor>.<patch>
+```
+
+For example, `skills/calle@2.0.0` identifies the complete canonical standalone
+Skill source and its release artifacts. It is independent of npm package tags
+and plugin release aliases. Create it at the accepted publication commit;
+preserve it unchanged after publication.
+
 ## Remote Names
 
 - `origin`: the default remote for the current repository.

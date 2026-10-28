@@ -25,7 +25,7 @@ API_ORIGIN = "https://api.heycall-e.com"
 MCP_URL = "https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth"
 DASHBOARD = "https://dashboard.heycall-e.com"
 REPOSITORY = "https://github.com/CALLE-AI/call-e-integrations"
-SKILL_DIRECTORY = "skills/callev2"
+SKILL_DIRECTORY = "skills/calle"
 
 _PRIOR_HTTP = {"api-05", "api-06", "api-08", "api-09", "api-10", "c04-02",
                "c04-03", "c04-05", "c04-07"}
@@ -184,7 +184,7 @@ class LifecycleMock:
                                  "credential_ref": self.bound_source})
             self._supplement("known API resource origin", "The synthetic original operation binds the existing resource to this API origin so malformed-response handling can be exercised.")
         if self.case_id in {"api-update-07", "mcp-update-07"}:
-            self.setup.setdefault("staging_root", "/fixture/downloads/callev2")
+            self.setup.setdefault("staging_root", "/fixture/downloads/calle")
             self._supplement("download staging root", "Synthetic empty staging root for the source fixture's authorized version-change inspection.")
 
     @property
@@ -773,7 +773,7 @@ class LifecycleMock:
             if self.staged_files is None:
                 if self.setup.get("complete_confined_regular_files") and self.setup.get("verified_commit"):
                     self.staging_verified = True
-                    return {"verified": True, "commit": self.setup["verified_commit"], "name": "callev2",
+                    return {"verified": True, "commit": self.setup["verified_commit"], "name": "calle",
                             "version": self.setup["downloaded_version"], "material_new_capabilities": self.setup.get("material_new_capabilities"),
                             "provenance": "Source fixture explicitly supplies prior complete inspection"}
                 raise PermissionError("There is no downloaded synthetic staging package to inspect")
@@ -782,7 +782,7 @@ class LifecycleMock:
             name = re.findall(r"^name:\s*(\S+)\s*$", main, re.M)
             versions = re.findall(r'^\s+version:\s*[\"\x27]?([^\"\x27\s]+)', main, re.M)
             issues = []
-            if name != ["callev2"] or len(versions) != 1 or not re.fullmatch(r"\d+\.\d+\.\d+", versions[0]):
+            if name != ["calle"] or len(versions) != 1 or not re.fullmatch(r"\d+\.\d+\.\d+", versions[0]):
                 issues.append("invalid same-Skill name or stable version metadata")
             for filename, body in files.items():
                 for link in re.findall(r"\[[^\]]*\]\(([^)]+)\)", body):

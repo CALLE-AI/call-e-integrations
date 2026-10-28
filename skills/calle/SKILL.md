@@ -1,20 +1,20 @@
 ---
-name: callev2
+name: calle
 description: >-
   Connect a CALL-E / HeyCall account, verify access, prepare or place real outbound phone calls, query results, and cancel tasks. Honor explicit interface choices and keep existing calls on their original interface. For other new operations, prefer MCP; select API Key before any related business write only when the host explicitly lacks MCP support, the target MCP connection is confirmed not configured, or complete discovery confirms the required capability is missing. Authentication failures, cancelled authorization, incomplete discovery, and unknown write outcomes do not trigger automatic fallback.
 compatibility: >-
   MCP requires host-managed remote MCP, OAuth, and real tool discovery; cards are optional when start_call is exposed. Prefer native connection management; an existing official host MCP command may manage the connection lifecycle. API requires HTTPS tools or a trusted runtime with secure credential injection. Updates require anonymous public reads. Business calls and Skill updates do not use a CLI.
 metadata:
-  version: "2.1.1"
-  update-source: "https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/skills/callev2/SKILL.md"
-  source: "https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/callev2"
-  verified-on: "2026-10-27"
+  version: "2.0.0"
+  update-source: "https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/skills/calle/SKILL.md"
+  source: "https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle"
+  verified-on: "2026-10-28"
   verification-scope: "host-tool-metadata-local-source-and-offline-only; no-account-authentication"
   interface: "mcp-preferred-api-key-fallback"
   tool-schema-status: "runtime-discovery-required"
 ---
 
-# callev2
+# calle
 
 ## Execution boundaries
 

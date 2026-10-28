@@ -1,16 +1,17 @@
-# callev2 Offline Development Tests
+# calle Offline Development Tests
 
-Current candidate identity is `callev2` with metadata/evaluation version `2.1.1`.
-Scenario IDs remain stable across the rename. Earlier `calle-connect` records
-retain their original hashes and names; they do not prove that the renamed
-candidate, selected update origin or host installation has been accepted.
-Use the [migration verification record](../docs/verification/callev2-migration-2026-10-21.md)
-for renamed-input checks and the [migration gates](../docs/calle-skill-migration-plan.md)
-for remaining host and delivery acceptance.
+Current canonical identity is `calle` with metadata/evaluation version `2.0.0`.
+Scenario IDs remain stable across the rename. Earlier `callev2` and
+`calle-connect` records retain their original names, versions and hashes;
+they do not establish acceptance of this canonical artifact. The initial
+live acceptance baseline is Codex MCP. Record API and other-client live
+checks as unexecuted where applicable. See the
+[migration plan](../docs/calle-skill-migration-plan.md) for the formal
+cutover scope and candidate-specific acceptance requirements.
 
 This suite checks the local structure, HTTP templates, client semantic checks,
 and behavior-evaluation preparation, dispatch and state helpers for the unified
-[callev2](../skills/callev2/SKILL.md) Skill. Its scan includes only
+[calle](../skills/calle/SKILL.md) Skill. Its scan includes only
 this Skill; the existing [calle-cli compatibility Skill](../skills/calle-cli/SKILL.md) retains its
 own checks.
 
@@ -117,7 +118,7 @@ migrated.
 ## Behavior Evaluation Status
 
 The inventory contains **125 formal Agent + mock-tool scenarios**:
-105 [repository scenarios](behavior/callev2-evals.json),
+105 [repository scenarios](behavior/calle-evals.json),
 12 [extra scenarios](extra-behavior-cases.json), and
 8 [round-one scenarios](behavior/round-1-cases.json).
 The dated record contains actual model execution and independent review evidence;
@@ -159,7 +160,7 @@ needed, an actually prepared private save location, `CALLE_API_KEY` and the
 reply-saved continuation step. All browser and call results remain synthetic.
 
 The API and MCP polling groups follow the shared
-[result-waiting policy](../skills/callev2/references/polling.md). Synthetic
+[result-waiting policy](../skills/calle/references/polling.md). Synthetic
 response ranges cover results after twelve and thirty-two reads, completed
 execution with a pending result, all four delay phases, server minimum waits,
 interruptible waits and progress, terminal/unavailable results, user stops,

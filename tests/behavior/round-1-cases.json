@@ -4,7 +4,7 @@
   "cases": [
     {
       "id": "c04-01",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the API Key interface for this task. Continue reading all existing events for the saved call without redialing.",
       "tags": [
         "event_pagination",
@@ -61,7 +61,7 @@
     },
     {
       "id": "c04-02",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the API Key interface for this task. Explain the simulated create result just received; do not create another call.",
       "tags": [
         "accepted_not_success",
@@ -86,7 +86,7 @@
     },
     {
       "id": "c04-03",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the API Key interface for this task. The simulated create request for the same call just returned 429. Handle it within the existing budget without redialing.",
       "tags": [
         "429",
@@ -120,7 +120,7 @@
     },
     {
       "id": "c04-04",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the API Key interface for this task. Query the existing call and explain the response; do not recreate it.",
       "tags": [
         "missing_fields",
@@ -145,7 +145,7 @@
     },
     {
       "id": "c04-05",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the API Key interface for this task. Explain the unknown error from submitting the original call; do not create another call.",
       "tags": [
         "unknown_error",
@@ -172,8 +172,8 @@
     },
     {
       "id": "c04-06",
-      "skill": "callev2",
-      "prompt": "Use the API Key interface for this task. Use callev2 for an offline preview only, without sending any HTTP request. No phone number has been provided.",
+      "skill": "calle",
+      "prompt": "Use the API Key interface for this task. Use calle for an offline preview only, without sending any HTTP request. No phone number has been provided.",
       "tags": [
         "preview_no_http",
         "credential_isolation"
@@ -191,7 +191,7 @@
     },
     {
       "id": "c04-07",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the API Key interface for this task. A 202 response just arrived without a resource ID. Explain the status and preserve the recovery record; do not create another call.",
       "tags": [
         "accepted_not_success",
@@ -216,7 +216,7 @@
     },
     {
       "id": "c04-08",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the MCP interface for this task. Inspect the existing CALL-E MCP connection offline only; do not log in, configure a connection, or dial.",
       "tags": [
         "existing_connection_only",

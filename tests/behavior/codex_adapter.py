@@ -290,7 +290,7 @@ def scenario_instances(source: dict) -> list[tuple[str, dict]]:
 
 
 def load_skill(root: Path, source: dict, snapshot: Path | None = None) -> tuple[dict[str, str], dict]:
-    skill_root = snapshot if snapshot and snapshot.is_dir() else root / "skills" / "callev2"
+    skill_root = snapshot if snapshot and snapshot.is_dir() else root / "skills" / "calle"
     files = {str(path.relative_to(skill_root)): path.read_text()
              for path in sorted(skill_root.rglob("*"))
              if path.is_file() and not any(part.startswith(".") for part in path.relative_to(skill_root).parts)}
@@ -502,7 +502,7 @@ def main() -> None:
         snapshot = args.output / "skill-snapshot"
         if snapshot.exists():
             parser.error("Output already has a frozen Skill snapshot; use a fresh output path")
-        shutil.copytree(root / "skills" / "callev2", snapshot,
+        shutil.copytree(root / "skills" / "calle", snapshot,
                         ignore=shutil.ignore_patterns(".*"))
         catalog_path = prepare_catalog(executable, args.output)
         isolation = json.loads(args.isolation_report.read_text())

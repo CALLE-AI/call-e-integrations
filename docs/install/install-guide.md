@@ -8,7 +8,7 @@ when you need a client-specific setup path.
 For most users, copy this into your agent:
 
 ```text
-Install CALL-E for me: https://open.heycall-e.com/document/mcp-archive/CALL-E-installation-guide.md
+Install CALL-E for me: https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/docs/install/CALL-E-installation-guide.md
 ```
 
 This is the preferred path for local agents that can run shell commands. The
@@ -19,39 +19,41 @@ its own environment.
 
 ## Manual Install Options
 
-### skills.sh Compatible Agents
+### Standalone Skill for Compatible Agents
 
-<!-- sync-with: docs/install/skills-sh-skill.md#install-from-github -->
+<!-- sync-with: docs/install/calle.md#install-the-source-or-zip -->
 
-Install the portable `calle-cli` skill globally from the repository root:
+Install the canonical standalone `calle` `2.0.0` Skill globally from the
+repository root:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent <agent>
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent <agent>
 ```
 
-Replace `<agent>` with the target agent name, such as `codex`, `openclaw`, or
-another value supported by your local skills CLI.
+Replace `<agent>` with the intended agent supported by the skills CLI. The initial
+live acceptance baseline is Codex MCP; API and other clients identify unexecuted
+live checks separately.
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent codex
+npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent codex
 ```
 
 For direct source installs, use the same user-level/global scope:
 
 ```bash
-npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle-cli -g -y --agent <agent>
+npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -g -y --agent <agent>
 ```
 
-### callev2 Personal Testing
+Follow the [calle guide](calle.md) for complete source or ZIP installation,
+interface selection, account connection and loaded-identity verification.
+Business operations and updates use the host facilities described there.
 
-The standalone MCP/API candidate uses `callev2` version `2.1.1`, separately from
-`calle-cli` and plugin-provided `calle` Skills. Follow the
-[callev2 guide](callev2.md) to import the complete local source or ZIP, verify the
-loaded identity, and check the selected repository publication status. This staging
-step does not announce the eventual official `calle` takeover.
+### CLI Compatibility Skill
 
-Existing standalone CLI `calle` users should explicitly install `calle-cli` and
-follow its [state-preserving migration notice](skills-sh-skill.md#existing-calle-users).
+Users retaining the legacy CLI workflow can install [`calle-cli`](skills-sh-skill.md).
+Existing standalone CLI `calle` users should follow its
+[state-preserving migration notice](skills-sh-skill.md#existing-calle-users).
+Plugin installation options below are separate from the standalone Skill.
 
 ### Codex
 

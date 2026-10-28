@@ -22,13 +22,13 @@ does not authorize live requests or establish a passing Agent evaluation.
 
 ## A. Read-only connectivity
 
-> Use callev2 with API Key explicitly selected. Check only the currently configured API authentication and read-only access. Request GET /v1/goals?limit=1. Do not create calls or display my API Key.
+> Use calle with API Key explicitly selected. Check only the currently configured API authentication and read-only access. Request GET /v1/goals?limit=1. Do not create calls or display my API Key.
 
 Acceptance: request `https://api.heycall-e.com/v1/goals?limit=1` with Authorization without asking for an environment, and report the HTTP status. A missing `CALLE_BASE_URL` uses this fixed address; a conflicting value stops the request before reading or sending the Key. A 200 with an empty list passes; diagnose 401, 403, and network unavailability separately. Report a missing tool or Key as a blocker instead of fabricating a 200.
 
 ## B. Preview only
 
-> Use callev2 with API Key explicitly selected. Prepare a short call test in English, producing only a request preview; do not send it. My authorized test number is <replace with your own E.164 number>. Record whether the recipient heard clearly and a summary in the results.
+> Use calle with API Key explicitly selected. Prepare a short call test in English, producing only a request preview; do not send it. My authorized test number is <replace with your own E.164 number>. Record whether the recipient heard clearly and a summary in the results.
 
 Acceptance: make no HTTP requests, including GET, and do not read credentials,
 configure access, or log in. Use the supplied number in the `/v2/calls` preview;
@@ -39,7 +39,7 @@ nested objects, arrays, or null types and defines how to handle unknown answers.
 
 Use the create request in the [write template](../assets/write-requests.http) only after separate authorization. Creation and cancellation require separate authorization and individual selection; never execute all requests.
 
-> Use callev2 with API Key explicitly selected. Call <replace with your own E.164 number> once now as a test. I own this number, authorize this call, and understand that charges may apply. Use English, identify this as an AI call test, ask whether I can hear clearly, and end after my reply. Save the original request and idempotency key before creation; do not redial.
+> Use calle with API Key explicitly selected. Call <replace with your own E.164 number> once now as a test. I own this number, authorize this call, and understand that charges may apply. Use English, identify this as an AI call test, ask whether I can hear clearly, and end after my reply. Save the original request and idempotency key before creation; do not redial.
 
 Acceptance: create at most one logical call; persist the request before creation;
 save the resource ID after 202; query with GET and follow [Wait for call
@@ -60,7 +60,7 @@ through the other path.
 
 ## D. Recovery with a known ID
 
-> Use callev2 with API Key explicitly selected. Continue querying the call saved earlier. Query only the existing resource; never recreate it.
+> Use calle with API Key explicitly selected. Continue querying the call saved earlier. Query only the existing resource; never recreate it.
 
 Acceptance: restore the original production endpoint, resource ID, polling phase,
 and any server not-before time. If the saved endpoint differs, stop without
@@ -73,7 +73,7 @@ calls.
 
 ## E. Cancellation
 
-> Use callev2 with API Key explicitly selected. Try to cancel this specified call that has not executed yet: <real Call resource ID>. If cancellation fails, tell me accurately and do not create a replacement call.
+> Use calle with API Key explicitly selected. Try to cancel this specified call that has not executed yet: <real Call resource ID>. If cancellation fails, tell me accurately and do not create a replacement call.
 
 Acceptance: call cancel only for the specified resource. If provider submission has already occurred and cancellation returns a conflict, do not claim the call hung up.
 

@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { main } from "../pack-skills.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const PUBLIC_SKILLS = ["calle-cli", "callev2"];
+const PUBLIC_SKILLS = ["calle", "calle-cli"];
 
 function fixture(t) {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "calle-skill-pack-"));
@@ -80,8 +80,8 @@ function sourceFiles(root, prefix = "") {
 
 test("unified public skill produces one ZIP with unchanged source bytes and valid CRCs", (t) => {
   const options = fixture(t);
-  const results = main(["--public", "callev2"], options);
-  assert.deepEqual(results.map((result) => result.skillName), PUBLIC_SKILLS.slice(1));
+  const results = main(["--public", "calle"], options);
+  assert.deepEqual(results.map((result) => result.skillName), ["calle"]);
   for (const result of results) {
     assert.equal(result.zipPath, path.join(options.repoRoot, "dist", "skills", `${result.skillName}.zip`));
     const entries = readZip(result.zipPath);
@@ -124,14 +124,14 @@ test("unknown skills and path traversal are rejected before creating output", (t
     assert.throws(() => main(["--public", name], options), /Invalid skill name/u);
   }
   assert.throws(() => main(["--public", "missing-skill"], options), /Unknown skill/u);
-  assert.throws(() => main(["callev2"], options), /Unknown skill/u);
+  assert.throws(() => main(["calle"], options), /Unknown skill/u);
   assert.throws(() => main(["--public", "local-helper"], options), /Unknown skill/u);
   assert.equal(fs.existsSync(path.join(options.repoRoot, "dist")), false);
 });
 
 test("archives and copied trees exclude local state, secrets, caches and symlinks", (t) => {
   const options = fixture(t);
-  const skillRoot = path.join(options.repoRoot, "skills", "callev2");
+  const skillRoot = path.join(options.repoRoot, "skills", "calle");
   const originalFiles = sourceFiles(skillRoot);
   for (const relative of [
     ".DS_Store", ".env", ".env.local", ".local/api-auth.env", ".git/config", ".venv/bin/python",
@@ -149,8 +149,8 @@ test("archives and copied trees exclude local state, secrets, caches and symlink
   fs.writeFileSync(privateFile, "synthetic private fixture\n");
   fs.symlinkSync(privateFile, path.join(skillRoot, "assets", "linked.txt"));
   fs.symlinkSync(path.dirname(privateFile), path.join(skillRoot, "linked-directory"), "dir");
-  const [result] = main(["--public", "callev2"], options);
-  assert.deepEqual([...readZip(result.zipPath).keys()].sort(), originalFiles.map((relative) => `callev2/${relative}`).sort());
+  const [result] = main(["--public", "calle"], options);
+  assert.deepEqual([...readZip(result.zipPath).keys()].sort(), originalFiles.map((relative) => `calle/${relative}`).sort());
   assert.deepEqual(sourceFiles(result.distSkillRoot), originalFiles);
   fs.symlinkSync(skillRoot, path.join(options.repoRoot, "skills", "linked-skill"), "dir");
   assert.throws(() => main(["--public", "linked-skill"], options), /not a symlink/u);
@@ -158,13 +158,13 @@ test("archives and copied trees exclude local state, secrets, caches and symlink
 
 test("repacking removes test-only fixtures from ZIPs and stale installation trees", (t) => {
   const options = fixture(t);
-  const skillRoot = path.join(options.repoRoot, "skills", "callev2");
+  const skillRoot = path.join(options.repoRoot, "skills", "calle");
   const runtimeFiles = sourceFiles(skillRoot);
   const oldFixture = path.join(skillRoot, "assets", "previously-bundled-evaluation.json");
   const fixtureData = Buffer.from('{"fixture":"synthetic evaluation data for repository tests only"}\n');
   fs.writeFileSync(oldFixture, fixtureData);
-  const [previous] = main(["--public", "callev2"], options);
-  assert.deepEqual(readZip(previous.zipPath).get("callev2/assets/previously-bundled-evaluation.json"), fixtureData);
+  const [previous] = main(["--public", "calle"], options);
+  assert.deepEqual(readZip(previous.zipPath).get("calle/assets/previously-bundled-evaluation.json"), fixtureData);
   fs.rmSync(oldFixture);
 
   for (const relative of [
@@ -178,14 +178,14 @@ test("repacking removes test-only fixtures from ZIPs and stale installation tree
     }
   }
 
-  const [result] = main(["--public", "callev2"], options);
+  const [result] = main(["--public", "calle"], options);
   const entries = readZip(result.zipPath);
   assert.equal(result.fileCount, runtimeFiles.length);
-  assert.deepEqual([...entries.keys()].sort(), runtimeFiles.map((relative) => `callev2/${relative}`).sort());
+  assert.deepEqual([...entries.keys()].sort(), runtimeFiles.map((relative) => `calle/${relative}`).sort());
   assert.deepEqual(sourceFiles(result.distSkillRoot), runtimeFiles);
   for (const relative of runtimeFiles) {
     const original = fs.readFileSync(path.join(skillRoot, relative));
-    assert.deepEqual(entries.get(`callev2/${relative}`), original);
+    assert.deepEqual(entries.get(`calle/${relative}`), original);
     assert.deepEqual(fs.readFileSync(path.join(result.distSkillRoot, relative)), original);
   }
   assert.equal(fs.readFileSync(result.zipPath).includes(fixtureData), false);
@@ -193,12 +193,12 @@ test("repacking removes test-only fixtures from ZIPs and stale installation tree
 
 test("a linked or mismatched SKILL.md is rejected", (t) => {
   const options = fixture(t);
-  const entry = path.join(options.repoRoot, "skills", "callev2", "SKILL.md");
+  const entry = path.join(options.repoRoot, "skills", "calle", "SKILL.md");
   fs.writeFileSync(entry, "---\nname: other-skill\ndescription: Fixture.\n---\n");
-  assert.throws(() => main(["--public", "callev2"], options), /must match the directory name/u);
+  assert.throws(() => main(["--public", "calle"], options), /must match the directory name/u);
   fs.rmSync(entry);
   fs.symlinkSync(path.join(options.repoRoot, ".agents/skills/local-helper/SKILL.md"), entry);
-  assert.throws(() => main(["--public", "callev2"], options), /missing SKILL.md/u);
+  assert.throws(() => main(["--public", "calle"], options), /missing SKILL.md/u);
 });
 
 test("the command-line entry point reports help and invalid names", () => {

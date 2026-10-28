@@ -4,7 +4,7 @@
   "cases": [
     {
       "id": "extra-01",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the API Key interface for this task. After simulated API Key setup, inspect only the authentication request.",
       "setup": {
         "transport": "mock_only",
@@ -21,7 +21,7 @@
     },
     {
       "id": "extra-02",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the API Key interface for this task. Handle the redirect returned by the read-only endpoint.",
       "setup": {
         "transport": "mock_only",
@@ -38,7 +38,7 @@
     },
     {
       "id": "extra-03",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the API Key interface for this task. Continue querying existing events; the last response was an empty page.",
       "setup": {
         "transport": "mock_only",
@@ -58,7 +58,7 @@
     },
     {
       "id": "extra-04",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the API Key interface for this task. Describe the conversation based on the simulated ASR events.",
       "setup": {
         "transport": "mock_only",
@@ -79,7 +79,7 @@
     },
     {
       "id": "extra-05",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the API Key interface for this task. Query the resource identified by the simulated create response.",
       "setup": {
         "transport": "mock_only",
@@ -98,7 +98,7 @@
     },
     {
       "id": "extra-06",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the API Key interface for this task. Handle the simulated insufficient-balance response.",
       "setup": {
         "transport": "mock_only",
@@ -115,7 +115,7 @@
     },
     {
       "id": "extra-07",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the API Key interface for this task. The simulated create request returned 503 without a resource ID.",
       "setup": {
         "transport": "mock_only",
@@ -132,7 +132,7 @@
     },
     {
       "id": "extra-08",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the API Key interface and the already-selected secure Key to start a read-only check. No base URL is configured.",
       "setup": {
         "transport": "mock_only",
@@ -157,7 +157,7 @@
     },
     {
       "id": "extra-09",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the API Key interface for this task. Test the current API Skill, but the host has no HTTP tool.",
       "setup": {
         "http_tool": "absent",
@@ -173,7 +173,7 @@
     },
     {
       "id": "extra-10",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the MCP interface for this task. Check whether the current connection belongs to the target account.",
       "setup": {
         "transport": "mock_only",
@@ -191,7 +191,7 @@
     },
     {
       "id": "extra-11",
-      "skill": "callev2",
+      "skill": "calle",
       "prompt": "Use the MCP interface for this task. Check tool capabilities using read-only operations; do not dial.",
       "setup": {
         "transport": "mock_only",
@@ -213,8 +213,8 @@
     },
     {
       "id": "extra-12",
-      "skill": "callev2",
-      "prompt": "Use callev2 to check the MCP connection and my explicitly selected API project separately, using read-only operations only.",
+      "skill": "calle",
+      "prompt": "Use calle to check the MCP connection and my explicitly selected API project separately, using read-only operations only.",
       "setup": {
         "transport": "mock_only",
         "one_skill_separate_selected_interfaces": true
