@@ -106,6 +106,6 @@ Stop blind retries after authentication rejection. After configuration is correc
 
 ## Installation and host differences
 
-The standard directory entry point is `callev2/SKILL.md`. Add the entire directory in a host supporting directory-based Skills, or select the standalone ZIP in a host supporting Skill ZIP import. Installation menus and ZIP root rules differ across products; this package does not assume a particular product's menu path.
+The standard directory entry point is `calle/SKILL.md`. Add the entire directory in a host supporting directory-based Skills, or select the standalone ZIP in a host supporting Skill ZIP import. Installation menus and ZIP root rules differ across products; this package does not assume a particular product's menu path.
 
 Installing the Skill does not supply an API Key, grant network access, or authorize real dialing.

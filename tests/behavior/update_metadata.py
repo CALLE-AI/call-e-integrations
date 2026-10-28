@@ -8,8 +8,8 @@ import json
 import re
 
 
-SOURCE_URL = "https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/skills/callev2/SKILL.md"
-REQUEST_PATTERN = re.escape(SOURCE_URL) + r"\?callev2_update_check=[0-9a-f]{16}"
+SOURCE_URL = "https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/skills/calle/SKILL.md"
+REQUEST_PATTERN = re.escape(SOURCE_URL) + r"\?calle_update_check=[0-9a-f]{16}"
 
 
 def metadata_state():

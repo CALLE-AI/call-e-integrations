@@ -1,12 +1,13 @@
 # Offline Agent Evaluation Adapters and Grading
 
-Current candidate identity is `callev2` with metadata/evaluation version `2.1.1`.
-Scenario IDs remain stable across the rename. Earlier `calle-connect` records
-retain their original hashes and names; they do not prove that the renamed
-candidate, selected update origin or host installation has been accepted.
-Use the [migration verification record](../docs/verification/callev2-migration-2026-10-21.md)
-for renamed-input checks and the [migration gates](../docs/calle-skill-migration-plan.md)
-for remaining host and delivery acceptance.
+Current canonical identity is `calle` with metadata/evaluation version `2.0.0`.
+Scenario IDs remain stable across the rename. Earlier `callev2` and
+`calle-connect` records retain their original names, versions and hashes;
+they do not establish acceptance of this canonical artifact. The initial
+live acceptance baseline is Codex MCP. Record API and other-client live
+checks as unexecuted where applicable. See the
+[migration plan](../docs/calle-skill-migration-plan.md) for the formal
+cutover scope and candidate-specific acceptance requirements.
 
 The formal inventory contains **125 Agent scenarios**: 105 repository cases (30 original API,
 27 original MCP, 14 routing, 1 unified update source, 1 MCP preview,
@@ -71,7 +72,7 @@ checkpoint; call references, counts and deadlines are preserved.
 
 ## Files and Interfaces
 
-- Original API/MCP scenarios are combined in the [repository evaluation suite](behavior/callev2-evals.json) with their original IDs preserved. [Supplemental scenarios](extra-behavior-cases.json) are also available. Every scenario loads the same `callev2` Skill. Evaluation fixtures, including adversarial inputs and rejection expectations, remain under `tests/` and are excluded from the installed Skill directory and ZIP. Load scenario data only through the isolated evaluation adapter; the runtime Skill does not fetch or load it.
+- Original API/MCP scenarios are combined in the [repository evaluation suite](behavior/calle-evals.json) with their original IDs preserved. [Supplemental scenarios](extra-behavior-cases.json) are also available. Every scenario loads the same `calle` Skill. Evaluation fixtures, including adversarial inputs and rejection expectations, remain under `tests/` and are excluded from the installed Skill directory and ZIP. Load scenario data only through the isolated evaluation adapter; the runtime Skill does not fetch or load it.
 - This round's additions are in [round-1-cases.json](behavior/round-1-cases.json). Fixtures are minimal synthetic behavior fragments, not complete official responses.
 - `build_catalog(root)` in [preparation.py](behavior/preparation.py) aggregates all scenarios by stable ID, preserving their prompts, setup, tool/response fragments, and every expected item. It assigns `<case_id>:e<n>` rubric items and action scopes. Per-turn expectations receive `<case_id>:t<n>:e<m>` identifiers and are individually marked NOT_RUN alongside global expectations, so waiting and continuation branches are not omitted by recording only top-level expectations.
 - `not_run_results(root)` returns an inventory with every scenario and expectation marked NOT_RUN, and computes SHA-256 hashes of the working-copy Skill and all three repository scenario files at invocation time. Generate it after all edits are complete. These hashes identify the inputs; they do not prove that a host loaded the Skill.
@@ -112,7 +113,7 @@ parameter semantics are missing, complete and manually review them in a separate
 synthetic fixture first. Otherwise the scenario is BLOCKED; do not guess real
 CALL-E capabilities. A scenario that has not been attempted remains NOT_RUN.
 
-Start a fresh session for each case and load only `callev2`. `extra-12`
+Start a fresh session for each case and load only `calle`. `extra-12`
 uses two independent subsessions loading the same Skill, with MCP/API interfaces
 and corresponding secret references selected separately. Combine their traces
 with explicit provenance; do not create shared default credentials. `route-11`
@@ -171,7 +172,7 @@ most once, never create a replacement preparation or change interface.
 identifiers so argument traces can establish which identifier was used.
 
 `api-polling-01` and `mcp-polling-01` monitor an already-created synthetic Call
-under the shared [waiting policy](../skills/callev2/references/polling.md).
+under the shared [waiting policy](../skills/calle/references/polling.md).
 Each group has 22 independent variants; execution status comes from its actual
 run and review records. The base responses
 cover 31 completed/pending reads followed by an available empty object on read

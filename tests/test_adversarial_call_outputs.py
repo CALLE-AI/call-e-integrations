@@ -101,7 +101,7 @@ class AdversarialCallOutputTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            skill = root / "skills" / "callev2"
+            skill = root / "skills" / "calle"
             skill.mkdir(parents=True)
             (skill / "SKILL.md").write_text("Synthetic installed Skill for executor classification only.\n")
             with patch("tests.behavior.codex_adapter.run_cli", side_effect=simulated_inference):

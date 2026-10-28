@@ -1,4 +1,0 @@
-interface:
-  display_name: "callev2"
-  short_description: "CALL-E phone calls through MCP or API Key"
-  default_prompt: "Use $callev2 to prepare a CALL-E phone call through MCP or API Key access."

@@ -32,11 +32,11 @@ class NativeUpdateReaderTests(unittest.TestCase):
                                   **({"controller_state": saved} if saved else {})})
 
     def arguments(self, nonce="0123456789abcdef"):
-        return {"open": [{"ref_id": SOURCE_URL + "?callev2_update_check=" + nonce}]}
+        return {"open": [{"ref_id": SOURCE_URL + "?calle_update_check=" + nonce}]}
 
     def response(self, version="2.0.5", **overrides):
         return {"status": 200, "complete": True, "reader_source": SOURCE_URL,
-                "body": f'---\nname: callev2\nmetadata:\n  version: "{version}"\n---\nSynthetic metadata.\n',
+                "body": f'---\nname: calle\nmetadata:\n  version: "{version}"\n---\nSynthetic metadata.\n',
                 **overrides}
 
     def test_native_schema_omits_unavailable_transport_controls_in_both_bridges(self):
@@ -118,7 +118,7 @@ class NativeUpdateReaderTests(unittest.TestCase):
                     result = dispatcher.call("web_open", self.arguments())
                     self.assertIn("Source: open(", result["content"][0]["text"])
             for source in (SOURCE_URL + "?customer=synthetic", SOURCE_URL + "#unapproved",
-                           SOURCE_URL.replace("/callev2/", "/calle/")):
+                           SOURCE_URL.replace("/calle/", "/callev2/")):
                 with self.subTest(source=source):
                     dispatcher = self.dispatcher([self.response(reader_source=source)])
                     text = dispatcher.call("web_open", self.arguments())["content"][0]["text"]
@@ -158,7 +158,7 @@ class NativeUpdateReaderTests(unittest.TestCase):
             for name in required | {"automatic-reader-unavailable"}:
                 with self.subTest(transport=transport, variant=name):
                     variant = normalized_turn_source(variants[name])
-                    self.assertEqual(variant["prompt"], "What can callev2 help me do?")
+                    self.assertEqual(variant["prompt"], "What can calle help me do?")
                     self.assertEqual(len(variant["turns"]), 3)
                     self.assertEqual(variant["turns"][1]["user"], variant["prompt"])
                     self.assertEqual(variant["turns"][2]["user"], "Can it also retrieve call transcripts?")

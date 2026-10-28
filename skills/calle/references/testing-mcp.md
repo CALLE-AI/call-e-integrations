@@ -2,7 +2,7 @@
 
 ## A. Connection and tool discovery
 
-> Use callev2 with MCP explicitly selected. Check only the existing CALL-E OAuth MCP connection and list the tool names, required parameters, and possible side effects you actually discover. Do not add a connection, log in, dial, create or modify tasks, or use an API Key, CLI, or terminal proxy. Explicitly mark incomplete discovery.
+> Use calle with MCP explicitly selected. Check only the existing CALL-E OAuth MCP connection and list the tool names, required parameters, and possible side effects you actually discover. Do not add a connection, log in, dial, create or modify tasks, or use an API Key, CLI, or terminal proxy. Explicitly mark incomplete discovery.
 
 Acceptance: tools must belong to the specified server. Apply the
 [MCP tool policy](mcp.md#current-call-tools-and-legacy-exclusion): legacy tools may
@@ -14,7 +14,7 @@ authorized read-only verification.
 
 ## B. Parameter preview using discovered tools
 
-> Use callev2 with MCP explicitly selected. Using the tool schemas already
+> Use calle with MCP explicitly selected. Using the tool schemas already
 > available in this conversation, prepare a local plan and parameter preview for
 > a short English test call to <replace with your own E.164 number>. Make no
 > business tool calls, including read-only lookups, and do not configure or log in.
@@ -27,7 +27,7 @@ authorization beyond this preview request.
 
 ## C. One live test
 
-> Use callev2 with MCP explicitly selected. Call <replace with your own E.164 number> once now as a test. I own this number, authorize this call, and understand that charges may apply. Use English, identify this as an AI call test, ask whether I can hear clearly, then end. Use only the authorized MCP; do not switch to API or dial repeatedly.
+> Use calle with MCP explicitly selected. Call <replace with your own E.164 number> once now as a test. I own this number, authorize this call, and understand that charges may apply. Use English, identify this as an AI call test, ask whether I can hear clearly, then end. Use only the authorized MCP; do not switch to API or dial repeatedly.
 
 Acceptance: call the discovered `prepare_call` with the user's task and known
 facts, without requiring a custom `result_schema` or inventing missing fields.
@@ -71,7 +71,7 @@ presented, report that limitation instead of overriding the wait instruction.
 
 ## D. Query and recovery
 
-> Use callev2 with MCP explicitly selected. Follow the previous call until its result is final, without creating the task again.
+> Use calle with MCP explicitly selected. Follow the previous call until its result is final, without creating the task again.
 
 Acceptance: use the actual `call.id` as the read tools' `call_id` argument, not
 the nested Billing `call.call_id`, a preparation ID, or a legacy run ID. Use
@@ -112,7 +112,7 @@ Key acceptance criteria:
 
 ## F. First connection and read-only integration check
 
-> Use callev2 with MCP explicitly selected. Help me connect for the first time and perform one safe read-only verification. You may configure the specified host connection and log in. Do not dial or write business data.
+> Use calle with MCP explicitly selected. Help me connect for the first time and perform one safe read-only verification. You may configure the specified host connection and log in. Do not dial or write business data.
 
 Acceptance: reuse an existing correct connection. For missing setup, prefer the current host's exposed native management capabilities. When unavailable, an already-installed official MCP management command may configure or authenticate the target under the [connection guidance](connection.md#host-interface-and-tool-flow). Match the current host and verify command support; a terminal alone is insufficient. Respect explicit no-CLI instructions and host permission denials. Do not repeat login if adding the connection already started OAuth. After the user completes the browser flow, verify the host callback. If the current chat lacks tools, follow actual supported refresh steps, discover schemas, and perform a suitable read-only call through MCP tools. Record configuration, OAuth, discovery, reading, and identity checks separately. Without a suitable read-only tool, do not claim business reading passed; without identity fields, report identity unverified. If no permitted setup mechanism exists, give only the confirmed missing user step.
 

@@ -34,7 +34,7 @@ class BehaviorPreparationTests(unittest.TestCase):
 
     def catalog_for_synthetic_case(self, source, selected_transport="api"):
         original_read = Path.read_text
-        selected = "tests/behavior/callev2-evals.json"
+        selected = "tests/behavior/calle-evals.json"
         source = {"selected_transport": selected_transport, **source}
 
         def fixture_read(path, *args, **kwargs):
@@ -168,7 +168,7 @@ class BehaviorPreparationTests(unittest.TestCase):
             fixture = case["fixture"]
             source = fixture["source_case"]
             self.assertEqual(source["execution_status"], "NOT_RUN")
-            self.assertEqual(source["version"], "2.1.1")
+            self.assertEqual(source["version"], "2.0.0")
             self.assertEqual(set(fixture["allowed_actions"]),
                              {"local.report", "journal.read", "journal.write", "host.mock_wait",
                               "http.GET" if transport == "api" else "mcp.get_call"})
@@ -621,7 +621,7 @@ class BehaviorPreparationTests(unittest.TestCase):
 
     def test_all_cases_load_one_skill_and_hash_only_its_current_sources(self):
         catalog = build_catalog(ROOT)
-        self.assertEqual({case["skill"] for case in catalog}, {"callev2"})
+        self.assertEqual({case["skill"] for case in catalog}, {"calle"})
         for case in catalog:
             scope = case["fixture"]["source_case"].get("mock_action_scope", "authentication")
             if scope == "authentication":
@@ -629,20 +629,20 @@ class BehaviorPreparationTests(unittest.TestCase):
         hashes = not_run_results(ROOT)["skill_and_fixture_file_hashes"]
         skill_hashes = [path for path in hashes if path.startswith("skills/")]
         self.assertTrue(skill_hashes)
-        self.assertTrue(all(path.startswith("skills/callev2/") for path in skill_hashes))
+        self.assertTrue(all(path.startswith("skills/calle/") for path in skill_hashes))
         source_files = {case["source_file"] for case in catalog}
-        self.assertEqual(source_files, {"tests/behavior/callev2-evals.json",
+        self.assertEqual(source_files, {"tests/behavior/calle-evals.json",
                                        "tests/extra-behavior-cases.json",
                                        "tests/behavior/round-1-cases.json"})
         for relative in source_files:
             self.assertEqual(hashes[relative], hashlib.sha256((ROOT / relative).read_bytes()).hexdigest())
-        self.assertNotIn("skills/callev2/evals/evals.json", hashes)
+        self.assertNotIn("skills/calle/evals/evals.json", hashes)
 
     def test_fixture_changes_update_evidence_hash_without_changing_skill_hashes(self):
-        source = "tests/behavior/callev2-evals.json"
+        source = "tests/behavior/calle-evals.json"
         with tempfile.TemporaryDirectory() as directory:
             temporary_root = Path(directory)
-            shutil.copytree(ROOT / "skills/callev2", temporary_root / "skills/callev2")
+            shutil.copytree(ROOT / "skills/calle", temporary_root / "skills/calle")
             for relative in {case["source_file"] for case in build_catalog(ROOT)}:
                 destination = temporary_root / relative
                 destination.parent.mkdir(parents=True, exist_ok=True)
@@ -663,17 +663,17 @@ class BehaviorPreparationTests(unittest.TestCase):
         catalog = build_catalog(ROOT)
         updates = [case for case in catalog if case["fixture"]["source_case"].get("mock_action_scope") == "skill_update"]
         self.assertEqual(len(updates), 18)
-        expected_source = "https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/skills/callev2/SKILL.md"
+        expected_source = "https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/skills/calle/SKILL.md"
         for case in updates:
             setup = case["fixture"]["source_case"]["setup"]
-            self.assertEqual(setup["installed_name"], "callev2")
+            self.assertEqual(setup["installed_name"], "calle")
             self.assertEqual(setup["update_source"], expected_source)
             self.assertNotIn("http.GET", case["fixture"]["allowed_actions"])
             self.assertNotIn("host.mock_discovery", case["fixture"]["allowed_actions"])
 
     def test_catalog_preserves_every_original_and_extra_expectation(self):
         catalog = {case["id"]: case for case in build_catalog(ROOT)}
-        sources = [ROOT / "tests/behavior/callev2-evals.json"]
+        sources = [ROOT / "tests/behavior/calle-evals.json"]
         sources.append(ROOT / "tests/extra-behavior-cases.json")
         sources.append(ROOT / "tests/behavior/round-1-cases.json")
         for path in sources:

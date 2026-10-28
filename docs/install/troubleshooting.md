@@ -2,19 +2,21 @@
 
 ## Which standalone Skill is installed?
 
-The CLI compatibility entry is `calle-cli`; its executable remains `calle` and
-its authentication and recovery state remain on the original CLI path. Existing
-standalone `calle` users should follow the
+The canonical standalone MCP/API Skill is [`calle` 2.0.0](calle.md). Verify its
+loaded name and version after host reload, not just its directory on disk.
+Plugin-owned `calle` entries have separate lifecycles; identify the intended
+standalone or plugin entry when the host exposes overlapping names.
+
+The legacy CLI compatibility entry is `calle-cli`; its executable remains
+`calle`, and authentication and recovery state stay on the original CLI path.
+Users retaining the old standalone CLI workflow should follow the
 [explicit migration steps](skills-sh-skill.md#existing-calle-users). Do not fix a
 name mismatch by logging out, deleting credentials or recreating a pending call.
-Plugin-provided `calle` entries have their own installation lifecycle.
 
-The standalone MCP/API personal testing candidate is
-[`callev2` 2.1.1](callev2.md). Verify the loaded name/version after host reload,
-not just the directory on disk. `calle-connect` update checks cannot rename it
-or switch publisher automatically. An unavailable `callev2` update source means
-unknown update status; it does not authorize fetching a different Skill.
-The final official `calle` cutover is a separate migration gate.
+The temporary `callev2` testing source is retired, and migration of its installed
+copies is outside this release's scope. Same-name update checks do not authorize
+switching Skill identity or publisher. An unavailable source means unknown
+update status.
 
 Use this guide when CALL-E installation, authentication, or tool verification
 fails in a local agent environment.

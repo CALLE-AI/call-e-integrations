@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def cases():
     return {case["id"]: case for case in json.loads(
-        (ROOT / "tests/behavior/callev2-evals.json").read_text(encoding="utf-8"))["cases"]}
+        (ROOT / "tests/behavior/calle-evals.json").read_text(encoding="utf-8"))["cases"]}
 
 
 def variant(case, name):

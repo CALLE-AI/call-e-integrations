@@ -20,7 +20,7 @@ try:
 except ImportError:  # unittest discovery with tests as the start directory
     from diagnostics import ROOT, collect_observations, expand_local, load_contract, request_validator, resolve_pointer, synthetic_request
 
-SKILLS = ("callev2",)
+SKILLS = ("calle",)
 MCP_URL = "https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth"
 BASE_URLS = {"https://api.heycall-e.com"}
 
@@ -90,7 +90,7 @@ class PackageTests(unittest.TestCase):
     def test_skill_file_discovery_ignores_hidden_local_metadata(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            skill_root = root / "skills" / "callev2"
+            skill_root = root / "skills" / "calle"
             (skill_root / ".local").mkdir(parents=True)
             (skill_root / ".DS_Store").write_bytes(b"\x80synthetic Finder metadata")
             (skill_root / ".local" / "metadata.json").write_bytes(b"\x80synthetic local metadata")
@@ -213,7 +213,7 @@ class PackageTests(unittest.TestCase):
             Draft202012Validator.check_schema(expand_local(self.contract, schema))
 
     def test_phone_placeholder_not_sendable(self):
-        payload = read_json("skills/callev2/assets/hello-call.request.json")
+        payload = read_json("skills/calle/assets/hello-call.request.json")
         self.assertEqual(payload["phone"], "<AUTHORIZED_E164_PHONE>")
         self.assertFalse(self.validator.is_valid(payload))
 
@@ -297,22 +297,22 @@ class PackageTests(unittest.TestCase):
         self.assertNotIn("cursor", params)
 
     def test_mcp_exact_endpoint(self):
-        self.assertEqual(read_json("skills/callev2/assets/tool-map.template.json")["server_url"], MCP_URL)
+        self.assertEqual(read_json("skills/calle/assets/tool-map.template.json")["server_url"], MCP_URL)
 
     def test_mcp_template_has_no_claimed_observed_tools(self):
-        value = read_json("skills/callev2/assets/tool-map.template.json")
+        value = read_json("skills/calle/assets/tool-map.template.json")
         self.assertFalse(value["connection_verified"])
         self.assertEqual(value["tools"], [])
         self.assertIsNone(value["observed_at"])
 
     def test_mcp_capabilities_unverified(self):
-        value = read_json("skills/callev2/assets/tool-map.template.json")
+        value = read_json("skills/calle/assets/tool-map.template.json")
         for candidate in value["capability_candidates"].values():
             self.assertEqual(candidate["status"], "unverified")
             self.assertEqual(candidate["actual_tool_names"], [])
 
     def test_original_behavioral_case_ids_are_preserved_when_cases_are_added(self):
-        for skill, prefix, count in (("callev2", "api", 14), ("callev2", "mcp", 10)):
+        for skill, prefix, count in (("calle", "api", 14), ("calle", "mcp", 10)):
             cases = read_json(f"tests/behavior/{skill}-evals.json")["cases"]
             ids = {case["id"] for case in cases}
             self.assertTrue({f"{prefix}-{index:02}" for index in range(1, count + 1)} <= ids)
@@ -338,13 +338,13 @@ class PackageTests(unittest.TestCase):
 
     def test_http_templates_only_placeholder_credentials(self):
         headers = []
-        for path in (ROOT / "skills/callev2/assets").glob("*.http"):
+        for path in (ROOT / "skills/calle/assets").glob("*.http"):
             headers.extend(re.findall(r"^Authorization:\s*(.+)$", path.read_text(), re.M))
         self.assertTrue(headers)
         self.assertTrue(all(header == "Bearer {{CALLE_API_KEY}}" for header in headers))
 
     def test_http_templates_methods_match_contract(self):
-        for file in (ROOT / "skills/callev2/assets").glob("*.http"):
+        for file in (ROOT / "skills/calle/assets").glob("*.http"):
             for method, url in re.findall(r"^(GET|POST|PUT|DELETE|PATCH)\s+(\S+)", file.read_text(), re.M):
                 self.assertTrue(url.startswith("https://api.heycall-e.com/"))
                 path = url.removeprefix("https://api.heycall-e.com").split("?", 1)[0]

@@ -21,7 +21,7 @@
     "publish-packages": "changeset publish",
     "release": "pnpm run version-packages",
     "pack:skill:calle-cli": "node ./scripts/pack-skills.mjs --public calle-cli",
-    "pack:skill:callev2": "node ./scripts/pack-skills.mjs --public callev2"
+    "pack:skill:calle": "node ./scripts/pack-skills.mjs --public calle"
   },
   "devDependencies": {
     "@call-e/core": "workspace:^",

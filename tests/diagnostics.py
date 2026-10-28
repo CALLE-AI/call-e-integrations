@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def load_contract(root: Path = ROOT) -> dict[str, Any]:
     """Read the working-copy contract without changing it."""
     value = yaml.safe_load(
-        (root / "skills/callev2/references/openapi-calls.yaml").read_text(encoding="utf-8")
+        (root / "skills/calle/references/openapi-calls.yaml").read_text(encoding="utf-8")
     )
     if not isinstance(value, dict):
         raise ValueError("OpenAPI input must be a mapping")
@@ -69,7 +69,7 @@ def request_validator(root: Path = ROOT) -> Draft202012Validator:
 
 def synthetic_request(root: Path = ROOT) -> dict[str, Any]:
     payload = json.loads(
-        (root / "skills/callev2/assets/hello-call.request.json").read_text(encoding="utf-8")
+        (root / "skills/calle/assets/hello-call.request.json").read_text(encoding="utf-8")
     )
     # Synthetic in-memory input ONLY. Never pass this object to a network client.
     payload["phone"] = "+12025550123"

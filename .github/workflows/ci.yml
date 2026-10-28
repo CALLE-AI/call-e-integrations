@@ -52,7 +52,7 @@ jobs:
 
       - name: Package standalone Skills
         run: |
-          pnpm pack:skill:callev2
+          pnpm pack:skill:calle
           pnpm pack:skill:calle-cli
 
       - name: Test Python batch runner

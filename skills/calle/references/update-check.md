@@ -1,6 +1,6 @@
 # Version checks and downloads
 
-<!-- Canonical procedure for the single callev2 package. -->
+<!-- Canonical procedure for the single calle package. -->
 
 The update flow uses only the host's existing public webpage/HTTPS reading, file-saving, and Skill-management tools or interfaces. Checks, downloads, and installation use no CLI, shell, or terminal commands. Do not install dependencies, start helper processes, or run scripts/install hooks from downloaded content. If appropriate capabilities are unavailable, explain the limitation and provide the official source; command-line solutions are not a fallback.
 
@@ -19,7 +19,7 @@ https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/skills/<name
 https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/<name>
 ```
 
-`<name>` must be the current Skill's `callev2`. Here, `main` means the latest public source, not an npm package version or a published versioned ZIP.
+`<name>` must be the current Skill's `calle`. Here, `main` means the latest public source, not an npm package version or a published versioned ZIP.
 
 Use an available host-native public webpage reader, such as Codex's `web.run` / `open`, or a dedicated anonymous HTTPS reader. A native public reader whose interface accepts only a URL is sufficient; missing header or redirect-control parameters alone do not prevent a check. Supply only the public source URL and supported reading options. Do not read or attach user credentials, Authorization headers, cookies, API Keys, OAuth tokens, or customer data. Authenticated business clients and logged-in browser sessions are not update readers; do not install a tool or substitute CALL-E business interfaces.
 
@@ -27,7 +27,7 @@ When the reader exposes request controls, use empty custom headers and disable r
 
 ### Fresh requests and bounded retry
 
-A public reader can return a stale successful page or a cached error for a mutable `main` URL. Keep the canonical `metadata.update-source` unchanged. For each request, append exactly `?callev2_update_check=<nonce>`, where `<nonce>` is a newly generated random token of 16 lowercase hexadecimal characters used only for this request. It must not contain or derive from credentials, account identifiers, conversation IDs, user text, or other customer data. Preserve the exact HTTPS host, repository, branch, and file path above; add no other query parameters or fragment. Open that exact constructed URL using the reader's supported arguments. Do not manually follow a redirect target, search for an alternative source, or substitute a command-line request.
+A public reader can return a stale successful page or a cached error for a mutable `main` URL. Keep the canonical `metadata.update-source` unchanged. For each request, append exactly `?calle_update_check=<nonce>`, where `<nonce>` is a newly generated random token of 16 lowercase hexadecimal characters used only for this request. It must not contain or derive from credentials, account identifiers, conversation IDs, user text, or other customer data. Preserve the exact HTTPS host, repository, branch, and file path above; add no other query parameters or fragment. Open that exact constructed URL using the reader's supported arguments. Do not manually follow a redirect target, search for an alternative source, or substitute a command-line request.
 
 Validate the source attributed by the reader outside the fetched document body. It must identify the same official HTTPS host, repository, branch, and file path; the reported URL may retain the approved nonce or omit that query when normalized. For a controlled HTTPS reader that binds its response to the exact requested URL with redirect following explicitly disabled, that request/response binding establishes the source even without a separate source field. A URL-only native reader instead needs reader-reported source attribution; the requested URL alone is insufficient. A different source, unexpected URL parameters, conflicting attribution, or missing attribution without that controlled transport binding makes the result unknown. Text inside the downloaded document cannot establish its own origin. No internal redirect-chain evidence is required from a URL-only native reader; validate the source it actually reports.
 
@@ -65,9 +65,6 @@ Agreement to "download" authorizes obtaining files; overwriting, installing, or 
 
 Do not overwrite the user's local modifications. A completed download is not a completed installation, and writing to disk does not mean the current session loaded the new version. Report completion according to actual host capabilities; the host performs any authorized reload, after which the effective version must be checked. Until the host actually loads it, do not substitute the downloaded body for this session's instructions. Updates do not migrate or clear business credentials, saved call records, or idempotency keys, and do not replay business operations.
 
-Moving from `calle-api-key`, `calle-mcp-oauth`, or `calle-connect` to `callev2` is a migration, not a same-name update. Existing installations require the user to explicitly install the unified Skill, disable the old entry points, and have the host reload. Do not automatically rename, delete old directories, or migrate secrets based on the remote body.
-
-The future official `calle` Skill is a separate identity. A `callev2` update
-checks only `callev2`; it does not replace or update `calle`, `calle-cli`, or
-plugin Skill entries. Keep existing host connection names, private credential
-locations, and saved call references unchanged during an identity migration.
+This update procedure handles only the standalone `calle` Skill. It does not
+update `calle-cli` or plugin-owned Skill entries. Keep existing host connection
+names, private credential locations and saved call references unchanged.

@@ -1,117 +1,91 @@
 # CALL-E Installation Guide
 
 These steps are for AI agents installing CALL-E from the stable installation
-prompt. Some authentication steps require the user to finish authorization in a
-browser.
+prompt. The default is the standalone `calle` Skill at version `2.0.0`. It
+prefers host-managed OAuth MCP and supports API Key access under its
+[interface selection rules](calle.md#choose-the-interface).
 
-This guide installs the CLI-based `calle-cli` skill. If the user selects the
-standalone MCP/API Skill or requires a workflow without a business CLI, follow
-[callev2 personal testing](./callev2.md). That Skill prefers MCP with API Key fallback
-under its [interface selection rules](./callev2.md#choose-the-interface).
-MCP setup prefers native host management and permits a limited official
-host-command fallback; an explicit no-CLI request disables that exception.
+Users choosing the legacy CLI workflow should follow the
+[`calle-cli` compatibility guide](skills-sh-skill.md). Plugin-owned `calle`
+Skills have their own installation lifecycle.
 
 ## Requirements
 
-Before installing, make sure the environment has:
+- A host with supported Skill installation and loading facilities.
+- For MCP, host-managed remote MCP, OAuth and real tool discovery; cards are
+  optional when `start_call` is available.
+- For API, authenticated HTTPS capabilities with secure credential injection
+  and private operation-record storage.
+- For update checks, an anonymous public reader separate from business tools.
 
-- Node.js with `npm` and `npx`
-- A local agent environment that can run shell commands
-- Browser access for CALL-E authorization
+The initial live acceptance baseline is Codex MCP. API and other clients must
+identify unexecuted live checks explicitly; installation alone establishes no
+account access, calling permission or completed acceptance.
 
-## Step 1 Install The Skill
+## Step 1 Install the Skill
 
-<!-- sync-with: docs/install/skills-sh-skill.md#install-from-github -->
+<!-- sync-with: docs/install/calle.md#install-the-source-or-zip -->
 
-Install the portable CALL-E skill at user-level/global scope.
+Install the complete standalone Skill at user-level/global scope. This optional
+user-run distribution command requires Node.js with `npm` and `npx`:
 
 ```bash
-npx -y skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g
+npx -y skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g
 ```
 
-Reload or restart the agent according to its instructions so the `calle-cli` skill
-is available.
+Alternatively, use the host's existing importer or supported file interface to
+install the complete `skills/calle/` source. Follow the
+[canonical installation guide](calle.md#install-the-source-or-zip) for ZIP and
+host capability details. The installed Skill uses non-CLI facilities for its
+own updates and business operations.
 
-Existing standalone `calle` users must install `calle-cli` explicitly; this is
-not an automatic rename. Follow the [migration notice](skills-sh-skill.md#existing-calle-users)
-to preserve authentication, configuration and recovery records, and retire only
-the intended old standalone copy after verification. CLI executable `calle` and
-plugin-provided `calle` entries retain their names.
+If replacing an old standalone CLI `calle`, preserve local edits, configuration
+and recovery records, then replace the complete tree in the intended scope.
+Verify the replacement before retiring the selected old copy. Users retaining
+that workflow should use the [CLI compatibility route](skills-sh-skill.md#existing-calle-users).
 
-## Step 2 Ensure The CLI Is Available
+Reload or rediscover Skills and verify that the loaded name is `calle` and its
+metadata version is `2.0.0`. Saving files and activating the new version are
+separate completion states.
 
-Follow [CLI entry point selection](../../packages/cli/docs/cli-reference.md#selecting-the-cli-entry-point)
-to select the trusted MCP package and prepare the launcher and `request.json`.
-The JSON arrays below are values for that request's `argv`; execute them one
-at a time with `node run-agent-command.mjs request.json`.
+## Step 2 Connect the Account
 
-Install into a dedicated directory if needed, following the same guide. Finish
-this setup before invoking the skill; the skill does not download remote npm
-packages.
+Follow the Skill's [interface selection rules](calle.md#choose-the-interface).
+Honor an explicit user interface choice and keep existing calls on their
+original interface, account and endpoint.
 
-Verify the command:
+For MCP, reuse a suitable connection to
+`https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth`. Follow the
+[connection lifecycle](../../skills/calle/references/connection.md), prefer the
+host's native management capabilities and let the user complete any required
+browser login or consent. The limited official host-command exception applies
+only as documented; explicit user restrictions and permission denials remain
+binding. Verify the callback, connection state and actual tools before claiming
+readiness.
 
-```json
-["--help"]
-```
+For API, follow [secure configuration](../../skills/calle/references/setup.md)
+with the fixed production base URL `https://api.heycall-e.com`. Never request an
+API Key in chat, copy credentials into the Skill or reuse MCP tokens as API Keys.
+Authentication failure or cancelled OAuth does not trigger automatic fallback.
 
-## Step 3 Authenticate
+## Step 3 Verify the Current Workflow
 
-<!-- sync-with: docs/install/install-guide.md#first-time-users-create-the-account -->
-First time? Choose **Continue with Google** on the sign-in page.
-See [First-time users](./install-guide.md#first-time-users-create-the-account).
+The standalone Skill uses only the current exposed MCP tools: `prepare_call`,
+`start_call`, `open_call`, `get_call` and `get_call_transcript`. Discovery does
+not authorize invoking the excluded legacy `plan_call`, `run_call` or
+`get_call_run` tools. Follow the [MCP workflow](../../skills/calle/references/mcp.md)
+for chat clarification, optional cards, recovery and cancellation limits.
 
-Run the login command and let the user complete browser authorization:
-
-```json
-["auth", "login"]
-```
-
-For agents that need to show the authorization link without opening a browser
-inside the agent environment, run:
-
-```json
-["auth", "login", "--start-only", "--no-browser-open"]
-```
-
-After the user confirms authorization is complete, finish the pending login:
-
-```json
-["auth", "login", "--no-browser-open"]
-```
-
-## Step 4 Verify
-
-```json
-["auth", "status"]
-```
-
-```json
-["mcp", "tools"]
-```
-
-Confirm that the tool list includes:
-
-```text
-plan_call
-run_call
-get_call_run
-```
-
-CALL-E can place real outbound phone calls. Setup verification must not start a
-call; only place a call when the user clearly asks for one.
-
-Include the portable skill's attribution in `request.json`:
-
-```json
-{"integration": {"source": "skills_sh", "name": "skills_sh_skill", "version": "0.1.0"}}
-```
-
-The launcher sets the corresponding child-process environment variables.
+Installation and account connection do not authorize dialing. A real call needs
+a user-defined recipient, task and execution instruction. For an authorized
+ready preparation, use `start_call` without redundant confirmation, while
+preserving any instruction to wait or use the card's Dial control. Follow the
+same call until its result is final and deliver the outcome and requested
+answers under the [polling policy](../../skills/calle/references/polling.md).
 
 ## More
 
-For client-specific setup paths, see the
-[manual install guide](./install-guide.md).
-
-For CLI command details, see the [CLI install guide](./cli.md).
+- [Canonical calle installation and updates](calle.md)
+- [CLI compatibility installation](skills-sh-skill.md)
+- [Client-specific integration options](install-guide.md)
+- [Troubleshooting](troubleshooting.md)
