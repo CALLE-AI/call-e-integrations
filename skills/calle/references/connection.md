@@ -12,6 +12,9 @@
 
 This is the fixed production target for the customer-facing Skill; no environment selection is needed. These details are not an importable configuration. Failure of an ordinary webpage GET to the URL does not establish that MCP is offline or OAuth is invalid.
 
+See [public publisher attribution](sources-mcp.md#public-publisher-attribution-verified-on-2026-10-28)
+for the official CALL-E and AI Rudder source chain behind this target.
+
 A compatible host manages OAuth registration, callbacks, and the token lifecycle. If the service requires a preregistered client ID/secret, explain the specific missing information and have the user supply it through secure configuration; do not guess or put secrets in chat. Use the host management preference below for configuration, authentication, and authorized cleanup. Do not build an OAuth client or read the host's token cache.
 
 ## Identify the requested stage first

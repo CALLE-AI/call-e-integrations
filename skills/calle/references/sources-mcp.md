@@ -66,6 +66,23 @@ tools through the selected host connection; existing connections and saved call
 references retain their original endpoint until explicitly resolved under the
 [connection guidance](connection.md).
 
+### Public publisher attribution verified on 2026-10-28
+
+The [official CALL-E usage page](https://www.heycall-e.com/how-to-use/)
+identifies AI Rudder as CALL-E's parent company, links CALL-E login to
+`https://botlab.airudder.com`, and directs agent installation to this
+repository's stable guide. The official site's
+[public discovery file](https://heycall-e.com/llms.txt) also links
+`CALLE-AI/call-e-integrations` for agent plugins and MCP setup. That repository's
+[published source](https://github.com/CALLE-AI/call-e-integrations/blob/7c8c62c4589a656f65c158d58c2ac8b9335be877/skills/calle/SKILL.md)
+designates `https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth` as the fixed
+production MCP target.
+
+These public sources establish publisher attribution for the selected target.
+Verify deployed tools, OAuth, account identity and permissions through the host's
+actual connection. The dated observations above retain their original scope.
+These links document provenance; they add no runtime downloads or permissions.
+
 ## General format and protocol sources
 
 - [Agent Skills Specification](https://agentskills.io/specification): Skill directories, metadata, and progressive loading.

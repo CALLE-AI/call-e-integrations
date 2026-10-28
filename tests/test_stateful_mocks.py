@@ -94,7 +94,7 @@ class StatefulMockTests(unittest.TestCase):
                         self.assertIsNotNone(mock.stopped_reason)
                         self.assertEqual(mock.create_count, 0)
                         executed += 1
-        self.assertEqual(executed, 44)
+        self.assertEqual(executed, 45)
         # Dedicated actual-checkpoint resume tests live in test_polling_interruption_resume.py.
         self.assertEqual(multiturn, [(case_id, "host-hard-interruption-resume")
                                     for case_id in ("api-polling-01", "mcp-polling-01")])

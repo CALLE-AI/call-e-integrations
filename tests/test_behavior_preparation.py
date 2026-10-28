@@ -168,7 +168,7 @@ class BehaviorPreparationTests(unittest.TestCase):
             fixture = case["fixture"]
             source = fixture["source_case"]
             self.assertEqual(source["execution_status"], "NOT_RUN")
-            self.assertEqual(source["version"], "2.0.0")
+            self.assertEqual(source["version"], "2.0.1")
             self.assertEqual(set(fixture["allowed_actions"]),
                              {"local.report", "journal.read", "journal.write", "host.mock_wait",
                               "http.GET" if transport == "api" else "mcp.get_call"})
@@ -203,7 +203,7 @@ class BehaviorPreparationTests(unittest.TestCase):
             self.assertEqual(variants["snapshot-only"]["expected_read_counts"]["session"], 1)
             self.assertEqual(variants["snapshot-only"]["fixture_wait_plan"],
                              [{"query_ordinals": [1, 1], "seconds": 0}])
-            self.assertEqual(len(source["variants"]), 22)
+            self.assertEqual(len(source["variants"]), 23 if transport == "mcp" else 22)
             resumed = variants["host-hard-interruption-resume"]
             self.assertEqual(len(resumed["turns"]), 2)
             self.assertEqual(resumed["expected_read_counts"], {"session": 11, "cumulative": 11})

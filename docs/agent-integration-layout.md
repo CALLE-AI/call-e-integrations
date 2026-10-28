@@ -42,7 +42,7 @@ Current standalone layout:
 
 ```text
 skills/calle-cli/  # Official CLI compatibility entry
-skills/calle/      # Canonical MCP/API Skill at version 2.0.0
+skills/calle/      # Canonical MCP/API Skill at version 2.0.1
 ```
 
 Current Claude Code layout:
@@ -160,10 +160,11 @@ intentionally exposes multiple CALL-E marketplaces in the same client UI.
 ## Standalone Skills
 
 The [migration plan](calle-skill-migration-plan.md) records the formal standalone
-cutover: `calle` version `2.0.0` is the canonical MCP/API Skill, with directory,
-frontmatter, display name and invocation aligned to `calle`. `calle-cli` remains
-the legacy CLI compatibility entry. The temporary installable `callev2` source
-is retired; its historical verification records retain their original inputs.
+cutover to `calle` `2.0.0`. The current canonical MCP/API Skill is `calle` version
+`2.0.1`, with directory, frontmatter, display name and invocation aligned to
+`calle`. `calle-cli` remains the legacy CLI compatibility entry. The temporary
+installable `callev2` source is retired; its historical verification records
+retain their original inputs.
 Migration of installed `callev2` copies is outside this cutover's scope.
 
 `skills/calle/` is distributed as a complete source directory and

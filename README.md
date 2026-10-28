@@ -115,7 +115,7 @@ Choose the integration path that fits your use case:
 ```text
 Install CALL-E for me: https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/docs/install/CALL-E-installation-guide.md
 ```
-The linked guide installs the standalone `calle` 2.0.0 Skill and selects the
+The linked guide installs the standalone `calle` 2.0.1 Skill and selects the
 host-supported connection path. The initial live acceptance baseline is Codex
 MCP; API and other clients identify unexecuted live checks separately.
 
@@ -127,7 +127,7 @@ see [calle installation](docs/install/calle.md). Business operations and updates
 use non-CLI host facilities. MCP setup prefers native host management, with a
 limited exception for the current host's official MCP management commands.
 
-The standalone Skill is now `calle` version `2.0.0`. Users retaining the legacy
+The standalone Skill is now `calle` version `2.0.1`. Users retaining the legacy
 CLI workflow can install `calle-cli` through the
 [compatibility guide](docs/install/skills-sh-skill.md#existing-calle-users).
 Plugin-owned `calle` Skills have independent installation and release lifecycles.
@@ -502,7 +502,7 @@ This is a multi-ecosystem integration monorepo with packaged plugins and standal
 | `packages/openclaw-cli-skill` | OpenClaw CALL-E skill source. |
 | `packages/skills-sh-skill` | skills.sh compatible CALL-E skill package. |
 | `skills/calle-cli/` | Portable CLI compatibility Skill; official installation uses `--skill calle-cli`. |
-| `skills/calle/` | Canonical standalone Skill at version 2.0.0; prefers host-managed OAuth MCP, with direct HTTPS/API Key fallback governed by the [interface selection rules](docs/install/calle.md#choose-the-interface). |
+| `skills/calle/` | Canonical standalone Skill at version 2.0.1; prefers host-managed OAuth MCP, with direct HTTPS/API Key fallback governed by the [interface selection rules](docs/install/calle.md#choose-the-interface). |
 | `tests/` | Offline standalone Skill validation and Agent/mock scenario definitions; execution states are recorded separately. |
 | `examples/` | Runnable MCP client demos. |
 | `docs/` | Integration guides, install docs, and troubleshooting. |
