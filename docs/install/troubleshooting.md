@@ -2,7 +2,7 @@
 
 ## Which standalone Skill is installed?
 
-The canonical standalone MCP/API Skill is [`calle` 2.0.1](calle.md). Verify its
+The canonical standalone MCP/API Skill is [`calle` 1.0.0](calle.md). Verify its
 loaded name and version after host reload, not just its directory on disk.
 Plugin-owned `calle` entries have separate lifecycles; identify the intended
 standalone or plugin entry when the host exposes overlapping names.

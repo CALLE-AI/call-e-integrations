@@ -26,7 +26,7 @@ commands.
   install, migration and local ZIP guidance lives in `docs/install/calle.md`.
   Keep `docs/install/callev2.md`, `docs/install/calle-connect.md` and
   `docs/install/dual-skills.md` as pointers for earlier links. The canonical
-  identity is `calle` with metadata/evaluation version `2.0.1`; the cutover scope
+  identity is `calle` with metadata/evaluation version `1.0.0`; the cutover scope
   is recorded in `docs/calle-skill-migration-plan.md`. The Skill's
   metadata version is independent of the CLI-based skills.sh package attribution.
   Shared routing and business workflow live in `SKILL.md`; MCP and API contracts
@@ -100,7 +100,7 @@ commands.
   attribution `skills_sh/skills_sh_skill/<version>`, authentication and recovery
   paths. Plugin names and package-scoped `calle` Skills are separate surfaces.
 - The stable `docs/install/CALL-E-installation-guide.md` defaults to `calle`
-  `2.0.1` and must remain at that path. Codex MCP is the initial live acceptance
+  `1.0.0` and must remain at that path. Codex MCP is the initial live acceptance
   baseline; API and other clients must identify unexecuted live checks.
 - Repository-local Codex helper skills live in `.agents/skills/`.
 

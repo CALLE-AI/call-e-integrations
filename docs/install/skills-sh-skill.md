@@ -4,7 +4,7 @@ This guide covers the CLI-based `calle-cli` skill. Its source of truth lives at
 `skills/calle-cli` so skills.sh can index the public skill page and search results
 directly from the repository root.
 
-For the default standalone `calle` 2.0.1 Skill, which prefers MCP with API Key fallback,
+For the default standalone `calle` 1.0.0 Skill, which prefers MCP with API Key fallback,
 see [calle installation](./calle.md) and its
 [interface selection rules](./calle.md#choose-the-interface).
 Business operations and updates use non-CLI host facilities. MCP setup follows
