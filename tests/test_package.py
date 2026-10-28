@@ -164,7 +164,7 @@ class PackageTests(unittest.TestCase):
             for url in re.findall(r"https?://[^\s\"'<>`\[\]()]+", path.read_text()):
                 parsed = urlsplit(url)
                 host = parsed.hostname or ""
-                if host.endswith(".heycall-e.com") and host not in {"docs.heycall-e.com", "dashboard.heycall-e.com"}:
+                if host.endswith(".heycall-e.com") and host not in {"docs.heycall-e.com", "dashboard.heycall-e.com", "www.heycall-e.com"}:
                     origins.add(f"{parsed.scheme}://{parsed.netloc}")
         self.assertEqual(origins, BASE_URLS)
 

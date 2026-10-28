@@ -1,6 +1,6 @@
 # calle Offline Development Tests
 
-Current canonical identity is `calle` with metadata/evaluation version `2.0.0`.
+Current canonical identity is `calle` with metadata/evaluation version `2.0.1`.
 Scenario IDs remain stable across the rename. Earlier `callev2` and
 `calle-connect` records retain their original names, versions and hashes;
 they do not establish acceptance of this canonical artifact. The initial
