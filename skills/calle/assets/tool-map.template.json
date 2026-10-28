@@ -1,0 +1,56 @@
+{
+  "template_notice": "This is a local diagnostic template, not a host configuration or an observed tools/list response.",
+  "server_url": "https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth",
+  "authentication_expected": "oauth",
+  "authentication_source": "user-provided",
+  "observed_at": null,
+  "host_name": null,
+  "connection_verified": false,
+  "discovery_method": null,
+  "discovery_completeness": "unknown",
+  "read_only_check": {
+    "performed": false,
+    "actual_tool_name": null,
+    "outcome": null
+  },
+  "tools": [],
+  "tool_entry_fields": [
+    "actual_tool_name",
+    "description",
+    "input_schema",
+    "output_schema_if_present",
+    "annotations_if_present",
+    "observed_side_effect_semantics"
+  ],
+  "capability_candidates": {
+    "read_account_or_tasks": {
+      "status": "unverified",
+      "actual_tool_names": []
+    },
+    "prepare_call": {
+      "status": "unverified",
+      "actual_tool_names": []
+    },
+    "create_or_execute_call": {
+      "status": "unverified",
+      "actual_tool_names": []
+    },
+    "read_call_state_or_result": {
+      "status": "unverified",
+      "actual_tool_names": []
+    },
+    "read_transcript": {
+      "status": "unverified",
+      "actual_tool_names": []
+    },
+    "cancel_call": {
+      "status": "unverified",
+      "actual_tool_names": []
+    }
+  },
+  "notes": [
+    "Never store OAuth tokens or API keys here.",
+    "Do not mark unavailable based only on partial discovery.",
+    "No tool name in this template is claimed to exist."
+  ]
+}
