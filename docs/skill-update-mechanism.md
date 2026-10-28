@@ -1,7 +1,7 @@
 # Standalone Skill Update Mechanism Design Record
 
 Design first recorded on 2026-10-15. Current guidance applies to the canonical
-standalone `calle` entry, metadata/evaluation version `2.0.1`; the dated
+standalone `calle` entry, metadata/evaluation version `1.0.0`; the dated
 third-party audit examples below remain historical snapshots. The selected
 repository is `CALLE-AI/call-e-integrations`.
 
@@ -193,7 +193,7 @@ requires review.
 
 The earlier MCP/API merge was tested as `calle-connect` version `0.2.0`.
 The formal cutover promoted the `callev2` `2.1.1` implementation to `calle`
-`2.0.0`. The current canonical `calle` version is `2.0.1`, with evaluation inputs
+`2.0.0`. The current canonical `calle` version is `1.0.0`, with evaluation inputs
 at `tests/behavior/calle-evals.json`.
 Keep historical acceptance tied to its original names and hashes; source binding
 and host activation need candidate-specific evidence under the
@@ -233,8 +233,12 @@ guarantee that it triggers every time on every platform.
 
 ## Identity and compatibility boundaries
 
-The canonical standalone `calle` starts at `2.0.0`. The preceding `callev2`
-identity and version sequence remain historical testing provenance. Installed
+The canonical standalone `calle` was initially published as `2.0.0`. The publisher
+subsequently selected `1.0.0` as its current release designation. Existing `2.0.x`
+copies require an explicit complete-directory installation to enter the `1.x`
+sequence; numeric comparison and downgrade suppression remain unchanged. See
+the [version designation guidance](install/calle.md#version-designation-and-existing-20x-installations).
+The preceding `callev2` identity and version sequence remain historical testing provenance. Installed
 `callev2` migration, transitional releases and cross-name updater support are
 outside this cutover's scope. Same-name checks still validate the configured
 identity; missing or mismatched public content produces unknown status rather

@@ -1,7 +1,7 @@
 # CALL-E Installation Guide
 
 These steps are for AI agents installing CALL-E from the stable installation
-prompt. The default is the standalone `calle` Skill at version `2.0.1`. It
+prompt. The default is the standalone `calle` Skill at version `1.0.0`. It
 prefers host-managed OAuth MCP and supports API Key access under its
 [interface selection rules](calle.md#choose-the-interface).
 
@@ -45,7 +45,7 @@ Verify the replacement before retiring the selected old copy. Users retaining
 that workflow should use the [CLI compatibility route](skills-sh-skill.md#existing-calle-users).
 
 Reload or rediscover Skills and verify that the loaded name is `calle` and its
-metadata version is `2.0.1`. Saving files and activating the new version are
+metadata version is `1.0.0`. Saving files and activating the new version are
 separate completion states.
 
 ## Step 2 Connect the Account

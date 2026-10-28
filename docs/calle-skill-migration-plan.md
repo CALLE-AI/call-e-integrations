@@ -1,5 +1,29 @@
 # Staged callev2 and calle-cli Migration Plan
 
+## Current standalone version designation (2026-10-28)
+
+After publishing `calle` `2.0.0` and `2.0.1`, the user explicitly selected `1.0.0`
+as the current standalone release designation and authorized its publication.
+This decision supersedes the version designation in the original cutover plan
+below. The earlier decisions, test identities, acceptance records and published
+`2.0.x` tags and artifacts remain historical records with their original contents.
+
+Publish the complete `calle` Skill under a new immutable `skills/calle@1.0.0` tag,
+with synchronized metadata, evaluation versions and current installation guidance.
+Preserve the MCP/API workflow and result-handling protections from `2.0.1`, along
+with independent CLI/plugin versions and the `calle-cli` compatibility entry.
+This is a maintainer-selected version reset, not a numeric upgrade from `2.0.1`.
+Record it in an empty Changeset; no npm package version bump is needed.
+
+The existing numeric updater does not offer older remote versions. Users with
+`2.0.x` installed must explicitly install the complete `1.0.0` release and verify
+host loading before receiving subsequent `1.x` update offers. Follow the
+[installation guidance](install/calle.md#version-designation-and-existing-20x-installations).
+Publication, installation, skills.sh indexing and security audit freshness remain
+separate observations. The reset does not establish new live or security acceptance.
+
+## Historical migration decisions
+
 Originally recorded on 2026-10-20; staging authorization updated on 2026-10-21.
 
 **Initial staging authorization: move the legacy standalone `calle` to `calle-cli` and

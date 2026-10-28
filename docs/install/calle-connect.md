@@ -1,7 +1,7 @@
 # Earlier calle-connect Installation Guide
 
 The current canonical standalone MCP/API workflow is
-[`calle` 2.0.1](calle.md). Follow that guide for complete installation, host
+[`calle` 1.0.0](calle.md). Follow that guide for complete installation, host
 requirements, interface selection, updates and validation scope. The legacy
 CLI workflow remains available through [`calle-cli`](skills-sh-skill.md).
 

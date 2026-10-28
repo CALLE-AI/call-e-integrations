@@ -5,7 +5,7 @@ CALL-E calling workflows. It prefers host-managed OAuth MCP. Before business
 writes, it can select direct HTTPS with an API Key when the host explicitly lacks
 MCP support, the target MCP connection is confirmed not configured, or complete
 discovery confirms the required capability is missing. Authentication failure or
-cancellation does not trigger fallback. The source metadata version is `2.0.1`.
+cancellation does not trigger fallback. The source metadata version is `1.0.0`.
 The directory, Skill name and display name are `calle`; invoke it as `$calle`.
 This is the canonical standalone Skill. The CLI executable and plugin-owned
 `calle` Skills have independent installation and release lifecycles.
@@ -36,6 +36,20 @@ compliance with these instructions remain part of enforcement.
 The legacy [`calle-cli` Skill](./skills-sh-skill.md) and packaged integrations are
 separate products with their existing CLI workflows. Select the exact
 `calle` source when installing this Skill.
+
+## Version designation and existing 2.0.x installations
+
+The publisher selected `1.0.0` as the current standalone release designation on
+2026-10-28. It retains the MCP/API workflow and result-handling protections from
+`2.0.1`. The earlier `2.0.0` and `2.0.1` tags and release artifacts remain available
+with their original contents.
+
+Version checks compare numeric versions and do not offer downgrades. Existing
+`2.0.x` installations therefore do not receive automatic offers for `1.0.0` or
+later `1.x` versions. To move to this release sequence, explicitly install the
+complete `1.0.0` Skill using the source or ZIP procedure below, then reload the
+host and verify the loaded version. Preserve local edits, account configuration
+and saved call records under the existing installation and rollback guidance.
 
 ## Delivery and validation scope
 

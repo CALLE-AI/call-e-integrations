@@ -21,9 +21,14 @@ The OpenAPI subset was manually authored for this package, not successfully down
 
 Version 0.2.0 incorporated the API path into the unified calle-connect Skill. Interface selection and session update checking share the main entry point; API credentials, parameters, and idempotency rules remain separate. This did not change or revalidate the server contract.
 
-Version 2.0.0 is the canonical standalone `calle` release, adopting the tested
+The initial canonical standalone `calle` release was version 2.0.0, adopting the tested
 `callev2` implementation and its existing MCP and API business contracts.
 Existing host connections, private credential locations and saved call records
 keep their original references. The initial live acceptance baseline is Codex
 MCP; unexecuted API and other-client live checks remain explicitly unverified.
 Earlier verification remains evidence only for its recorded source and scope.
+
+On 2026-10-28, the publisher selected 1.0.0 as the current release designation,
+retaining the 2.0.1 MCP/API workflow and result-handling protections. Earlier
+release artifacts and verification records retain their original versions; this
+version reset does not establish new service, host or security-audit acceptance.

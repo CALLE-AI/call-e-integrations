@@ -100,9 +100,14 @@ Version 0.2.0 merged both access paths into calle-connect, preferring MCP and se
 
 Not established by this revision: current CALL-E OAuth, the complete server tool inventory beyond the host-exposed definitions above, query/create/cancel permissions, identity, automatic token refresh, server-side revocation, live calls, or direct ZIP installation in a specific host. Prior test records remain scoped to their original host and run; they do not replace current discovery. `verified-on` identifies only the guidance review date.
 
-Version 2.0.0 is the canonical standalone `calle` release, adopting the tested
+The initial canonical standalone `calle` release was version 2.0.0, adopting the tested
 `callev2` implementation and its existing MCP and API business contracts.
 Existing host connections, private credential locations and saved call records
 keep their original references. The initial live acceptance baseline is Codex
 MCP; unexecuted API and other-client live checks remain explicitly unverified.
 Earlier verification remains evidence only for its recorded source and scope.
+
+On 2026-10-28, the publisher selected 1.0.0 as the current release designation,
+retaining the 2.0.1 MCP/API workflow and result-handling protections. Earlier
+release artifacts and verification records retain their original versions; this
+version reset does not establish new service, host or security-audit acceptance.
