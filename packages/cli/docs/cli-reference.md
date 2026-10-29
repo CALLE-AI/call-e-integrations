@@ -184,7 +184,10 @@ first clarification question when available.
 
 Call workflow failures include a `stage` of `plan_call`, `run_call`, or
 `get_call_run`, plus `call_started` and `retry_safe` guidance. A `plan_call`
-failure reports `call_started: false` and is safe to retry. If `run_call` may
+failure reports `call_started: false` and is safe to retry. A `call status`
+(`get_call_run`) failure reports `call_started: "unknown"` and `retry_safe:
+true`: a status lookup cannot know whether a call exists, and `true` is
+reserved for a stable `run_id` from `run_call`. If `run_call` may
 have been accepted but no stable `run_id` was received, the CLI reports
 `call_started: "unknown"`, `retry_safe: false`, an opaque `recovery_id`, and
 `next_argv`. Use that array as the next request's `argv`, preserving all
