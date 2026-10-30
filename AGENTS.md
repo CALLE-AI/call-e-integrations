@@ -35,7 +35,7 @@ Productized OpenClaw skill source lives in `packages/openclaw-cli-skill/skills`.
 
 Before changing standalone Skill identities, install/update origins or migration
 checks, follow [the staged migration plan](docs/calle-skill-migration-plan.md).
-The standalone entries are `calle` version `1.0.0` for the MCP/API workflow and
+The standalone entries are `calle` version `1.0.1` for the MCP/API workflow and
 `calle-cli` for CLI compatibility; CLI and plugin names remain `calle`. Preserve historical verification
 records and add new candidate evidence rather than relabeling earlier runs.
 

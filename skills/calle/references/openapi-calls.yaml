@@ -333,6 +333,12 @@ components:
           - string
           - 'null'
           description: Billing correlation id; never substitute for resource id.
+        duration:
+          type:
+          - number
+          - 'null'
+          minimum: 0
+          description: Recorded BillSec duration in seconds. Preserves zero and fractional values; null while unavailable, independently of result_status. Optional for older service versions.
         status:
           type: string
           description: Execution lifecycle state, not business success.

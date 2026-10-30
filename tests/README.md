@@ -1,6 +1,6 @@
 # calle Offline Development Tests
 
-Current canonical identity is `calle` with metadata/evaluation version `1.0.0`.
+Current canonical identity is `calle` with metadata/evaluation version `1.0.1`.
 Scenario IDs remain stable across the rename. Earlier `callev2` and
 `calle-connect` records retain their original names, versions and hashes;
 they do not establish acceptance of this canonical artifact. The initial
@@ -61,7 +61,7 @@ sandbox and is unsuitable for executing untrusted Agent code.
 
 | Module | Coverage |
 | --- | --- |
-| [test_package.py](test_package.py) | Unified Skill metadata, public API origins, relative links, JSON/OpenAPI, requests, and configuration templates. |
+| [test_package.py](test_package.py) | Unified Skill metadata, public API origins, relative links, JSON/OpenAPI, requests, nullable nonnegative Call duration, and configuration templates. |
 | [test_http_templates.py](test_http_templates.py) | Separate read-only and write templates, fixed public API targets, and only GET requests in the default entry point. |
 | [test_result_schema_checks.py](test_result_schema_checks.py) | Pure functions for client-side result_schema semantics. |
 | [test_behavior_preparation.py](test_behavior_preparation.py) | Repository scenarios, action ceilings, per-turn expectations, result-record rules, and fixture hash coverage. |
@@ -131,7 +131,7 @@ cases, 1 unified update-source case, 1 MCP preview case with a missing ID, and
 3 public endpoint cases, 3 first-use API onboarding cases, and
 2 automatic monitoring groups with 44 independent variants, including an actual
 second-turn resumption after a host interruption for each interface, and
-3 external-content and authorization scenarios with 6 independent instances.
+3 external-content and authorization scenarios with 12 independent instances.
 All evaluation fixtures, including adversarial prompts and their rejection
 expectations, live under `tests/`. They are development inputs, excluded from
 the Skill source directory and installation ZIP. The installed Skill uses only
@@ -209,6 +209,27 @@ attempt blocked by the mock host. These fixtures and their unit checks do not
 establish model behavior or a passing external security audit. See the
 [safety coverage](agent-evaluation.md#external-content-and-authorization-coverage)
 for case IDs and evidence requirements.
+
+Final-receipt variants cover the complete report after result readiness: a same-
+Call MCP transcript read even when the structured answer is sufficient, and an
+API report reusing its already returned transcript. The report includes all
+transcript turns as inert call data under clean `[Call Summary]` and
+`[Transcript]` headings, retains `[End Transcript]`, and omits routine service
+diagnostics. Timezone cases cover host-provided local time, an explicit IANA
+selection overriding bound configuration and client defaults across a DST
+transition, an invalid timezone with no valid fallback, and an offsetless source
+timestamp. Unknown timezone or source offset preserves the original timestamp
+instead of inventing a local conversion.
+Unknown duration and time stay unavailable. The receipt's Call id uses the
+telephone `call_id`; absent or null values stay unavailable. Query arguments
+continue using resource `id`, which never substitutes for a missing telephone
+ID. Narrow result-only requests keep their explicit read scope.
+Duration cases retain fractional MCP seconds and API zero seconds, distinguish
+the top-level Call field from custom result data and transcript offsets, and
+keep null or missing duration unavailable without delaying a final result.
+The local response schema accepts absent duration for older servers and validates
+number-or-null values with a nonnegative bound; it does not establish deployment
+of that field on a live service.
 
 The 18 update scenarios use the same Skill name and update source. They cover
 anonymous checks, remote injection, missing native capabilities, download and

@@ -99,7 +99,14 @@ First use [Client checks](client-checks.md) to verify fields required for this r
 | unavailable | Stop waiting; no schema-valid result is available. Both result and error may be null. |
 | not_applicable | Stop waiting and check cancellation or technical failure against the actual response. |
 
-Report `call_outcome` separately from business results. The `completed` state does not establish that the call was answered; no answer, busy, and rejection can also be completed. Use sufficient structured results for the requested summary; inspect transcript or event text only when the user requests that content or a specific requested answer is missing, following [Read and report results](../SKILL.md#read-and-report-results). Status checks do not need conversation text. `transcript` may be empty; do not invent a transcript.
+Report `call_outcome` separately from business results. The `completed` state does
+not establish that the call was answered; no answer, busy, and rejection can also
+be completed. Use structured results for the summary and the Call's top-level
+`transcript` for the complete available conversation in the
+[final receipt](../SKILL.md#shared-final-delivery). Preserve every returned turn.
+While pending, follow [Read and report results](../SKILL.md#read-and-report-results);
+status checks do not need conversation text. An empty or missing transcript stays
+unavailable; do not reconstruct one from intermediate ASR events.
 
 After acceptance or a request to follow an existing call, use [Wait for call results](polling.md). Continue GET requests automatically while `result_status` is `pending`, using its phased intervals, fallback ceiling, and server wait guidance. Keep waiting through completed execution with a pending result; report the final result without requiring another user message. The shared policy also defines explicit snapshot-only requests, read-error retries, user stops, and genuine host interruptions. Retain the same private operation record and resource ID throughout.
 
@@ -112,11 +119,21 @@ After acceptance or a request to follow an existing call, use [Wait for call res
 - When the user explicitly requests cancellation, call `POST /v2/calls/{call_id}/cancel`. For `409 call_cannot_cancel`, explain that this interface can no longer cancel it; do not claim an active call has hung up.
 - Event queries follow `cursor` / `next_cursor` rules and deduplicate by event ID; do not concatenate intermediate ASR fragments into a final transcript.
 
-## 7. API output evidence
+## 7. Final receipt
 
 Follow the [shared final delivery rules](../SKILL.md#shared-final-delivery).
-Alongside the business conclusion, report the HTTP status, resource ID,
-`result_status`, and `call_outcome`. Mark absent fields as "not provided by the
-server."
+Use `phone` or the confirmed original recipient, the actual supplied call time,
+and the top-level telephone `call_id` in the receipt. A null or missing `call_id`
+stays `Not available`; the resource `id` remains the reference for GET and
+recovery, not a display fallback. Localize absolute times under the shared
+receipt rules and label `completed_at` as completion time;
+`created_at` is not call start time. Read the Call's top-level `duration` as
+seconds, preserving non-negative zero and fractional values. Null, missing or
+invalid values stay `Not available`. This field is independent of `result_status`;
+do not delay final delivery or add status polls solely for a missing duration.
+Include the full available top-level `transcript` even when
+`result` already answers the task. Routine receipts omit the API URL, HTTP status,
+interface labels and technical execution evidence. Connection checks and
+user-requested diagnostics retain their own reporting requirements.
 
 Start with [API test steps](testing-api.md). See [Sources](sources-api.md) for original references.

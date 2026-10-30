@@ -47,6 +47,14 @@ A successful create is supported by HTTP 202 and the actual response. Save `id`,
 
 The bundled OpenAPI uses permissive response objects describing only reviewed core fields. It does not incorrectly require every illustrative field or invent real account responses.
 
+The optional `duration` field is aligned with the user-supplied service candidate
+reviewed on 2026-10-30: a non-negative number of seconds or null, sourced from
+recorded BillSec facts. Preserve zero and fractional seconds. It is null before
+terminal execution or while duration data is unavailable, and can populate on a
+later read independently of `result_status`. Missing fields from older service
+versions remain unavailable. This source review does not establish deployment
+or a live response containing the field.
+
 `result_status` determines whether to keep waiting. `pending` can coexist with completed execution; an `available` result may be `{}`; `unavailable` may have both result=null and error=null; `not_applicable` covers situations with no applicable business result. Do not replace explicit status checks with truthiness checks such as `if result`.
 
 ## Events

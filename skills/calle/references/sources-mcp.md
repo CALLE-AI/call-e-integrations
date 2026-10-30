@@ -4,6 +4,12 @@ Initially compiled on 2026-10-13. Authentication sources reviewed on 2026-10-14.
 
 ## Evidence for this CALL-E MCP
 
+On 2026-10-30, the user-supplied service candidate added `duration` to its shared
+Call response, exposed as `structuredContent.call.duration` by MCP. It uses
+recorded BillSec seconds, permits null, and preserves zero and fractional values
+independently of business-result readiness. This is local source evidence, not
+confirmation of deployment or an authenticated response with the new field.
+
 The user initially supplied `https://seleven-mcp-sg.airudder.com/mcp/chatgpt_oauth` and specified OAuth. The earlier observations below remain scoped to that endpoint.
 
 During initial compilation, ordinary webpage reading did not obtain content, and direct network access from that runtime also failed. The package does not embed an authenticated tool snapshot. Historical host tests do not establish the current connection, identity, schema, or permissions. This instruction revision makes no new CALL-E authentication or account requests; its documentation and offline checks do not establish that the server is offline or that OAuth is valid or expired.

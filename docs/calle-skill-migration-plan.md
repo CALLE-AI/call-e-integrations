@@ -16,8 +16,8 @@ This is a maintainer-selected version reset, not a numeric upgrade from `2.0.1`.
 Record it in an empty Changeset; no npm package version bump is needed.
 
 The existing numeric updater does not offer older remote versions. Users with
-`2.0.x` installed must explicitly install the complete `1.0.0` release and verify
-host loading before receiving subsequent `1.x` update offers. Follow the
+`2.0.x` installed must explicitly install the current complete `1.0.1` release
+and verify host loading before receiving subsequent `1.x` update offers. Follow the
 [installation guidance](install/calle.md#version-designation-and-existing-20x-installations).
 Publication, installation, skills.sh indexing and security audit freshness remain
 separate observations. The reset does not establish new live or security acceptance.

@@ -19,6 +19,12 @@ Not completed: target-host integration for secret storage/injection/deletion; re
 
 The OpenAPI subset was manually authored for this package, not successfully downloaded as a complete official OpenAPI file. Offline validation from any version cannot replace real-environment integration tests.
 
+On 2026-10-30, the user-supplied service candidate was reviewed for the additive
+Call `duration` field: recorded BillSec seconds as a non-negative number or null,
+with zero and fractional values preserved independently of business results.
+The bundled contract accepts this field without requiring it from older servers.
+This is local source evidence; deployment and live availability remain unverified.
+
 Version 0.2.0 incorporated the API path into the unified calle-connect Skill. Interface selection and session update checking share the main entry point; API credentials, parameters, and idempotency rules remain separate. This did not change or revalidate the server contract.
 
 The initial canonical standalone `calle` release was version 2.0.0, adopting the tested

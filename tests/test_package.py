@@ -285,6 +285,21 @@ class PackageTests(unittest.TestCase):
         result_schema = self.contract["components"]["schemas"]["Call"]["properties"]["result_status"]
         self.assertEqual(set(result_schema["enum"]), {"pending", "available", "unavailable", "not_applicable"})
 
+    def test_call_duration_accepts_nullable_nonnegative_seconds_and_old_responses(self):
+        schema = expand_local(self.contract, self.contract["components"]["schemas"]["Call"])
+        validator = Draft202012Validator(schema)
+        self.assertTrue(validator.is_valid({"id": "call_fixture_duration"}))
+        for value in (None, 0, 0.0, 83.25):
+            with self.subTest(duration=value):
+                self.assertTrue(validator.is_valid({"id": "call_fixture_duration", "duration": value}))
+        for value in (-1, -0.25, True, False, "83.25", {}, []):
+            with self.subTest(duration=value):
+                self.assertFalse(validator.is_valid({"id": "call_fixture_duration", "duration": value}))
+        for state in ("pending", "available", "unavailable", "not_applicable"):
+            with self.subTest(result_status=state):
+                self.assertTrue(validator.is_valid({"id": "call_fixture_duration",
+                                                    "duration": None, "result_status": state}))
+
     def test_event_page_limit(self):
         params = {p["name"]: p for p in self.contract["paths"]["/v2/calls/{call_id}/events"]["get"]["parameters"]}
         self.assertEqual(params["limit"]["schema"]["default"], 50)

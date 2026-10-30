@@ -182,19 +182,20 @@ Each read uses this shape, replacing the illustrative value with the real ID:
   processing remains `pending`. No-answer, busy, and declined are reported
   telephone outcomes, not automatic technical failures. Never redial
   automatically; a completed execution alone does not establish business success.
-- Use sufficient structured results for the requested summary. Read available
-  conversation text with `get_call_transcript` when the user asks for it or it
-  supplies a specific requested answer missing from those results, following
-  [Read and report results](../SKILL.md#read-and-report-results). Status checks
-  do not need a transcript. Do not invent dialogue or infer that no call occurred
-  when a transcript is missing.
+- Use structured results for the summary and collect the complete available
+  transcript for the [final receipt](../SKILL.md#shared-final-delivery). Use
+  `call.transcript` when complete; otherwise read `get_call_transcript` with the
+  same `call.id` and use its returned `transcript_turns`. Follow the discovered
+  schema; do not invent pagination parameters. While pending, follow
+  [Read and report results](../SKILL.md#read-and-report-results); status checks
+  do not need a transcript. Missing text does not establish that no call occurred.
 
 ## Scope, errors, and output
 
 This workflow supports one immediate phone task at a time. Do not promise
 scheduled execution or batch calls, or convert them into an immediate call.
 Keep explanations brief. Use the real card when available, and provide the
-server's clarifications, progress and results in chat when no card is usable.
+server's clarifications and progress in chat when no card is usable.
 Deliver the final business conclusion under
 the [shared final delivery rules](../SKILL.md#shared-final-delivery), and report
 only tool/card-supported state.
@@ -202,7 +203,18 @@ only tool/card-supported state.
 Prefer `structuredContent` and inspect `isError`; returned text or HTTP 200
 alone does not establish acceptance. Structured narrative fields remain subject
 to the [shared data boundary](../SKILL.md#authorization-and-external-content).
-Redact phone numbers by default and omit unnecessary private transcript details.
+Show the confirmed callee number and full available transcript in the final
+receipt. Its `Call id` is the telephone/Billing `call.call_id`, or `Not available`
+when null or missing. Keep `call.id` for tool arguments and recovery. Redact
+numbers in diagnostics and shared logs. Use `call.phone` for the supplied
+number and localize `call.completed_at` under the shared receipt rules, labeling
+it as completion time; `call.created_at` is resource creation time.
+Read duration from `structuredContent.call.duration`, in seconds. The updated
+Call contract permits a non-negative number or null; preserve `0` and fractional
+seconds. A null or absent field stays `Not available`, including on older service
+versions. Duration is populated from recorded BillSec facts and can be missing
+after results are final; keep result polling governed by `result_status`.
+Routine receipts omit service URLs and technical execution details.
 
 Report validation errors, authentication failures, network errors, and missing
 host capabilities separately. An error from a standard preparation does not
