@@ -189,6 +189,12 @@ Each read uses this shape, replacing the illustrative value with the real ID:
   schema; do not invent pagination parameters. While pending, follow
   [Read and report results](../SKILL.md#read-and-report-results); status checks
   do not need a transcript. Missing text does not establish that no call occurred.
+- Once `result_status` is final, follow the shared
+  [read-only receipt phase](../SKILL.md#read-and-report-results). Read a missing
+  transcript only for this same Call, then deliver the receipt and end monitoring.
+  Reuse a complete inline transcript without an extra read. A failed or unavailable
+  transcript read leaves a reported gap; it does not restart polling, preparation,
+  execution or connection setup.
 
 ## Scope, errors, and output
 
@@ -238,7 +244,9 @@ interface, request, authorization, preparation ID and submitted revision:
 - For authentication or permission failures, follow connection recovery and
   reuse the original references. These errors do not justify a different
   credential or transport. A blocked or incomplete preparation is not retryable
-  execution.
+  execution. During the final receipt phase, report an unavailable supplemental
+  read rather than starting connection recovery; a new user instruction can
+  authorize that separate task.
 
 See [MCP testing](testing-mcp.md) for scoped checks and
 [sources and verification status](sources-mcp.md) for the basis of this guidance.

@@ -71,6 +71,11 @@ commands.
   Map receipt duration to MCP `structuredContent.call.duration` or API Call
   `duration` in seconds, preserving zero and fractional values. Null or missing
   duration stays unavailable and never delays a final business result.
+  Final result states enter the shared read-only receipt phase. Keep same-Call
+  reads, complete inline data reuse, failed-read gap reporting and task completion
+  aligned across MCP, API, polling and manual tests. Distinguish available
+  task-scoped host restrictions from instruction-only behavior; never imply that
+  a Skill itself changes host permissions.
   Local tests and scan attempts do not establish an audit PASS.
 - Standalone Skill evaluation definitions live in
   `tests/behavior/calle-evals.json`, outside the installable Skill source
