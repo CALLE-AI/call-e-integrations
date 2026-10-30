@@ -1,4 +1,4 @@
-# Side effects: creation may place a real, billable call; cancellation changes state.
+# Side effects: creation may place a real call; cancellation changes state.
 # Each operation needs explicit, specific authorization. Never execute all requests.
 # Creation does not authorize cancellation or vice versa. Persist the original body/key before creation; send only the authorized request.
 # HTTP request templates, not terminal commands or previously executed requests.

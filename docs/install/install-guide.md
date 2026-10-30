@@ -23,7 +23,7 @@ its own environment.
 
 <!-- sync-with: docs/install/calle.md#install-the-source-or-zip -->
 
-Install the canonical standalone `calle` `1.0.1` Skill globally from the
+Install the canonical standalone `calle` `1.0.2` Skill globally from the
 repository root:
 
 ```bash

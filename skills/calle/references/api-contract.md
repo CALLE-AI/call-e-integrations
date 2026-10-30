@@ -9,7 +9,7 @@ Reviewed on 2026-10-13. Scope: Calls v2 and read-only Goals v1, not the complete
 | GET | /v1/goals?limit=1 | Minimal access check | Read |
 | GET | /v1/goals | List published Goals visible to the current owner | Read |
 | GET | /v1/goals/{goal_id} | Read the specified published interface | Read |
-| POST | /v2/calls | Immediately create one call | May place a real call and incur charges |
+| POST | /v2/calls | Immediately create one call | May place a real call |
 | GET | /v2/calls/{call_id} | Query Call status, results, and transcript | Read |
 | GET | /v2/calls/{call_id}/events | Query a JSON page of persisted events | Read |
 | POST | /v2/calls/{call_id}/cancel | Attempt cancellation before provider submission | State change |

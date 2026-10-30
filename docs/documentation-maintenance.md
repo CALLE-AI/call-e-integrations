@@ -26,7 +26,7 @@ commands.
   install, migration and local ZIP guidance lives in `docs/install/calle.md`.
   Keep `docs/install/callev2.md`, `docs/install/calle-connect.md` and
   `docs/install/dual-skills.md` as pointers for earlier links. The canonical
-  identity is `calle` with metadata/evaluation version `1.0.1`; the cutover scope
+  identity is `calle` with metadata/evaluation version `1.0.2`; the cutover scope
   is recorded in `docs/calle-skill-migration-plan.md`. The Skill's
   metadata version is independent of the CLI-based skills.sh package attribution.
   Shared routing and business workflow live in `SKILL.md`; MCP and API contracts
@@ -71,6 +71,11 @@ commands.
   Map receipt duration to MCP `structuredContent.call.duration` or API Call
   `duration` in seconds, preserving zero and fractional values. Null or missing
   duration stays unavailable and never delays a final business result.
+  Final result states enter the shared read-only receipt phase. Keep same-Call
+  reads, complete inline data reuse, failed-read gap reporting and task completion
+  aligned across MCP, API, polling and manual tests. Distinguish available
+  task-scoped host restrictions from instruction-only behavior; never imply that
+  a Skill itself changes host permissions.
   Local tests and scan attempts do not establish an audit PASS.
 - Standalone Skill evaluation definitions live in
   `tests/behavior/calle-evals.json`, outside the installable Skill source
@@ -111,7 +116,7 @@ commands.
   attribution `skills_sh/skills_sh_skill/<version>`, authentication and recovery
   paths. Plugin names and package-scoped `calle` Skills are separate surfaces.
 - The stable `docs/install/CALL-E-installation-guide.md` defaults to `calle`
-  `1.0.1` and must remain at that path. Codex MCP is the initial live acceptance
+  `1.0.2` and must remain at that path. Codex MCP is the initial live acceptance
   baseline; API and other clients must identify unexecuted live checks.
 - Repository-local Codex helper skills live in `.agents/skills/`.
 

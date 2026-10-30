@@ -81,6 +81,12 @@ pending; they are commentary, not a final answer or a request to continue. When
 the result is final, report it in the same task under the
 [shared final delivery rules](../SKILL.md#shared-final-delivery).
 
+Final result states end status polling and enter the shared
+[read-only receipt phase](../SKILL.md#read-and-report-results). Complete only the
+permitted same-Call reads needed for delivery, then end monitoring after the
+receipt. A missing transcript or duration does not restart the polling schedule
+or authorize another operation.
+
 ## Fallback ceiling
 
 The 120-read ceiling prevents indefinite waiting for a service that keeps

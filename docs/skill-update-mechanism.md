@@ -1,7 +1,7 @@
 # Standalone Skill Update Mechanism Design Record
 
 Design first recorded on 2026-10-15. Current guidance applies to the canonical
-standalone `calle` entry, metadata/evaluation version `1.0.1`; the dated
+standalone `calle` entry, metadata/evaluation version `1.0.2`; the dated
 third-party audit examples below remain historical snapshots. The selected
 repository is `CALLE-AI/call-e-integrations`.
 
@@ -193,7 +193,7 @@ requires review.
 
 The earlier MCP/API merge was tested as `calle-connect` version `0.2.0`.
 The formal cutover promoted the `callev2` `2.1.1` implementation to `calle`
-`2.0.0`. The current canonical `calle` version is `1.0.1`, with evaluation inputs
+`2.0.0`. The current canonical `calle` version is `1.0.2`, with evaluation inputs
 at `tests/behavior/calle-evals.json`.
 Keep historical acceptance tied to its original names and hashes; source binding
 and host activation need candidate-specific evidence under the

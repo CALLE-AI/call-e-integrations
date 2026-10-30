@@ -89,7 +89,7 @@ paths:
     post:
       operationId: createOneCall
       summary: Create one immediate call after explicit user authorization
-      description: May dial a real number and incur costs. Save the original request
+      description: May dial a real number. Save the original request
         and one stable key before sending. This Skill uses Calls v2, not legacy v1
         calls.
       parameters:
