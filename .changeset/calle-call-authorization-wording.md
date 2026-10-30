@@ -14,7 +14,8 @@ polling, manual tests and evaluation expectations; exercise a blocked execution
 attempt after final transcript retrieval in the executor regression. Retain the
 authentication-probe requirement in read-only verification scenarios.
 
-No npm package release is needed. This empty changeset records a standalone
-distribution change; prepare the next patch version before publishing changed
-artifacts. Historical releases and verification records remain unchanged. This
-wording change does not establish a different service price or an audit PASS.
+No npm package release is needed. Prepare the independently distributed
+standalone `calle` source as `1.0.2`, with synchronized evaluation metadata and
+current installation guidance. Preserve existing release artifacts, independent
+SDK/package versions and historical verification records. Local preparation and
+checks do not establish a different service price or a fresh security-audit PASS.

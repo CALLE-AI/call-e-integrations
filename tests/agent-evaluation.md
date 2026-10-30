@@ -1,6 +1,6 @@
 # Offline Agent Evaluation Adapters and Grading
 
-Current canonical identity is `calle` with metadata/evaluation version `1.0.1`.
+Current canonical identity is `calle` with metadata/evaluation version `1.0.2`.
 Scenario IDs remain stable across the rename. Earlier `callev2` and
 `calle-connect` records retain their original names, versions and hashes;
 they do not establish acceptance of this canonical artifact. The initial
