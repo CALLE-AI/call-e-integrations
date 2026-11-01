@@ -162,9 +162,9 @@ subcommand are rejected instead of being silently ignored.
 | `calle mcp config` | Print MCP client configuration JSON. | None |
 | `calle mcp tools` | List tools from the configured MCP server. | None |
 | `calle mcp call <tool-name>` | Call an arbitrary MCP tool. | `<tool-name>` |
-| `calle call plan` | Plan a phone call through `plan_call`. | `--to-phone`, `--goal` |
+| `calle call plan` | Plan a phone call through `plan_call`. Prints `confirm_token` by default. `--redact-confirm-token` (or `CALLE_REDACT_CONFIRM_TOKEN=1`) hides it, sets `has_confirm_token`, and stores the pair in the private cache. | `--to-phone`, `--goal` |
 | `calle call start` | Plan and run a phone call without printing confirmation data. | `--to-phone`, `--goal` |
-| `calle call run` | Run a planned phone call, then fetch status once. | `--plan-id`, `--confirm-token` |
+| `calle call run` | Run a planned phone call, then fetch status once. `--confirm-token` is required unless `call plan --redact-confirm-token` stored that `plan_id`. Cache hits report `confirm_token_source: "private_cache"`. | `--plan-id`, `--confirm-token` |
 | `calle call recover` | Safely repeat an uncertain `run_call` with its original private confirmation data. | `--recovery-id` |
 | `calle call status` | Query a call run through `get_call_run`. | `--run-id` |
 | `calle regions list` | Print the supported regions and languages documentation URL. | None |
@@ -273,12 +273,17 @@ network requests or output.
 | `--language` | Text | None | `call plan`, `call start` | No | No | Language hint passed to `plan_call`. Only provide when explicitly known. | `calle call plan --to-phone +15551234567 --goal "Confirm" --language English` |
 | `--region` | Text | None | `call plan`, `call start` | No | No | Region hint passed to `plan_call`. Only provide when explicitly known. | `calle call plan --to-phone +15551234567 --goal "Confirm" --region US` |
 | `--timezone` | IANA timezone | System timezone | `call plan`, `call start`, `call run`, `call recover`, `call status` | No | No | Adds planning timezone metadata for planning commands and localizes returned call timestamps for run/status commands. | `calle call status --run-id run_123 --timezone Asia/Shanghai` |
+| `--redact-confirm-token` | Boolean | `false`; `CALLE_REDACT_CONFIRM_TOKEN=1` | `call plan` | No | No | Hide `confirm_token` in `call plan` stdout, set `has_confirm_token`, and store `plan_id` + `confirm_token` in the private recovery cache (`0600`). Default remains printed so skill `call plan` → `call run` keeps working. | `calle call plan --to-phone +15551234567 --goal "Confirm" --redact-confirm-token` |
 | `--plan-id` | Text | None | `call run` | Yes | No | Planned call ID returned by `plan_call`. Preserve exactly. | `calle call run --plan-id plan_123 --confirm-token token_123` |
-| `--confirm-token` | Text | None | `call run` | Yes | No | Execution confirmation token returned by `plan_call`. Preserve exactly. | `calle call run --plan-id plan_123 --confirm-token token_123` |
+| `--confirm-token` | Text | None | `call run` | Yes unless cached | No | Execution confirmation token returned by `plan_call`. Omit only when `call plan --redact-confirm-token` stored that `plan_id`. | `calle call run --plan-id plan_123 --confirm-token token_123` |
 | `--recovery-id` | Opaque text | None | `call recover` | Yes | No | Private-cache lookup ID returned when `run_call` has an uncertain outcome. Use only with the returned recovery command. | `calle call recover --recovery-id <recovery_id>` |
 | `--run-id` | Text | None | `call status` | Yes | No | Call run ID returned by `run_call` or `call start`. | `calle call status --run-id run_123` |
 | `--cursor` | Text | None | `call status` | No | No | Pagination cursor for `get_call_run` activity entries. | `calle call status --run-id run_123 --cursor cursor_123` |
 | `--limit` | Positive integer | None | `call status` | No | No | Maximum number of activity entries to request. | `calle call status --run-id run_123 --limit 20` |
+
+`CALLE_REDACT_CONFIRM_TOKEN=1` is the environment equivalent of
+`--redact-confirm-token` on `call plan`, following the same override order as
+`CALLE_TIMEZONE` for `--timezone`: an explicit flag wins.
 
 ## Telemetry Options
 
