@@ -2090,6 +2090,39 @@ test("call run invokes run_call then get_call_run once", async () => {
   assert.doesNotMatch(result.stdout, /run-token/);
 });
 
+test("call status auth failure reports call_started unknown", async () => {
+  const cacheRoot = makeTempRoot("calle-cli-call-status-auth");
+  let fetchCalled = false;
+  const result = await run(
+    [
+      "call",
+      "status",
+      "--run-id",
+      "run_does_not_exist",
+      "--base-url",
+      "https://mcp.example",
+      "--cache-root",
+      cacheRoot,
+    ],
+    {
+      fetchImpl: async () => {
+        fetchCalled = true;
+        throw new Error("fetch should not be called");
+      },
+    }
+  );
+  const payload = JSON.parse(result.stdout);
+
+  assert.equal(result.code, 1);
+  assert.equal(fetchCalled, false);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "auth_required");
+  assert.equal(payload.stage, "get_call_run");
+  assert.equal(payload.call_started, "unknown");
+  assert.equal(payload.retry_safe, true);
+  assert.notEqual(payload.call_started, true);
+});
+
 test("call status maps flags to get_call_run arguments", async () => {
   const cacheRoot = makeTempRoot("calle-cli-call-status");
   const serverUrl = "https://mcp.example/mcp/openagent_oauth";
