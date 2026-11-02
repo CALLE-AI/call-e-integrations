@@ -1,6 +1,6 @@
 {
   "skill": "calle",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "evaluation_status": "not_executed_on_an_agent",
   "notice": "Synthetic offline Agent behavior fixtures only. Original API/MCP IDs are retained with explicitly selected interfaces; routing and updates use separate mock scopes. No Agent execution, real credentials or live service results are represented.",
   "cases": [
@@ -3913,6 +3913,70 @@
       "mock_authorization_rule": "Mock-only maximum; capability selection precedes business writes. Scope does not authorize network, credentials outside the selected source, CLI, OAuth bypass, or replay."
     },
     {
+      "id": "route-15",
+      "skill": "calle",
+      "mock_action_scope": "routing",
+      "selected_transport": "undecided",
+      "prompt": "Check my CALL-E connection and tell me the next setup step for calls. Do not configure anything, log in, or dial yet.",
+      "setup": {
+        "fixture_only": true,
+        "transport": "mock_only",
+        "current_host": "simulated_mobile_agent",
+        "host_mcp": "supported",
+        "mcp_connection": "missing",
+        "native_management": "available_and_permitted",
+        "custom_connector_management": "available",
+        "loaded_business_tools": [],
+        "api_key": "configured",
+        "secret_source": "host_secret:fixture-route-missing",
+        "http_tool": "secure_https_available",
+        "business_write_sent": false
+      },
+      "expected": [
+        "Inspect non-secret host connection and management metadata before selecting the route; no CALL-E connector or loaded business tool does not establish that the host lacks MCP support.",
+        "In a supporting host, select MCP and explain the next authorized setup sequence: configure the fixed production MCP URL, complete host-managed OAuth, then load and discover tools. Keep the configured API Key unused.",
+        "This check-only request stops at inspection and the setup handoff; do not configure, start OAuth, read API credentials, request an API Key, send HTTP, or dial."
+      ],
+      "mock_allowed_actions": [
+        "local.report",
+        "host.inspect_existing_connection"
+      ],
+      "execution_status": "NOT_RUN",
+      "mock_authorization_rule": "Synthetic routing inspection and next-step reporting only. Available host management and API capabilities do not authorize their use in this check-only task. No network, credentials, setup, login, business writes, shell, or proxy installation.",
+      "variants": [
+        {
+          "id": "native-custom-connector",
+          "expected": [
+            "Identify the host's available native custom-connector manager as the MCP setup path despite the missing CALL-E connection, without asking the user to switch to API Key setup."
+          ]
+        },
+        {
+          "id": "user-managed-setup",
+          "setup": {
+            "native_management": "unavailable_to_agent",
+            "custom_connector_management": "user_interface_only",
+            "installed_official_command": "unavailable",
+            "confirmed_settings_entry": "Fixture Settings > Connectors"
+          },
+          "expected": [
+            "Keep MCP selected and give the confirmed user settings entry and fixed production URL. The Agent's missing management capability is not an unsupported host and does not authorize API fallback, a replacement client, or a guessed command."
+          ]
+        },
+        {
+          "id": "unknown-host-support",
+          "setup": {
+            "host_mcp": "unknown",
+            "mcp_connection": "unknown",
+            "native_management": "unknown",
+            "custom_connector_management": "unknown"
+          },
+          "expected": [
+            "Report host MCP support as unverified and explain the missing capability evidence. Do not classify the host as unsupported, invent settings, or select API merely because no tools are loaded."
+          ]
+        }
+      ]
+    },
+    {
       "id": "connect-update-01",
       "skill": "calle",
       "mock_action_scope": "skill_update",
@@ -5084,7 +5148,7 @@
     {
       "id": "api-polling-01",
       "skill": "calle",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "selected_transport": "api",
       "mock_action_scope": "api_call",
       "execution_status": "NOT_RUN",
@@ -6561,7 +6625,7 @@
     {
       "id": "mcp-polling-01",
       "skill": "calle",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "selected_transport": "mcp",
       "mock_action_scope": "mcp_call",
       "execution_status": "NOT_RUN",

@@ -1,6 +1,6 @@
 # calle Offline Development Tests
 
-Current canonical identity is `calle` with metadata/evaluation version `1.0.2`.
+Current canonical identity is `calle` with metadata/evaluation version `1.0.3`.
 Scenario IDs remain stable across the rename. Earlier `callev2` and
 `calle-connect` records retain their original names, versions and hashes;
 they do not establish acceptance of this canonical artifact. The initial
@@ -117,15 +117,15 @@ migrated.
 
 ## Behavior Evaluation Status
 
-The inventory contains **125 formal Agent + mock-tool scenarios**:
-105 [repository scenarios](behavior/calle-evals.json),
+The inventory contains **126 formal Agent + mock-tool scenarios**:
+106 [repository scenarios](behavior/calle-evals.json),
 12 [extra scenarios](extra-behavior-cases.json), and
 8 [round-one scenarios](behavior/round-1-cases.json).
 The dated record contains actual model execution and independent review evidence;
 see the [readiness record](../docs/verification/calle-connect-release-readiness-2026-10-21.md)
 for results and remaining gaps. A generated NOT_RUN inventory is not a current
 execution report, and neither a completed turn nor a mock unit test is a PASS.
-The repository suite preserves the original 30 API and 27 MCP IDs and adds 14 routing
+The repository suite preserves the original 30 API and 27 MCP IDs and adds 15 routing
 cases, 1 unified update-source case, 1 MCP preview case with a missing ID, and
 9 host management boundary cases, 12 current MCP tool-selection and execution cases, and
 3 public endpoint cases, 3 first-use API onboarding cases, and
@@ -147,6 +147,13 @@ discovery, selection, and read-only actions listed for each scenario; they gain
 no write, OAuth, configuration, or shell permissions. Recovery scenarios for
 previously submitted requests retain their own restricted action sets. New
 routing authorization cannot be used to recreate an already submitted call.
+
+The missing-connection routing case includes native custom-connector management,
+user-managed setup and unknown host support. It requires MCP setup or an honest
+capability handoff rather than API Key fallback, even when a Key is configured.
+Its inspection-only ceiling permits no configuration, OAuth, credential reads or
+HTTP. These synthetic definitions remain NOT_RUN until an Agent is evaluated;
+fixture and dispatch tests do not establish Muse behavior.
 
 The first-use API cases cover one initially authorized Hello call across private
 Key saving, unavailable browser fallback and an already-owned but unbound Key.

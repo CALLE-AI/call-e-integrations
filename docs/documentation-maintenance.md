@@ -26,7 +26,7 @@ commands.
   install, migration and local ZIP guidance lives in `docs/install/calle.md`.
   Keep `docs/install/callev2.md`, `docs/install/calle-connect.md` and
   `docs/install/dual-skills.md` as pointers for earlier links. The canonical
-  identity is `calle` with metadata/evaluation version `1.0.2`; the cutover scope
+  identity is `calle` with metadata/evaluation version `1.0.3`; the cutover scope
   is recorded in `docs/calle-skill-migration-plan.md`. The Skill's
   metadata version is independent of the CLI-based skills.sh package attribution.
   Shared routing and business workflow live in `SKILL.md`; MCP and API contracts
@@ -35,6 +35,10 @@ commands.
   repository evaluation policy aligned with it. Keep pre-execution fallback,
   explicit interface choice, incomplete discovery, authentication failures and
   unknown write outcomes synchronized with evaluation scenarios.
+  New tasks default to MCP in supporting hosts, including authorized connection
+  setup and OAuth. Missing connections, unloaded tools and unavailable Agent
+  management capabilities require MCP setup, discovery or a user handoff rather
+  than API Key fallback.
   This customer Skill supports production only, with fixed MCP endpoint
   `https://seleven-mcp-sg.airudder.com/mcp/openagent_oauth` and API base URL
   `https://api.heycall-e.com`. Keep setup, templates, manual checks, and repository
@@ -116,7 +120,7 @@ commands.
   attribution `skills_sh/skills_sh_skill/<version>`, authentication and recovery
   paths. Plugin names and package-scoped `calle` Skills are separate surfaces.
 - The stable `docs/install/CALL-E-installation-guide.md` defaults to `calle`
-  `1.0.2` and must remain at that path. Codex MCP is the initial live acceptance
+  `1.0.3` and must remain at that path. Codex MCP is the initial live acceptance
   baseline; API and other clients must identify unexecuted live checks.
 - Repository-local Codex helper skills live in `.agents/skills/`.
 
