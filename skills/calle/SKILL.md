@@ -5,7 +5,7 @@ description: >-
 compatibility: >-
   MCP requires host-managed remote MCP, OAuth, and real tool discovery; cards are optional when start_call is exposed. Prefer native connection management; an existing official host MCP command may manage the connection lifecycle. API requires HTTPS tools or a trusted runtime with secure credential injection. Updates require anonymous public reads. Business calls and Skill updates do not use a CLI.
 metadata:
-  version: "1.0.3"
+  version: "1.0.4"
   update-source: "https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/skills/calle/SKILL.md"
   source: "https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle"
   verified-on: "2026-10-28"
@@ -55,7 +55,7 @@ First identify the requested operation, any explicit interface choice, and wheth
 
 Inspect the host's connection manager or custom-connector capabilities as well as its loaded business tools. An absent CALL-E connector or empty tool list does not establish that the host lacks MCP support.
 
-Select according to the table and read only the selected path's instructions:
+Select according to the table and read only the selected path's instructions. MCP setup follows the [connection guidance](references/connection.md); API Key acquisition and storage instructions apply only after selecting the API path.
 
 | Situation | Action |
 | --- | --- |
