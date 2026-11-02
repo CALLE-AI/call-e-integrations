@@ -1,5 +1,8 @@
 # API Key configuration and lifecycle
 
+Use this guide only after selecting the API Key interface. MCP OAuth setup
+follows [Connection lifecycle](connection.md).
+
 This Skill provides Agent instructions; it is not a deployed HTTP tool or standalone application. The host needs actual HTTPS request capability that can securely read credentials. A public webpage browser generally cannot replace an authenticated arbitrary HTTP request tool.
 
 ## Initial setup and reuse of existing configuration

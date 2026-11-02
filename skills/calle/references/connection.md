@@ -15,7 +15,16 @@ This is the fixed production target for the customer-facing Skill; no environmen
 See [public publisher attribution](sources-mcp.md#public-publisher-attribution-verified-on-2026-10-28)
 for the official CALL-E and AI Rudder source chain behind this target.
 
-A compatible host manages OAuth registration, callbacks, and the token lifecycle. If the service requires a preregistered client ID/secret, explain the specific missing information and have the user supply it through secure configuration; do not guess or put secrets in chat. Use the host management preference below for configuration, authentication, and authorized cleanup. Do not build an OAuth client or read the host's token cache.
+Start setup through the selected host manager with the MCP URL above. Let the
+host discover OAuth metadata and manage registration, callbacks, and tokens;
+no preliminary website visit or manual metadata fetch is required when it
+supports discovery. If its actual setup schema requires explicit OAuth fields
+or allowed hosts, derive only those fields from server metadata rather than
+guessing endpoints or hardcoding a host list. Validate the configured MCP URL
+separately from discovered OAuth endpoints: an authorization server on another
+hostname remains part of MCP.
+
+If the service requires a preregistered client ID/secret, explain the specific missing information and have the user supply it through secure configuration; do not guess or put secrets in chat. Use the host management preference below for configuration, authentication, and authorized cleanup. Do not build an OAuth client or read the host's token cache.
 
 ## Identify the requested stage first
 

@@ -6,7 +6,7 @@ host-managed OAuth MCP, including authorized setup of a missing connection.
 Before business writes, it can select direct HTTPS with an API Key when the
 host explicitly lacks MCP support or complete discovery confirms the required
 capability is missing. Missing connections, unloaded tools, authentication
-failure, or cancellation do not trigger fallback. The source metadata version is `1.0.3`.
+failure, or cancellation do not trigger fallback. The source metadata version is `1.0.4`.
 The directory, Skill name and display name are `calle`; invoke it as `$calle`.
 This is the canonical standalone Skill. The CLI executable and plugin-owned
 `calle` Skills have independent installation and release lifecycles.
@@ -48,7 +48,7 @@ with their original contents.
 Version checks compare numeric versions and do not offer downgrades. Existing
 `2.0.x` installations therefore do not receive automatic offers for `1.0.0` or
 later `1.x` versions. To move to this release sequence, explicitly install the
-complete `1.0.3` Skill using the source or ZIP procedure below, then reload the
+complete `1.0.4` Skill using the source or ZIP procedure below, then reload the
 host and verify the loaded version. Preserve local edits, account configuration
 and saved call records under the existing installation and rollback guidance.
 
