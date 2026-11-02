@@ -168,7 +168,7 @@ class BehaviorPreparationTests(unittest.TestCase):
             fixture = case["fixture"]
             source = fixture["source_case"]
             self.assertEqual(source["execution_status"], "NOT_RUN")
-            self.assertEqual(source["version"], "1.0.2")
+            self.assertEqual(source["version"], "1.0.3")
             self.assertEqual(set(fixture["allowed_actions"]),
                              {"local.report", "journal.read", "journal.write", "host.mock_wait",
                               "http.GET" if transport == "api" else "mcp.get_call"})
@@ -608,14 +608,14 @@ class BehaviorPreparationTests(unittest.TestCase):
 
     def test_routing_fixture_permissions_preserve_critical_negative_cases(self):
         catalog = {case["id"]: case for case in build_catalog(ROOT)}
-        for number in (1, 3, 6, 7, 8, 10, 12, 13):
+        for number in (1, 3, 6, 7, 8, 10, 12, 13, 15):
             actions = catalog[f"route-{number:02}"]["fixture"]["allowed_actions"]
             self.assertNotIn("http.GET", actions)
             self.assertNotIn("host.mock_secret_read", actions)
         for number in (2, 4, 5, 9, 11):
             self.assertIn("http.GET", catalog[f"route-{number:02}"]["fixture"]["allowed_actions"])
         self.assertNotIn("host.mock_discovery", catalog["route-09"]["fixture"]["allowed_actions"])
-        for number in range(1, 14):
+        for number in range(1, 16):
             self.assertFalse(any("POST" in action or "write" in action for action in
                                  catalog[f"route-{number:02}"]["fixture"]["allowed_actions"]))
 

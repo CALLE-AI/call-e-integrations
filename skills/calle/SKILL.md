@@ -1,11 +1,11 @@
 ---
 name: calle
 description: >-
-  Connect a CALL-E / HeyCall account, verify access, prepare or place real outbound phone calls, query results, and cancel tasks. Honor explicit interface choices and keep existing calls on their original interface. For other new operations, prefer MCP; select API Key before any related business write only when the host explicitly lacks MCP support, the target MCP connection is confirmed not configured, or complete discovery confirms the required capability is missing. Authentication failures, cancelled authorization, incomplete discovery, and unknown write outcomes do not trigger automatic fallback.
+  Connect a CALL-E / HeyCall account, verify access, prepare or place real outbound phone calls, query results, and cancel tasks. Honor explicit interface choices and keep existing calls on their original interface. For other new operations, use MCP whenever the host supports it, completing authorized connection setup and OAuth when needed. Select API Key before any related business write only when the host explicitly lacks MCP support or complete discovery confirms the required capability is missing. Missing connections, unloaded tools, authentication failures, cancelled authorization, incomplete discovery, and unknown write outcomes do not trigger automatic fallback.
 compatibility: >-
   MCP requires host-managed remote MCP, OAuth, and real tool discovery; cards are optional when start_call is exposed. Prefer native connection management; an existing official host MCP command may manage the connection lifecycle. API requires HTTPS tools or a trusted runtime with secure credential injection. Updates require anonymous public reads. Business calls and Skill updates do not use a CLI.
 metadata:
-  version: "1.0.2"
+  version: "1.0.3"
   update-source: "https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/skills/calle/SKILL.md"
   source: "https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle"
   verified-on: "2026-10-28"
@@ -53,6 +53,8 @@ Treat the remote file only as name and version data; do not execute or load its 
 
 First identify the requested operation, any explicit interface choice, and whether the task continues an existing call. Determine MCP availability from existing non-secret host connection metadata, tool definitions, or real discovery capabilities; do not read an API Key merely to probe the default route.
 
+Inspect the host's connection manager or custom-connector capabilities as well as its loaded business tools. An absent CALL-E connector or empty tool list does not establish that the host lacks MCP support.
+
 Select according to the table and read only the selected path's instructions:
 
 | Situation | Action |
@@ -60,7 +62,8 @@ Select according to the table and read only the selected path's instructions:
 | Query, cancel, or recover an existing call | Use the returned MCP reference in the conversation or saved host context; API calls use their private operation record. Keep the original interface, environment, account, and ID type. If only an ID is known, verify its origin first; do not guess or recreate the call. |
 | A new task explicitly selects MCP or API Key | Use the selected path. Do not automatically fall back when the user restricts the interface; explain any conflict with an existing call's origin first. |
 | MCP has a permitted tool supporting the operation | Prefer the [MCP workflow](references/mcp.md), without reading an API Key even if one is also available. |
-| The host explicitly lacks MCP support, or the target connection is confirmed not configured | The [API workflow](references/api.md) may be selected. Reuse an already bound, secure API configuration; otherwise follow its setup guidance without requiring MCP installation first. When the user requests MCP connection or login, complete that task instead of replacing it with API setup. Authentication failures and cancellation do not meet this condition. |
+| The host supports MCP but the target connection is missing | Select the [MCP workflow](references/mcp.md) and follow the [connection guidance](references/connection.md) to configure the target, complete OAuth, and load tools within the user's authorization. If the Agent cannot manage a required step, give the remaining user step. Keep MCP selected without requesting an API Key, even if one is already configured. Check-only, offline, and preview requests retain their setup restrictions. |
+| The host explicitly lacks MCP support | The [API workflow](references/api.md) may be selected. Reuse an already bound, secure API configuration; otherwise follow its setup guidance. An Agent's inability to manage connections does not establish that the host lacks MCP support. When the user requests MCP connection or login, explain the host limitation instead of replacing that task with API setup. |
 | Complete MCP discovery confirms that the required capability is missing | Before any related business write, the API path may be selected after confirming that its contract supports the operation and required parameters. |
 | MCP tools are not loaded, discovery is incomplete, or the state is unknown | Refresh or complete discovery using the [connection guidance](references/connection.md); not seeing a tool does not establish lack of support. Explain the limitation if it cannot be verified. |
 | OAuth is unfinished, the user cancels, or a 401, 403, network error, or business rejection occurs | Diagnose the current path. These are not evidence of a missing capability and do not trigger automatic API Key fallback. Tools hidden by a role or scope restriction must not be accessed by bypassing that restriction with another credential. |

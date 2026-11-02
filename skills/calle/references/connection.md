@@ -28,11 +28,15 @@ First inspect non-secret connection metadata provided by the host. Reuse a conne
 
 When the connection is missing, explain the remaining sequence: configure the
 production URL in the current host, complete its OAuth flow, then load the
-current tools. A missing/unverified status alone is not a setup handoff. Perform
-only the stages authorized by the user; for a check-only request, describe the
-next step without starting it. Use a confirmed host entry point when available,
-and state when the host's specific controls are unknown rather than inventing
-menu names.
+current tools. Keep MCP selected in a supporting host, including one that uses
+custom connectors. An absent CALL-E connector or unavailable Agent management
+capability calls for setup or a user handoff, not API Key fallback. A
+missing/unverified status alone is not a setup handoff. Perform only the stages
+authorized by the user; an authorized new call covers its necessary connection
+setup, while a check-only request describes the next step without starting it.
+The user still completes browser login and consent. Use a confirmed host entry
+point when available, and state when the host's specific controls are unknown
+rather than inventing menu names.
 
 ## Host interface and tool flow
 

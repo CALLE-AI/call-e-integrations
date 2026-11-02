@@ -1,17 +1,18 @@
 # Standalone Skill Update Mechanism Design Record
 
 Design first recorded on 2026-10-15. Current guidance applies to the canonical
-standalone `calle` entry, metadata/evaluation version `1.0.2`; the dated
+standalone `calle` entry, metadata/evaluation version `1.0.3`; the dated
 third-party audit examples below remain historical snapshots. The selected
 repository is `CALLE-AI/call-e-integrations`.
 
 The mechanism lets an Agent read the version from the official remote
 `SKILL.md` when using an installed Skill, compare it with the local version, and
 ask whether the user wants to download a newer version. Business operations
-prefer MCP; API Key fallback is selected only before business writes, when the
-host explicitly lacks MCP support, the target MCP connection is confirmed not
-configured, or complete discovery confirms the required capability is missing.
-Authentication failure or cancellation does not trigger fallback. Update checks
+use MCP in supporting hosts, including authorized setup of missing connections;
+API Key fallback is selected only before business writes, when the host
+explicitly lacks MCP support or complete discovery confirms the required
+capability is missing. Missing connections, unloaded tools, authentication
+failure or cancellation do not trigger fallback. Update checks
 do not depend on business interfaces or introduce a CLI, SDK, new MCP tool, or version
 lookup service.
 
@@ -193,7 +194,7 @@ requires review.
 
 The earlier MCP/API merge was tested as `calle-connect` version `0.2.0`.
 The formal cutover promoted the `callev2` `2.1.1` implementation to `calle`
-`2.0.0`. The current canonical `calle` version is `1.0.2`, with evaluation inputs
+`2.0.0`. The current canonical `calle` version is `1.0.3`, with evaluation inputs
 at `tests/behavior/calle-evals.json`.
 Keep historical acceptance tied to its original names and hashes; source binding
 and host activation need candidate-specific evidence under the

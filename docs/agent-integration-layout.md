@@ -9,12 +9,12 @@ This repository is a multi-ecosystem integration monorepo.
 - Keep shared local capability in `packages/cli`.
 - Keep package-scoped, productized skills under their owning package.
 - Keep the skills.sh CLI compatibility `calle-cli` Skill at the repository root in `skills/`.
-- Keep the canonical standalone `calle` source alongside it in `skills/`. It prefers
-  host-managed OAuth MCP and can select direct HTTPS/API Key before business
-  writes when the host explicitly lacks MCP support, the target MCP connection
-  is confirmed not configured, or complete discovery confirms the required
-  capability is missing. Authentication failure or cancellation does not trigger
-  fallback.
+- Keep the canonical standalone `calle` source alongside it in `skills/`. It uses
+  host-managed OAuth MCP in supporting hosts, including authorized setup of a
+  missing connection. It can select direct HTTPS/API Key before business writes
+  when the host explicitly lacks MCP support or complete discovery confirms the
+  required capability is missing. Missing connections, unloaded tools,
+  authentication failure or cancellation do not trigger fallback.
   Business operations and updates use non-CLI host facilities. MCP setup prefers
   the current host's native management capabilities, with a limited official
   host-command exception defined in
@@ -42,7 +42,7 @@ Current standalone layout:
 
 ```text
 skills/calle-cli/  # Official CLI compatibility entry
-skills/calle/      # Canonical MCP/API Skill at version 1.0.2
+skills/calle/      # Canonical MCP/API Skill at version 1.0.3
 ```
 
 Current Claude Code layout:
@@ -161,7 +161,7 @@ intentionally exposes multiple CALL-E marketplaces in the same client UI.
 
 The [migration plan](calle-skill-migration-plan.md) records the formal standalone
 cutover to `calle` `2.0.0`. The current canonical MCP/API Skill is `calle` version
-`1.0.2`, with directory, frontmatter, display name and invocation aligned to
+`1.0.3`, with directory, frontmatter, display name and invocation aligned to
 `calle`. `calle-cli` remains the legacy CLI compatibility entry. The temporary
 installable `callev2` source is retired; its historical verification records
 retain their original inputs.

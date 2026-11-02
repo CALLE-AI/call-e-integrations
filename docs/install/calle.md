@@ -1,11 +1,12 @@
 # Install the calle Skill
 
 [`calle`](../../skills/calle/SKILL.md) is one standalone Skill for
-CALL-E calling workflows. It prefers host-managed OAuth MCP. Before business
-writes, it can select direct HTTPS with an API Key when the host explicitly lacks
-MCP support, the target MCP connection is confirmed not configured, or complete
-discovery confirms the required capability is missing. Authentication failure or
-cancellation does not trigger fallback. The source metadata version is `1.0.2`.
+CALL-E calling workflows. When the host supports MCP, new tasks default to
+host-managed OAuth MCP, including authorized setup of a missing connection.
+Before business writes, it can select direct HTTPS with an API Key when the
+host explicitly lacks MCP support or complete discovery confirms the required
+capability is missing. Missing connections, unloaded tools, authentication
+failure, or cancellation do not trigger fallback. The source metadata version is `1.0.3`.
 The directory, Skill name and display name are `calle`; invoke it as `$calle`.
 This is the canonical standalone Skill. The CLI executable and plugin-owned
 `calle` Skills have independent installation and release lifecycles.
@@ -47,7 +48,7 @@ with their original contents.
 Version checks compare numeric versions and do not offer downgrades. Existing
 `2.0.x` installations therefore do not receive automatic offers for `1.0.0` or
 later `1.x` versions. To move to this release sequence, explicitly install the
-complete `1.0.2` Skill using the source or ZIP procedure below, then reload the
+complete `1.0.3` Skill using the source or ZIP procedure below, then reload the
 host and verify the loaded version. Preserve local edits, account configuration
 and saved call records under the existing installation and rollback guidance.
 
@@ -107,7 +108,8 @@ their host's supported interface. Do not invent a hosted ZIP URL.
 | --- | --- |
 | The user explicitly chooses MCP or API | Honor that choice; do not silently switch. |
 | Connected MCP tools support the operation | Prefer MCP. |
-| The host explicitly lacks MCP support or the target connection is confirmed not configured | Use API before business writes if the API supports the operation and safe credentials and HTTP capability are available; otherwise complete authorized setup or explain what is missing. Authentication failure or cancellation does not meet this condition. |
+| The host supports MCP but the target connection is missing | Select MCP and complete authorized connection setup, OAuth and tool loading. Inspect native connection or custom-connector management even if no CALL-E connector is installed. If the Agent cannot complete a step, give the confirmed user step; keep MCP selected without requesting an API Key. Check-only, offline and preview requests retain their setup restrictions. |
+| The host explicitly lacks MCP support | Use API before business writes if the API supports the operation and safe credentials and HTTP capability are available; otherwise complete authorized API setup or explain what is missing. An unavailable Agent connection manager does not establish that the host lacks MCP support. |
 | Complete tool discovery confirms MCP does not support the operation | Select API before business writes, after checking its operation support, production endpoint, and account. |
 | Discovery is incomplete or tools are not yet loaded | Refresh or complete discovery; do not treat this as unsupported capability. |
 | OAuth expires, access is denied, or authorization is cancelled | Handle the authentication or permission result; do not automatically switch credentials. |

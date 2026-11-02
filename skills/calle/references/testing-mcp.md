@@ -148,6 +148,17 @@ Key acceptance criteria:
 
 ## F. First connection and read-only integration check
 
+> Use calle to connect my account for calls. Do not dial.
+
+Acceptance: with no interface explicitly selected, a host that supports remote
+MCP must take the MCP setup path even when CALL-E has no saved connector or
+loaded business tools and an API Key is available. Inspect the host's native
+connection or custom-connector manager, configure only the fixed target, and let
+the user complete OAuth. If the Agent has no permitted management mechanism,
+give the confirmed user setup step and keep MCP selected. Missing setup or
+Agent management access must not trigger an API Key request, API secret read,
+or business HTTP request. Check-only and preview requests still stop before setup.
+
 > Use calle with MCP explicitly selected. Help me connect for the first time and perform one safe read-only verification. You may configure the specified host connection and log in. Do not dial or write business data.
 
 Acceptance: reuse an existing correct connection. For missing setup, prefer the current host's exposed native management capabilities. When unavailable, an already-installed official MCP management command may configure or authenticate the target under the [connection guidance](connection.md#host-interface-and-tool-flow). Match the current host and verify command support; a terminal alone is insufficient. Respect explicit no-CLI instructions and host permission denials. Do not repeat login if adding the connection already started OAuth. After the user completes the browser flow, verify the host callback. If the current chat lacks tools, follow actual supported refresh steps, discover schemas, and perform a suitable read-only call through MCP tools. Record configuration, OAuth, discovery, reading, and identity checks separately. Without a suitable read-only tool, do not claim business reading passed; without identity fields, report identity unverified. If no permitted setup mechanism exists, give only the confirmed missing user step.

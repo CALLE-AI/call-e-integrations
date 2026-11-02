@@ -1,6 +1,6 @@
 # Offline Agent Evaluation Adapters and Grading
 
-Current canonical identity is `calle` with metadata/evaluation version `1.0.2`.
+Current canonical identity is `calle` with metadata/evaluation version `1.0.3`.
 Scenario IDs remain stable across the rename. Earlier `callev2` and
 `calle-connect` records retain their original names, versions and hashes;
 they do not establish acceptance of this canonical artifact. The initial
@@ -358,6 +358,7 @@ scenario reports.
 | Behavior | Scenarios and required evidence |
 | --- | --- |
 | MCP takes priority over an available Key | route-01: discovery and MCP read-only traces; zero API secret reads or HTTP requests. |
+| Missing connection or unknown host support | route-15 native-custom-connector, user-managed-setup and unknown-host-support: inspect host management as well as loaded tools; keep MCP selected in supporting hosts, give only the remaining user step when necessary, and report unknown support honestly. Zero API Key requests, credential reads, HTTP, configuration or OAuth under the check-only scope. |
 | Explicit user interface selection | route-02, route-03: retain the explicit selection without automatically configuring or using the other interface. |
 | Host lacks MCP, or complete discovery confirms missing capability | route-04, route-05: bind the API target, environment, and secure credential before execution; retain the qualification that identity has not been independently verified. |
 | Incomplete discovery | route-06: complete pagination or refresh; do not equate unloaded tools with unsupported capabilities. |
