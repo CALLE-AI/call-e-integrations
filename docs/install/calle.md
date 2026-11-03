@@ -77,30 +77,59 @@ results do not establish acceptance of the canonical `calle` artifact.
 
 ## Install the source or ZIP
 
-Explicitly select the standalone `calle` entry from the official repository:
+Identify the current host first. Prefer the Skills CLI when it supports that
+host and command execution is available. Confirm the target using the
+[upstream supported-agent list](https://github.com/vercel-labs/skills/blob/main/docs/agents.md)
+or available CLI help; shell access alone does not establish host support.
+
+For a supported host, explicitly select the standalone `calle` entry from the
+official repository at user-level/global scope. The command requires Node.js
+with `npm` and `npx`:
 
 ```bash
 npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle -g -y --agent codex
 ```
 
-Replace `codex` with the intended supported agent. This is an optional user-run
-distribution command, not permission for the installed Skill to use CLI updates.
+Replace `codex` with the current host's supported agent identifier. This is an
+optional user-run distribution command, not permission for the installed Skill
+to use CLI updates.
 The [upstream skills commands](https://github.com/vercel-labs/skills/blob/main/docs/commands.md)
 and [Skill directory guidance](https://github.com/vercel-labs/skills/blob/main/docs/creating-skills.md)
 describe repository discovery and local source installation.
 
-Use the host's existing Skill importer, Skill manager or supported file interface
-to install the complete `skills/calle/` directory. A host that accepts
-ZIPs may import `dist/skills/calle.zip`; verify that support in the actual
-host. Install only into a location selected for this Skill, preserving local
-changes. Reload or rediscover Skills and verify that the loaded name is
-`calle` and its version matches the intended source.
+If the Skills CLI does not support the host, support cannot be confirmed, or
+command execution or the required CLI tooling is unavailable, use the host's
+own supported Skill installer or import interface to download and install the
+Skill instead. Follow its documented input format: a repository URL with
+subdirectory selection, a URL of a Skill directory, or a complete folder/ZIP.
+For installers with a separate subdirectory option, use
+`https://github.com/CALLE-AI/call-e-integrations` and select `skills/calle` with
+the host's supported subdirectory option. Verify the installed host's syntax
+instead of assuming that every GitHub importer accepts the same URL.
+
+Use an entry point for standalone Skills. A plugin marketplace importer is a
+separate integration route covered by the
+[client-specific installation guides](install-guide.md#manual-install-options).
+
+For an importer that accepts GitHub URLs of Skill directories, use the complete
+[`skills/calle/` directory](https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle).
+This directory URL points to the folder containing `SKILL.md`;
+an importer may not discover nested Skills from the repository root. Include
+`SKILL.md` and all bundled references when importing a folder or ZIP. A host
+that accepts ZIPs may import `dist/skills/calle.zip`; verify support in the
+actual host and do not invent a hosted ZIP URL.
+
+Install only into a location selected for this Skill, preserving local changes.
+Reload or rediscover Skills and verify that the loaded name is `calle` and its
+version matches the intended source.
 
 The source is structured for skills.sh-compatible discovery. skills.sh is a
-distribution surface; it is not a runtime dependency or permission to execute a
-command-line installer. If the host has no supported non-CLI installation
-facility, report the limitation and let the user complete installation through
-their host's supported interface. Do not invent a hosted ZIP URL.
+distribution surface; it is not a runtime dependency or permission for the
+installed Skill to execute a command-line installer. If neither installation
+route is available to the Agent, provide confirmed user steps through the
+host's supported interface and report installation as pending. If the host
+cannot load Skills, report that capability gap; downloading from GitHub alone
+does not install a usable Skill.
 
 ## Choose the interface
 

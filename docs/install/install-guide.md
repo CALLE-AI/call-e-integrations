@@ -11,8 +11,11 @@ For most users, copy this into your agent:
 Install CALL-E for me: https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/docs/install/CALL-E-installation-guide.md
 ```
 
-This is the preferred path for local agents that can run shell commands. The
-stable prompt points to the latest
+The receiving agent first identifies its host and checks Skills CLI support.
+It uses the Skills CLI when the host is supported and the required command
+execution and CLI tooling are available; otherwise, it uses the host's own
+Skill installation interface.
+The stable prompt points to the latest
 [CALL-E installation guide](./CALL-E-installation-guide.md), keeping the install
 request client-agnostic while letting the receiving agent complete the setup in
 its own environment.
@@ -23,6 +26,10 @@ its own environment.
 
 <!-- sync-with: docs/install/calle.md#install-the-source-or-zip -->
 
+First identify the current host and confirm its target in the
+[Skills CLI supported-agent list](https://github.com/vercel-labs/skills/blob/main/docs/agents.md)
+or available CLI help. Prefer the Skills CLI when the host is supported,
+command execution is available, and Node.js with `npm` and `npx` is installed.
 Install the canonical standalone `calle` `1.0.4` Skill globally from the
 repository root:
 
@@ -43,6 +50,14 @@ For direct source installs, use the same user-level/global scope:
 ```bash
 npx skills add https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle -g -y --agent <agent>
 ```
+
+If the Skills CLI does not support the host, support cannot be confirmed, or
+command execution or the required CLI tooling is unavailable, use the host's
+own supported Skill installer or import interface instead, using its documented
+source format. GitHub URLs of Skill directories, repository URLs with separate
+subdirectory options, and plugin marketplace imports are separate mechanisms.
+Follow the
+[complete Skill-directory instructions](calle.md#install-the-source-or-zip).
 
 Follow the [calle guide](calle.md) for complete source or ZIP installation,
 interface selection, account connection and loaded-identity verification.
