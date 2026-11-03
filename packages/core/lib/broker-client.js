@@ -1,6 +1,29 @@
-import { pendingCachePath, pendingIsExpired, readPendingLogin, removeFile, tokenCachePath, tokenIsUsable, writePrivateJson, readJson } from "./cache.js";
+import { migrateTokenCache, pendingCachePath, pendingIsExpired, readPendingLogin, removeFile, tokenCachePath, tokenIsUsable, writePrivateJson, readJson } from "./cache.js";
 import { INTEGRATION_HEADER, SESSION_SECRET_HEADER } from "./constants.js";
 import { HttpStatusError, requestJson } from "./http.js";
+
+const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+
+function normalizeHostname(hostname) {
+  return hostname.replace(/^\[/u, "").replace(/\]$/u, "").toLowerCase();
+}
+
+export function isSafeBrokerLoginUrl(rawUrl) {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol === "https:") {
+      return true;
+    }
+
+    return parsed.protocol === "http:" && LOOPBACK_HOSTNAMES.has(normalizeHostname(parsed.hostname));
+  } catch {
+    return false;
+  }
+}
+
+export function sanitizeBrokerLoginUrl(rawUrl) {
+  return isSafeBrokerLoginUrl(rawUrl) ? new URL(rawUrl).href : null;
+}
 
 function integrationHeaders(config) {
   return config?.integrationHeader ? { [INTEGRATION_HEADER]: config.integrationHeader } : {};
@@ -98,10 +121,23 @@ export async function exchangeBrokerSession(config, pending, { fetchImpl = globa
 }
 
 export function normalizePendingSession(sessionPayload) {
+  const loginUrl = String(sessionPayload.login_url);
+  let parsedLoginUrl;
+  try {
+    parsedLoginUrl = new URL(loginUrl);
+  } catch {
+    throw new Error("Broker session returned an invalid login_url");
+  }
+  const hostname = parsedLoginUrl.hostname.replace(/^\[/u, "").replace(/\]$/u, "").toLowerCase();
+  const isLoopback = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+  if (parsedLoginUrl.protocol !== "https:" && !isLoopback) {
+    throw new Error(`Broker session login_url must use https:, got '${parsedLoginUrl.protocol}'`);
+  }
+
   return {
     session_id: String(sessionPayload.session_id),
     session_secret: String(sessionPayload.session_secret),
-    login_url: String(sessionPayload.login_url),
+    login_url: loginUrl,
     status: String(sessionPayload.status || "PENDING").toUpperCase(),
     created_at: new Date().toISOString(),
     expires_at: sessionPayload.expires_at ? String(sessionPayload.expires_at) : null,
@@ -137,6 +173,10 @@ export async function loginWithBroker(config, {
   noBrowserOpen = false,
   stderr = () => {},
 } = {}) {
+  // Migrate token files from legacy cache directory (md5) to current (sha256)
+  // when the hash algorithm was upgraded.  No-op when the two paths are identical.
+  migrateTokenCache(config.cacheRoot, config.serverUrl);
+
   const cachePath = tokenCachePath(config.cacheRoot, config.serverUrl);
   const pendingPath = pendingCachePath(config.cacheRoot, config.serverUrl);
   const cached = readJson(cachePath);
