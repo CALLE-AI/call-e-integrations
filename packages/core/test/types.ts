@@ -3,8 +3,9 @@ import {
   loginWithBroker,
   tokenIsUsable,
   type BrokerLoginConfig,
+  type BrokerOriginPolicy,
 } from "@call-e/core";
-import { ensurePendingLogin } from "@call-e/core/broker-client";
+import { ensurePendingLogin, normalizePendingSession } from "@call-e/core/broker-client";
 import { readJson } from "@call-e/core/cache";
 import { resolveServerUrl } from "@call-e/core/config";
 import { DEFAULT_CHANNEL } from "@call-e/core/constants";
@@ -34,6 +35,17 @@ interface PlanCallResult {
 }
 
 async function consumePublicTypes() {
+  const session = {
+    session_id: "opaque/session ü",
+    session_secret: "safe-secret",
+    login_url: "https://custom-broker.test/login",
+  };
+  const originPolicy: BrokerOriginPolicy = { brokerBaseUrl: "https://custom-broker.test" };
+  normalizePendingSession(session).session_id.toUpperCase();
+  normalizePendingSession(session, originPolicy).login_url.toUpperCase();
+  normalizePendingSession(session, { authBaseUrl: "https://custom-broker.test" });
+  normalizePendingSession(session, config);
+
   const cached = readJson("/tmp/token.json");
   if (tokenIsUsable(cached, config.minTtlSeconds)) {
     cached.token.access_token.toUpperCase();
