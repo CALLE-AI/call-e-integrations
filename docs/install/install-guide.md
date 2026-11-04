@@ -30,7 +30,7 @@ First identify the current host and confirm its target in the
 [Skills CLI supported-agent list](https://github.com/vercel-labs/skills/blob/main/docs/agents.md)
 or available CLI help. Prefer the Skills CLI when the host is supported,
 command execution is available, and Node.js with `npm` and `npx` is installed.
-Install the canonical standalone `calle` `1.0.4` Skill globally from the
+Install the canonical standalone `calle` `1.0.5` Skill globally from the
 repository root:
 
 ```bash

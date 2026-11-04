@@ -1,6 +1,6 @@
 {
   "skill": "calle",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "evaluation_status": "not_executed_on_an_agent",
   "notice": "Synthetic offline Agent behavior fixtures only. Original API/MCP IDs are retained with explicitly selected interfaces; routing and updates use separate mock scopes. No Agent execution, real credentials or live service results are represented.",
   "cases": [
@@ -4296,7 +4296,9 @@
         {
           "event": "Host confirms successful callback but current-session discovery returns no loaded tools.",
           "expected": [
-            "Separate callback success from tool loading; no terminal protocol proxy or API bypass."
+            "Separate callback success from tool loading; no terminal protocol proxy or API bypass.",
+            "Present generic activation guidance: starting a new session is recommended; fully quitting and reopening the Agent application is the alternative. Leave either action to the user.",
+            "Keep discovery pending and do not report readiness until actual tools are discovered and verified for the requested scope. Do not reinstall or repeat OAuth merely because tools are not visible, or assume a universal hot-reload API."
           ]
         }
       ]
@@ -4320,7 +4322,9 @@
       },
       "expected": [
         "Keep business operations on actual host-exposed MCP tools; an official management command is not permission to invoke MCP business tools from a terminal.",
-        "Report the missing tool-loading capability and a supported host refresh step; do not use curl, a script, a proxy, vendor CLI, SDK, or API fallback to complete this MCP-only request."
+        "Report the missing tool-loading capability and a supported host refresh step; do not use curl, a script, a proxy, vendor CLI, SDK, or API fallback to complete this MCP-only request.",
+        "If permitted refresh cannot load tools, offer a new session as recommended or fully quitting and reopening the Agent application as the alternative, using generic wording and leaving the action to the user.",
+        "Report configuration and authentication separately from tool discovery and scoped verification. Do not reinstall, repeat OAuth, assume universal runtime hot reload, or claim readiness while tools remain unloaded."
       ],
       "mock_allowed_actions": [
         "local.report",
@@ -5189,7 +5193,7 @@
     {
       "id": "api-polling-01",
       "skill": "calle",
-      "version": "1.0.4",
+      "version": "1.0.5",
       "selected_transport": "api",
       "mock_action_scope": "api_call",
       "execution_status": "NOT_RUN",
@@ -6666,7 +6670,7 @@
     {
       "id": "mcp-polling-01",
       "skill": "calle",
-      "version": "1.0.4",
+      "version": "1.0.5",
       "selected_transport": "mcp",
       "mock_action_scope": "mcp_call",
       "execution_status": "NOT_RUN",
