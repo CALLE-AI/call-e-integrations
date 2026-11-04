@@ -169,7 +169,15 @@ setup incomplete and does not establish that the host lacks MCP support.
 
 > Use calle with MCP explicitly selected. Help me connect for the first time and perform one safe read-only verification. You may configure the specified host connection and log in. Do not dial or write business data.
 
-Acceptance: reuse an existing correct connection. For missing setup, prefer the current host's exposed native management capabilities. When unavailable, an already-installed official MCP management command may configure or authenticate the target under the [connection guidance](connection.md#host-interface-and-tool-flow). Match the current host and verify command support; a terminal alone is insufficient. Respect explicit no-CLI instructions and host permission denials. Do not repeat login if adding the connection already started OAuth. After the user completes the browser flow, verify the host callback. If the current chat lacks tools, follow actual supported refresh steps, discover schemas, and perform a suitable read-only call through MCP tools. Record configuration, OAuth, discovery, reading, and identity checks separately. Without a suitable read-only tool, do not claim business reading passed; without identity fields, report identity unverified. If no permitted setup mechanism exists, give only the confirmed missing user step.
+Acceptance: reuse an existing correct connection. For missing setup, prefer the current host's exposed native management capabilities. When unavailable, an already-installed official MCP management command may configure or authenticate the target under the [connection guidance](connection.md#host-interface-and-tool-flow). Match the current host and verify command support; a terminal alone is insufficient. Respect explicit no-CLI instructions and host permission denials. Do not repeat login if adding the connection already started OAuth. After the user completes the browser flow, verify the host callback. Present the [activation guidance](connection.md#activate-call-e-mcp) after installation and OAuth succeed, before verifying tool availability. If the current chat lacks tools, follow actual supported refresh steps, discover schemas, and perform a suitable read-only call through MCP tools. Record configuration, OAuth, discovery, reading, and identity checks separately. Without a suitable read-only tool, do not claim business reading passed; without identity fields, report identity unverified. If no permitted setup mechanism exists, give only the confirmed missing user step.
+
+For the post-installation handoff, check that the guidance offers a new session
+as recommended and fully quitting and reopening the Agent application as the
+alternative, without product-specific commands or an assumed hot-reload API.
+Keep discovery pending until actual tools are loaded and verify them under the
+requested scope before reporting readiness. Missing tools alone must not cause
+reinstallation or repeated OAuth. The user performs the session or application
+action; the Agent does not create a session or restart the application automatically.
 
 ## G. Cancellation, expiry, and logout
 

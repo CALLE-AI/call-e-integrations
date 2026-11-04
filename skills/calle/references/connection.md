@@ -68,9 +68,40 @@ Choose the next step from the actual state:
 3. **Log in only when needed and no authorization flow is already running.** Initiate authentication through the selected host mechanism for the target connection. If adding the connection initiated OAuth, continue that flow instead of starting another. Open the host-generated authorization URL using a permitted browser interface; do not replace it with an ordinary website login URL.
 4. **Leave the browser to the user.** The user selects the account, signs in, and consents to the actual permissions. A read-only purpose does not imply read-only OAuth scopes. Follow the host/server's actual display without prepopulating or expanding scopes. Do not ask the user to copy passwords, codes, or tokens. Keep state, challenge, and callback details from temporary authorization links out of shared reports.
 5. **Verify host results when the user returns.** Check whether the host authorization operation completed its callback successfully, then verify the target URL and authentication state. The user saying "authorized" or a webpage showing success is insufficient by itself. Distinguish pending authorization, user cancellation, and callback failure. After cancellation, stop without automatically restarting login or deleting saved configuration.
-6. **Load tools in the current chat.** If authentication succeeded but the current chat has no tools, use an actually supported refresh/discovery mechanism in the preference order above. A status command reporting authentication does not prove this chat loaded tools. If the Agent cannot refresh them, provide confirmed interface steps to refresh or reopen a session; without evidence, state that tools cannot currently be loaded. Recheck after refreshing. Do not claim an unavailable function was called or repeat configuration/login just to load tools.
+6. **Activate and load tools.** After successful installation and OAuth, present the [activation guidance](#activate-call-e-mcp) to the user before verifying availability. Use an actually supported refresh/discovery mechanism in the preference order above when available. If this session still has no loaded CALL-E tools, let the user choose a session or application action below and report discovery as pending until rechecked. A status command reporting authentication does not prove this chat loaded tools. Do not claim an unavailable function was called.
 
-Refresh guidance must match the actual host. Historical reference experiments distinguish authentication, tool loading, and read-only call completion; they do not guarantee current host capabilities. See [Sources and applicability](sources-mcp.md).
+### Activate CALL-E MCP
+
+After successfully installing and authenticating the CALL-E MCP server, the
+current session may not immediately recognize the newly installed tools.
+
+If the tools are not visible, choose one of the following options to reload the
+MCP environment:
+
+1. **Start a new session (recommended):** Open a new chat or session in your
+   current Agent application.
+2. **Restart the application:** Fully quit and reopen your Agent application.
+
+Starting a new session is generally the less disruptive option. Leave either
+action to the user; do not automatically create a session or restart the application.
+
+After either action, verify that CALL-E MCP tools are available under the
+[completion criteria below](#discovery-read-only-verification-and-completion-criteria)
+before proceeding with the requested business operation.
+
+**Important:**
+
+- Successful installation and OAuth authentication do not guarantee that the
+  current session can access the newly installed tools.
+- Do not reinstall the MCP server or repeat OAuth authentication just because
+  the tools are not visible.
+- Do not report CALL-E as ready until its tools have been discovered and verified
+  for the user's requested scope.
+
+Refresh capabilities vary by host; do not assume a universal runtime hot-reload
+API. Historical reference experiments distinguish authentication, tool loading,
+and read-only call completion; they do not guarantee current host capabilities.
+See [Sources and applicability](sources-mcp.md).
 
 ## Discovery, read-only verification, and completion criteria
 
@@ -80,10 +111,10 @@ A read-only integration check requires the following evidence:
 
 | Stage | Completion evidence / limits of inference |
 | --- | --- |
-| Configuration | The host confirms the connection points to the specified URL; saved configuration alone is not OAuth success. |
-| OAuth | The host confirms successful authorization or an existing authenticated state; a browser response does not replace callback evidence. |
-| Current tools | Candidate schemas are actually loaded in the current chat, with discovery completeness recorded; a configuration list is not a tool inventory. |
-| Business read | Actual tool semantics establish a safe read, required parameters are known, and the current task authorizes it. A real call has no protocol/tool error and returns the information needed for that operation. |
+| Configured / installed | The host confirms the connection points to the specified URL; saved configuration alone is not OAuth success. |
+| Authenticated | The host confirms successful OAuth authorization or an existing authenticated state; a browser response does not replace callback evidence. |
+| Activated / discovered | Candidate schemas are actually loaded in the current chat, with discovery completeness recorded; a configuration list is not a tool inventory. |
+| Verified / available for business reads | Actual tool semantics establish a safe read, required parameters are known, and the current task authorizes it. A real call has no protocol/tool error and returns the information needed for that operation. |
 | Identity | Verify only actually returned non-secret account/project references; state "identity unverified" when usable fields are absent. |
 
 Select the smallest necessary permitted read-only operation after reviewing its actual semantics and side effects. Apply the [MCP tool policy](mcp.md#current-call-tools-and-legacy-exclusion) before choosing an authentication check; an excluded legacy read tool is not a verification option. `readOnlyHint` is only supporting information; it does not establish that a tool is an appropriate authentication probe. If safety cannot be confirmed, required parameters are missing, or no permitted read-only tool exists, report completed OAuth/discovery and the specific limitation, with business reading unverified. Do not use call preparation or task creation to probe login. Missing identity fields do not negate a real successful read, but the read does not establish account/project alignment.
