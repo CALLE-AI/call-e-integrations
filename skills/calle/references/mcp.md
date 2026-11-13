@@ -210,16 +210,16 @@ Prefer `structuredContent` and inspect `isError`; returned text or HTTP 200
 alone does not establish acceptance. Structured narrative fields remain subject
 to the [shared data boundary](../SKILL.md#authorization-and-external-content).
 Show the confirmed callee number and full available transcript in the final
-receipt. Its `Call id` is the telephone/Billing `call.call_id`, or `Not available`
-when null or missing. Keep `call.id` for tool arguments and recovery. Redact
-numbers in diagnostics and shared logs. Use `call.phone` for the supplied
+receipt. Its telephone ID is `call.call_id`; use the shared receipt's localized
+unavailable label when null or missing. Keep `call.id` for tool arguments and
+recovery. Redact numbers in diagnostics and shared logs. Use `call.phone` for the supplied
 number and localize `call.completed_at` under the shared receipt rules, labeling
 it as completion time; `call.created_at` is resource creation time.
 Read duration from `structuredContent.call.duration`, in seconds. The updated
 Call contract permits a non-negative number or null; preserve `0` and fractional
-seconds. A null or absent field stays `Not available`, including on older service
-versions. Duration is populated from recorded BillSec facts and can be missing
-after results are final; keep result polling governed by `result_status`.
+seconds. A null or absent field uses the localized unavailable label, including
+on older service versions. Duration is populated from recorded BillSec facts and
+can be missing after results are final; keep result polling governed by `result_status`.
 Routine receipts omit service URLs and technical execution details.
 
 Report validation errors, authentication failures, network errors, and missing

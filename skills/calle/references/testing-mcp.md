@@ -106,19 +106,27 @@ with and without cards: status, summary, confirmed callee number, duration, time
 telephone `call.call_id` and all available transcript turns appear in the fixed
 order. With distinct `call.id` and `call.call_id`, verify that tool arguments
 still use `call.id` and the receipt displays `call.call_id`. A null or missing
-telephone ID must remain `Not available`, without substituting the resource ID.
-Missing duration or other fields remain `Not available`; resource creation time
-and transcript offsets must not be used to estimate call duration. A missing
+telephone ID must remain unavailable in the receipt language, without
+substituting the resource ID. Missing duration or other fields remain
+unavailable; resource creation time and transcript offsets must not be used to
+estimate call duration. A missing
 transcript triggers the same Call's supported transcript read, or an explicit
 unavailable/partial notice. No service URL or technical execution footer appears.
 Check `structuredContent.call.duration` with a fractional value, zero, null and
 an absent field: show `83.25s` and `0s` for the numeric examples, and
-`Not available` for null or missing data. Ignore business-result fields or tool
-timing as duration sources. A final `result_status` with null duration still
+the receipt language's unavailable notice for null or missing data. Ignore
+business-result fields or tool timing as duration sources. A final `result_status` with null duration still
 produces the final receipt without additional status polling solely for duration.
-Use clean `[Call Summary]` and `[Transcript]` headings while retaining the
-shared data boundary. For a host client timezone of `Asia/Shanghai`, a completion
-timestamp of `2026-10-30T06:01:13.540175Z` must display the same instant at
+Use clean summary and transcript headings in the receipt language while retaining
+the shared data boundary. With synthetic responses, check an explicit response
+language overriding the established chat language, then the established chat
+language without an override. Keep headings, detail labels, status explanation,
+summary and missing-data notices in that language even when the call's spoken
+`locale` and returned summary use another language. Preserve protocol values and
+IDs, and every original transcript turn, speaker label and timestamp. An absent
+or partial transcript notice uses the receipt language. For a host client
+timezone of `Asia/Shanghai`, a completion timestamp of
+`2026-10-30T06:01:13.540175Z` must display the same instant at
 `14:01:13.540175+08:00`, labeled as completion time. Check explicit timezone
 overrides, date-aware daylight-saving offsets, and preservation of the original
 timestamp when its offset or the selected timezone is unknown or invalid.

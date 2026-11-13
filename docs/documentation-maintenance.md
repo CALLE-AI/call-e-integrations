@@ -26,7 +26,7 @@ commands.
   install, migration and local ZIP guidance lives in `docs/install/calle.md`.
   Keep `docs/install/callev2.md`, `docs/install/calle-connect.md` and
   `docs/install/dual-skills.md` as pointers for earlier links. The canonical
-  identity is `calle` with metadata/evaluation version `1.0.5`; the cutover scope
+  identity is `calle` with metadata/evaluation version `1.0.6`; the cutover scope
   is recorded in `docs/calle-skill-migration-plan.md`. The Skill's
   metadata version is independent of the CLI-based skills.sh package attribution.
   Shared routing and business workflow live in `SKILL.md`; MCP and API contracts
@@ -69,8 +69,14 @@ commands.
   receipt while retaining resource IDs for queries and recovery; missing telephone
   IDs stay unavailable. Localize absolute call times using the user's selected
   or host-provided timezone, with date-aware offsets and an honest source-time
-  fallback. Keep user-visible summary/transcript headings clean while preserving
-  the shared untrusted-content boundary. Preserve pending-result read
+  fallback. Keep receipt headings, labels, status explanations, summaries and
+  missing-data notices aligned with the user's explicit response language, or
+  established chat language when unspecified. Spoken call language and returned
+  text do not select the response language. Treat the English receipt template
+  as structural guidance; preserve field meanings/order, protocol values, IDs
+  and all original transcript dialogue, speaker labels and timestamps. Keep
+  localized summary/transcript headings clean while preserving the shared
+  untrusted-content boundary. Preserve pending-result read
   limits, explicitly narrow requests, inert quotations and task-scoped retention.
   Map receipt duration to MCP `structuredContent.call.duration` or API Call
   `duration` in seconds, preserving zero and fractional values. Null or missing
@@ -120,7 +126,7 @@ commands.
   attribution `skills_sh/skills_sh_skill/<version>`, authentication and recovery
   paths. Plugin names and package-scoped `calle` Skills are separate surfaces.
 - The stable `docs/install/CALL-E-installation-guide.md` defaults to `calle`
-  `1.0.5` and must remain at that path. Codex MCP is the initial live acceptance
+  `1.0.6` and must remain at that path. Codex MCP is the initial live acceptance
   baseline; API and other clients must identify unexecuted live checks.
 - Repository-local Codex helper skills live in `.agents/skills/`.
 

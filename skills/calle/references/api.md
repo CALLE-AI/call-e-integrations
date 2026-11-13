@@ -132,13 +132,13 @@ After acceptance or a request to follow an existing call, use [Wait for call res
 Follow the [shared final delivery rules](../SKILL.md#shared-final-delivery).
 Use `phone` or the confirmed original recipient, the actual supplied call time,
 and the top-level telephone `call_id` in the receipt. A null or missing `call_id`
-stays `Not available`; the resource `id` remains the reference for GET and
-recovery, not a display fallback. Localize absolute times under the shared
-receipt rules and label `completed_at` as completion time;
+uses the shared receipt's localized unavailable label; the resource `id` remains
+the reference for GET and recovery, not a display fallback. Localize absolute
+times under the shared receipt rules and label `completed_at` as completion time;
 `created_at` is not call start time. Read the Call's top-level `duration` as
 seconds, preserving non-negative zero and fractional values. Null, missing or
-invalid values stay `Not available`. This field is independent of `result_status`;
-do not delay final delivery or add status polls solely for a missing duration.
+invalid values use the localized unavailable label. This field is independent of
+`result_status`; do not delay final delivery or add status polls solely for a missing duration.
 Include the full available top-level `transcript` even when
 `result` already answers the task. Routine receipts omit the API URL, HTTP status,
 interface labels and technical execution evidence. Connection checks and

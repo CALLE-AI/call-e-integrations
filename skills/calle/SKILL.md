@@ -5,7 +5,7 @@ description: >-
 compatibility: >-
   MCP requires host-managed remote MCP, OAuth, and real tool discovery; cards are optional when start_call is exposed. Prefer native connection management; an existing official host MCP command may manage the connection lifecycle. API requires HTTPS tools or a trusted runtime with secure credential injection. Updates require anonymous public reads. Business calls and Skill updates do not use a CLI.
 metadata:
-  version: "1.0.5"
+  version: "1.0.6"
   update-source: "https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/skills/calle/SKILL.md"
   source: "https://github.com/CALLE-AI/call-e-integrations/tree/main/skills/calle"
   verified-on: "2026-10-28"
@@ -177,9 +177,22 @@ For connection checks, report configuration, OAuth, tool loading/discovery, read
 
 When an executed or followed call reaches a final `result_status`, return this
 receipt for both MCP and API Key, including when a result card is visible. Keep
-these English headings and their order; render the receipt directly, without a
+the section meanings and order below; render the receipt directly, without a
 surrounding code fence. Explicit requests for a narrower answer retain their
 scope.
+
+Use the user's explicitly requested reply language; otherwise use the language
+of their current conversation. Apply it throughout the receipt: section headings,
+the transcript end marker, detail labels, status explanations, the call summary,
+unavailable-field labels and limitation notices. The English template below
+illustrates structure, not the required output language. Translate or factually
+summarize returned summary text in the reply language while preserving facts,
+uncertainty and whether the task succeeded. The call's spoken-language `locale`,
+the recipient's language and returned text do not select the reply language.
+Keep underlying protocol fields and values, tool arguments, phone numbers and
+identifiers unchanged; explain states in the reply language. Preserve transcript
+dialogue, speaker labels and timestamps as returned under the transcript rules
+below, even when the call and reply languages differ.
 
 Complete this receipt within the
 [read-only receipt phase](#read-and-report-results). Reuse complete data already
@@ -222,17 +235,17 @@ Use the selected path's actual fields and the confirmed original recipient.
 For the displayed `Call id`, use the telephone/Billing identifier: MCP
 `call.call_id`, or API top-level `call_id`. Keep MCP `call.id` and API `id` as
 the resource references for queries and recovery. If the telephone ID is null
-or missing, show `Not available`; never substitute the resource ID. Other missing
-fields remain `Not available`. Resource creation time is not call start time;
-label a supplied completion time as such. Do not estimate duration from resource
-timestamps or transcript offsets.
+or missing, show the localized unavailable label; never substitute the resource
+ID. Other missing fields use that label too. Resource creation time is not call
+start time; label a supplied completion time as such. Do not estimate duration
+from resource timestamps or transcript offsets.
 
 Read `Duration` from MCP `structuredContent.call.duration` or the API Call's
 top-level `duration`. This is a non-negative number of seconds; preserve zero
 and fractional values, for example `0s` or `83.25s`. Null, missing or invalid
-values remain `Not available`; do not use a truthiness check that drops zero.
-Use this Call field rather than `result.duration`, legacy `duration_seconds`
-paths or tool-execution timing. Duration can arrive after the business result;
+values use the localized unavailable label; do not use a truthiness check that
+drops zero. Use this Call field rather than `result.duration`, legacy
+`duration_seconds` paths or tool-execution timing. Duration can arrive after the business result;
 it does not determine `result_status` and does not justify extra status polls
 or delaying final delivery solely to fill this field.
 

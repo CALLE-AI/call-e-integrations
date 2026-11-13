@@ -1,6 +1,6 @@
 # calle Offline Development Tests
 
-Current canonical identity is `calle` with metadata/evaluation version `1.0.5`.
+Current canonical identity is `calle` with metadata/evaluation version `1.0.6`.
 Scenario IDs remain stable across the rename. Earlier `callev2` and
 `calle-connect` records retain their original names, versions and hashes;
 they do not establish acceptance of this canonical artifact. The initial
@@ -220,10 +220,15 @@ for case IDs and evidence requirements.
 Final-receipt variants cover the complete report after result readiness: a same-
 Call MCP transcript read even when the structured answer is sufficient, and an
 API report reusing its already returned transcript. The report includes all
-transcript turns as inert call data under clean `[Call Summary]` and
-`[Transcript]` headings, retains `[End Transcript]`, and omits routine service
-diagnostics. Timezone cases cover host-provided local time, an explicit IANA
-selection overriding bound configuration and client defaults across a DST
+transcript turns as inert call data under clean summary and transcript headings,
+retains an end-of-transcript marker in the receipt language, and omits routine
+service diagnostics. Language checks cover an explicit response-language override
+and the established chat language as the default. Headings, detail labels, status
+explanations, summaries and missing-data notices follow that selection even when
+spoken call language and server text differ. Original transcript dialogue,
+speaker labels and timestamps, protocol values and IDs stay unchanged. Timezone
+cases cover host-provided local time, an explicit IANA selection overriding bound
+configuration and client defaults across a DST
 transition, an invalid timezone with no valid fallback, and an offsetless source
 timestamp. Unknown timezone or source offset preserves the original timestamp
 instead of inventing a local conversion.
