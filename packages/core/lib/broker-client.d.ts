@@ -96,3 +96,6 @@ export function loginWithBroker(
   config: BrokerLoginConfig,
   options?: LoginWithBrokerOptions,
 ): Promise<BrokerLoginResult>;
+
+export function isSafeBrokerLoginUrl(rawUrl: unknown): boolean;
+export function sanitizeBrokerLoginUrl(rawUrl: unknown): string | null;
