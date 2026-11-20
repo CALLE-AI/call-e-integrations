@@ -1,6 +1,6 @@
 {
   "skill": "calle",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "evaluation_status": "not_executed_on_an_agent",
   "notice": "Synthetic offline Agent behavior fixtures only. Original API/MCP IDs are retained with explicitly selected interfaces; routing and updates use separate mock scopes. No Agent execution, real credentials or live service results are represented.",
   "cases": [
@@ -5193,7 +5193,7 @@
     {
       "id": "api-polling-01",
       "skill": "calle",
-      "version": "1.0.6",
+      "version": "1.0.7",
       "selected_transport": "api",
       "mock_action_scope": "api_call",
       "execution_status": "NOT_RUN",
@@ -6670,7 +6670,7 @@
     {
       "id": "mcp-polling-01",
       "skill": "calle",
-      "version": "1.0.6",
+      "version": "1.0.7",
       "selected_transport": "mcp",
       "mock_action_scope": "mcp_call",
       "execution_status": "NOT_RUN",
@@ -6806,7 +6806,7 @@
         "Respect server Retry-After or rate-limit guidance as a minimum, taking the greater of the phase delay and remaining server delay; split waits into interruptible chunks of at most 30 seconds and provide progress within 60 seconds.",
         "Preserve cumulative phase, current-session request count, consecutive transient-failure streak, latest state, original resource ID, and server not-before value across known tool batches and interrupted resumption. Only a valid read or an explicitly authorized new monitoring session resets the failure streak.",
         "Stop normally on available, unavailable, or not_applicable; available requires an actual object and the empty object is valid. Do not infer connection or business success from readiness alone.",
-        "Count the first read and all retry requests toward a maximum of 120 requests in the same monitoring session. At pending query 120 preserve state and report fallback exhaustion, with no query 121, redial, cancellation, false terminal state, or background-monitoring claim.",
+        "For a monitoring session with no valid server interval, count the first read and all retries toward the 120-read fallback ceiling. A valid MCP interval permits continued same-Call reads beyond that ceiling. At a fallback stop, preserve state and report the pending result.",
         "Stop on explicit user stop or cancellation, a genuine host hard interruption, invalid response/schema, authentication failure, fatal error, or exhausted transient retries. An explicitly snapshot-only request performs one read and schedules no monitoring."
       ],
       "fixture_tools": [
@@ -6963,6 +6963,138 @@
             "session": 12,
             "cumulative": 12
           }
+        },
+        {
+          "id": "server-interval-with-unconfirmed-widget",
+          "prompt": "Keep following my existing MCP call call_fixture_polling_mcp. I cannot see a call card in this chat.",
+          "fixture_status_reads": [
+            {
+              "query_ordinal_range": [
+                120,
+                120
+              ],
+              "response": {
+                "isError": false,
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "{\"call\": {\"id\": \"call_fixture_polling_mcp\", \"status\": \"completed\", \"result_status\": \"pending\"}, \"presentation\": \"widget\", \"progress\": {\"poll_after_seconds\": 2, \"cursor\": \"call_fixture_polling_mcp:120\"}}"
+                  }
+                ],
+                "structuredContent": {
+                  "call": {
+                    "id": "call_fixture_polling_mcp",
+                    "status": "completed",
+                    "result_status": "pending",
+                    "result": null,
+                    "error": null
+                  }
+                }
+              }
+            },
+            {
+              "query_ordinal_range": [
+                121,
+                121
+              ],
+              "response": {
+                "isError": false,
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "{\"call\": {\"id\": \"call_fixture_polling_mcp\", \"status\": \"completed\", \"result_status\": \"pending\"}, \"presentation\": \"widget\", \"progress\": {\"cursor\": \"call_fixture_polling_mcp:121\"}}"
+                  }
+                ],
+                "structuredContent": {
+                  "call": {
+                    "id": "call_fixture_polling_mcp",
+                    "status": "completed",
+                    "result_status": "pending",
+                    "result": null,
+                    "error": null
+                  }
+                }
+              }
+            },
+            {
+              "query_ordinal_range": [
+                122,
+                122
+              ],
+              "response": {
+                "isError": false,
+                "structuredContent": {
+                  "call": {
+                    "id": "call_fixture_polling_mcp",
+                    "status": "completed",
+                    "result_status": "available",
+                    "result": {},
+                    "error": null
+                  }
+                }
+              }
+            }
+          ],
+          "expected": [
+            "Read the original Call after the 20-second fallback preceding query 120. The widget is unconfirmed. Observe the valid two-second interval and continue this session past read 120.",
+            "Pass the previous same-Call progress.cursor as progress_cursor for queries 121 and 122 because the discovered get_call schema supports it. Wait two seconds before query 121 and use the 20-second fallback before query 122 after the hint is absent. Report the available result on query 122."
+          ],
+          "setup": {
+            "polling_state": {
+              "cumulative_query_count": 119,
+              "session_query_count": 119,
+              "server_not_before_virtual_seconds": null,
+              "consecutive_transient_failures": 0
+            }
+          },
+          "fixture_wait_plan": [
+            {
+              "query_ordinals": [
+                120,
+                120
+              ],
+              "seconds": 20
+            },
+            {
+              "query_ordinals": [
+                121,
+                121
+              ],
+              "seconds": 2
+            },
+            {
+              "query_ordinals": [
+                122,
+                122
+              ],
+              "seconds": 20
+            }
+          ],
+          "expected_read_counts": {
+            "session": 122,
+            "cumulative": 122
+          },
+          "fixture_tools": [
+            {
+              "name": "mcp__calle_connect__get_call",
+              "description": "Synthetic current Call read with optional progress_cursor for the same Call.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "call_id": {
+                    "type": "string"
+                  },
+                  "progress_cursor": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "call_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          ]
         },
         {
           "id": "resume-after-30-reads",

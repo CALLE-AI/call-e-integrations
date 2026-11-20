@@ -1,6 +1,6 @@
 # Offline Agent Evaluation Adapters and Grading
 
-Current canonical identity is `calle` with metadata/evaluation version `1.0.6`.
+Current canonical identity is `calle` with metadata/evaluation version `1.0.7`.
 Scenario IDs remain stable across the rename. Earlier `callev2` and
 `calle-connect` records retain their original names, versions and hashes;
 they do not establish acceptance of this canonical artifact. The initial
@@ -173,8 +173,7 @@ identifiers so argument traces can establish which identifier was used.
 
 `api-polling-01` and `mcp-polling-01` monitor an already-created synthetic Call
 under the shared [waiting policy](../skills/calle/references/polling.md).
-Each group has 22 independent variants; execution status comes from its actual
-run and review records. The base responses
+Execution status comes from actual run and review records. The base responses
 cover 31 completed/pending reads followed by an available empty object on read
 32, with tool batches ending at 10, 20 and 30. Ranges in `fixture_status_reads`
 repeat only the supplied response for those cumulative query ordinals; they do
@@ -188,12 +187,22 @@ preparation helpers only build the catalog; [stateful_mocks.py](behavior/statefu
 and [fixture_server.py](behavior/fixture_server.py) implement synthetic state
 and dispatch separately.
 
+The base MCP fixtures omit `progress.poll_after_seconds` and exercise the phased
+fallback. `server-interval-with-unconfirmed-widget` exposes the hint in the
+tool's JSON text payload and supplies no verified card mount. On the next read,
+the two-second server interval takes precedence over the 20-second fallback and
+allows read 121. The Agent passes the same Call's cursor where the tool schema
+accepts it. The next response omits the interval, so read 122 uses the phased
+fallback and returns the terminal result. Verify a self-updating card handoff using the
+[MCP manual checks](../skills/calle/references/testing-mcp.md#d-query-and-recovery).
+
 Capture cumulative query count, session request count, consecutive transient
 failures, original ID, latest valid response and server not-before before and
 after every query, wait, batch boundary and interruption. Count initial and
-retry reads against the 120-request session ceiling. Query 120 can return a
-normal terminal result; if it remains pending, no query 121 occurs in that
-session. A later explicitly authorized new session retains the 20-second phase
+retry reads against the 120-request ceiling for API sessions and MCP sessions
+with no valid interval. In those sessions, query 120 can return a normal terminal
+result, and a pending response ends the session. A later explicitly authorized
+new session retains the 20-second phase
 and server deadline. A missing saved count is reported and starts a new capped
 session at 20 seconds, without inventing cumulative query 31; these fixtures
 use `session_request_ordinal_range` and null cumulative ordinals for that case.

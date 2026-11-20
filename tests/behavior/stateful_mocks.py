@@ -352,11 +352,17 @@ class StatefulMock:
             raise ValueError("Controller interruption history repeats an event")
         if restored.polling:
             polling = current["state"]
-            if not isinstance(polling, dict) or set(polling) != set(restored.state):
+            if not isinstance(polling, dict):
                 raise ValueError("Controller polling fields are invalid")
-            for key, maximum in (("session_query_count", 120), ("consecutive_transient_failures", 4)):
-                if type(polling[key]) is not int or not 0 <= polling[key] <= maximum:
-                    raise ValueError("Controller polling counters are invalid")
+            server_paced = restored.transport == "mcp" and polling.get("mcp_server_interval_seen") is True
+            fields = set(restored.state) | ({"mcp_server_interval_seen"} if server_paced else set())
+            if set(polling) != fields:
+                raise ValueError("Controller polling fields are invalid")
+            session_count = polling["session_query_count"]
+            failure_count = polling["consecutive_transient_failures"]
+            if (type(session_count) is not int or session_count < 0 or (not server_paced and session_count > 120)
+                    or type(failure_count) is not int or not 0 <= failure_count <= 4):
+                raise ValueError("Controller polling counters are invalid")
             count = polling["cumulative_query_count"]
             if count is not None and (type(count) is not int or count < polling["session_query_count"]):
                 raise ValueError("Controller cumulative count is invalid")
@@ -417,7 +423,30 @@ class StatefulMock:
             return self._onboarding_http(action, args)
         raise NotImplementedError("No complete stateful fixture implements this action")
 
+    def _mcp_service_interval(self):
+        if self.transport != "mcp" or not self.latest_response:
+            return None
+        for block in self.latest_response.get("content", []):
+            if block.get("type") != "text":
+                continue
+            try:
+                payload = json.loads(block["text"])
+            except json.JSONDecodeError:
+                continue
+            call = payload.get("call") if isinstance(payload, dict) else None
+            if not isinstance(call, dict) or call.get("id") != self.call_id:
+                continue
+            progress = payload.get("progress")
+            hint = progress.get("poll_after_seconds") if isinstance(progress, dict) else None
+            if type(hint) in (int, float) and math.isfinite(hint) and hint > 0:
+                return hint
+        return None
+
     def _next_delay(self):
+        if not self.state["consecutive_transient_failures"]:
+            interval = self._mcp_service_interval()
+            if interval is not None:
+                return interval
         count = self.state["cumulative_query_count"]
         if count is None:
             return 20
@@ -458,7 +487,8 @@ class StatefulMock:
                                               "polling_state": copy.deepcopy(self.state)})
 
     def _poll(self, args):
-        if self.stopped_reason or self.state["session_query_count"] >= 120:
+        if self.stopped_reason or (self.state["session_query_count"] >= 120
+                                   and not self.state.get("mcp_server_interval_seen")):
             raise PermissionError("Monitoring has stopped or exhausted its session cap")
         if self.transport == "api":
             if args.get("url") != API_ORIGIN + "/v2/calls/" + self.call_id:
@@ -505,6 +535,8 @@ class StatefulMock:
                 self.latest_response = copy.deepcopy(result)
                 if body["result_status"] in _TERMINAL:
                     self.stopped_reason = "terminal_result"
+                elif self._mcp_service_interval() is not None:
+                    self.state["mcp_server_interval_seen"] = True
         else:
             raise NotImplementedError("Polling response has no observation")
         delay = self.case.get("fixture_retry_after", {})
@@ -517,7 +549,7 @@ class StatefulMock:
                 result["synthetic_server_wait"] = {"minimum_seconds": delay["minimum_seconds"], "not_before_virtual_seconds": deadline}
         if self.variant_id == "snapshot-only":
             self.stopped_reason = "snapshot_complete"
-        if session == 120 and self.stopped_reason is None:
+        if session == 120 and self.stopped_reason is None and not self.state.get("mcp_server_interval_seen"):
             self.stopped_reason = "session_cap"
         self._interrupt()
         if self.host_event:
