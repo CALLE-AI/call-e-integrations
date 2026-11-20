@@ -90,9 +90,16 @@ presented, report that limitation instead of overriding the wait instruction.
 Acceptance: use the actual `call.id` as the read tools' `call_id` argument, not
 the nested Billing `call.call_id`, a preparation ID, or a legacy run ID. Use
 `open_call` for its card, `get_call` for state/results, and `get_call_transcript`
-for available conversation text. Follow [Wait for call results](polling.md) and
-continue automatically while `result_status` is `pending`, across polling phases
-up to the fallback ceiling without requiring another user message.
+for available conversation text. With a confirmed self-updating card for the
+Call, verify that a brief acknowledgment ends routine Agent monitoring and the
+card presents the result. Test an absent or failed card and `presentation=widget`
+without mount confirmation. In each case the Agent follows the same Call using
+[Wait for call results](polling.md). Test a valid `progress.poll_after_seconds`
+shorter than the current fallback phase, a longer required server wait, and a
+missing or invalid hint. Verify a server-paced Call continues past 120 reads and
+that a session with no valid server interval stops at the fallback ceiling. For
+successive reads, verify that the Agent sends the Call's returned cursor only
+when the discovered schema accepts `progress_cursor`.
 `unavailable` and `not_applicable` are final even with null result/error. Do not
 infer business success from completed execution, or invent a missing transcript.
 Report missing query capability or IDs without recreating the call or promising
@@ -101,8 +108,9 @@ after ten or thirty reads, final or pending results on read 120, server wait
 guidance, interruptions, and explicit snapshot-only requests without placing
 additional calls.
 
-Verify the [final receipt](../SKILL.md#shared-final-delivery) in chat in hosts
-with and without cards: status, summary, confirmed callee number, duration, time,
+Verify the [final receipt](../SKILL.md#shared-final-delivery) in chat when the
+Agent follows the call or the user explicitly requests it with a card present.
+Check that status, summary, confirmed callee number, duration, time,
 telephone `call.call_id` and all available transcript turns appear in the fixed
 order. With distinct `call.id` and `call.call_id`, verify that tool arguments
 still use `call.id` and the receipt displays `call.call_id`. A null or missing

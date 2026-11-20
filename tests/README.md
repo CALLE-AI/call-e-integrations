@@ -172,7 +172,9 @@ response ranges cover results after twelve and thirty-two reads, completed
 execution with a pending result, all four delay phases, server minimum waits,
 interruptible waits and progress, terminal/unavailable results, user stops,
 snapshot-only requests, host interruptions, and retry exhaustion or reset.
-Boundary variants cover final and pending results on request 120, retry requests
+An MCP variant supplies a server interval and cursor on read 120, advertises a
+widget without a verified card mount, and continues past the fallback ceiling.
+API and MCP fallback variants cover final and pending results on request 120, retry requests
 consuming the last slot, known and unknown saved counts, and later explicit
 continuation retaining the 20-second phase. Counts, failure streaks and server
 deadlines survive known batches and interruptions. Only an explicitly listed

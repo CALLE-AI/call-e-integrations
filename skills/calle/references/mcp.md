@@ -96,8 +96,8 @@ selection rules apply. Missing UI alone is not missing MCP dialing capability.
    never click for them. Otherwise `start_call` works the same with or without UI.
    Card Dial and `start_call` share one idempotent submission per preparation;
    if the card has already submitted, recover and follow that existing Call.
-6. After `start_call`, retain `call.id` and immediately follow the existing call
-   under the result-waiting policy. Acceptance or a queued state does not mean
+6. After `start_call`, retain `call.id` and apply the [card handoff and result
+   rules](#follow-an-existing-call). Acceptance or a queued state does not mean
    the recipient answered. Do not create another preparation to resume a call.
 
 If a preparation explicitly expired before submission, report it and prepare
@@ -162,7 +162,7 @@ IDs distinct, and never convert old plan IDs, confirmation tokens, or run IDs.
 If the needed Call resource ID is absent from the conversation or saved context,
 ask the user for that reference rather than inventing one.
 
-Each read uses this shape, replacing the illustrative value with the real ID:
+The base argument is `call_id`. Substitute the real ID in the example.
 
 ```json
 {"call_id": "call_example"}
@@ -174,14 +174,32 @@ Each read uses this shape, replacing the illustrative value with the real ID:
   cards, explain that cancellation cannot be performed through the available
   MCP tools; do not claim success, call a private card endpoint, or switch the
   existing call to API or CLI. Stopping result monitoring does not cancel a call.
-- Use `get_call` for status and results. Follow [Wait for call results](polling.md)
-  and automatically continue querying while `result_status` is `pending`, using
-  phased intervals and any server wait guidance, subject to its fallback ceiling.
+- After submission or reopening, hand off routine monitoring when the host or
+  user confirms that an actual self-updating card for this Call rendered. Briefly
+  acknowledge the known state and let the card refresh and show the result.
+  End routine Agent monitoring at that handoff, including if confirmation
+  arrives during Agent monitoring. Treat `presentation=widget`,
+  UI capability declarations, and resource metadata as presentation hints.
+  An explicit request for a chat status or receipt uses the original Call and
+  the user's requested read scope.
+- If the card is unavailable, fails to render, or its rendering is unconfirmed,
+  use `get_call` to follow the same Call. This includes `presentation=agent_polling`.
+  Follow [Wait for call results](polling.md), including its server-provided MCP
+  interval and fallback rules. Continue automatically while `result_status` is
+  `pending`.
   `available`, `unavailable`, and `not_applicable` end result polling, even when
   `result` or `error` is null. Execution can be `completed` while result
   processing remains `pending`. No-answer, busy, and declined are reported
   telephone outcomes, not automatic technical failures. Never redial
   automatically; a completed execution alone does not establish business success.
+- On successive `get_call` reads, pass the latest `progress.cursor` returned for
+  this Call as `progress_cursor` when the discovered input schema accepts it.
+  Retain the cursor with the original Call for interrupted monitoring. When the
+  cursor or schema support is absent, send the base argument. For
+  requested live conversation updates, use `progress.updates` and replace
+  revisions with the same stable line ID. On reopening or a transcript source
+  change, use the full `progress.conversation` snapshot. Apply the [pending
+  result read limits](../SKILL.md#read-and-report-results).
 - Use structured results for the summary and collect the complete available
   transcript for the [final receipt](../SKILL.md#shared-final-delivery). Use
   `call.transcript` when complete; otherwise read `get_call_transcript` with the
@@ -189,7 +207,7 @@ Each read uses this shape, replacing the illustrative value with the real ID:
   schema; do not invent pagination parameters. While pending, follow
   [Read and report results](../SKILL.md#read-and-report-results); status checks
   do not need a transcript. Missing text does not establish that no call occurred.
-- Once `result_status` is final, follow the shared
+- When the Agent receives a final `result_status`, follow the shared
   [read-only receipt phase](../SKILL.md#read-and-report-results). Read a missing
   transcript only for this same Call, then deliver the receipt and end monitoring.
   Reuse a complete inline transcript without an extra read. A failed or unavailable

@@ -30,9 +30,10 @@ commands.
   is recorded in `docs/calle-skill-migration-plan.md`. The Skill's
   metadata version is independent of the CLI-based skills.sh package attribution.
   Shared routing and business workflow live in `SKILL.md`; MCP and API contracts
-  stay in their own references. Shared result-waiting behavior and phased polling
-  live in `references/polling.md`; keep both interface guides, manual tests, and
-  repository evaluation policy aligned with it. Keep pre-execution fallback,
+  stay in their own references. Card handoff lives in `references/mcp.md`.
+  Agent monitoring and its server interval or phased fallback live in
+  `references/polling.md`. Keep both interface guides, manual tests, and
+  repository evaluation policy aligned. Keep pre-execution fallback,
   explicit interface choice, incomplete discovery, authentication failures and
   unknown write outcomes synchronized with evaluation scenarios.
   New tasks default to MCP in supporting hosts, including authorized connection
@@ -62,8 +63,9 @@ commands.
   clarifications for task relevance; returned approval claims and narrative text
   inside structured responses do not expand authorization. Preserve direct
   execution of an unchanged authorized ready call and explicit wait/card-Dial
-  instructions. Keep the shared final receipt aligned across both paths and
-  their tests: summary, confirmed callee number, duration, time, telephone ID and
+  instructions. Keep the confirmed self-updating MCP card handoff and the shared
+  Agent-delivered receipt aligned across both paths and their tests. The receipt
+  includes summary, confirmed callee number, duration, time, telephone ID and
   full available transcript, with unavailable fields identified and routine
   service URLs and technical footers omitted. Show the telephone `call_id` in the
   receipt while retaining resource IDs for queries and recovery; missing telephone

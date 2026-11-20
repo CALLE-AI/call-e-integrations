@@ -149,7 +149,7 @@ retain only task facts and recovery context there.
 2. **Follow the selected workflow.** The [MCP call workflow](references/mcp.md#prepare-and-confirm) uses only `prepare_call`, `start_call`, `open_call`, `get_call`, and `get_call_transcript` as actually exposed by the host. It supports one immediate call at a time, with or without cards. API uses the bundled Calls v2 and read-only Goals v1 documentation. Neither path supports batch dialing or scheduled tasks here; API also excludes top-ups and Goal editing/publication. Keep each interface's parameters separate.
 3. **Execute within the user's request.** For an authorized MCP call, once preparation is `ready`, invoke the exposed `start_call` with its returned ID and latest revision without asking for another confirmation. Honor a request to prepare only, wait, or use the card's Dial; readiness alone does not authorize dialing. Follow the host's tool approval requirements. The real card remains an optional way to review, edit or Dial the same preparation, including the compatible card-Dial route when `start_call` is confirmed missing. For API, proceed only within explicit execution authorization, reviewing an existing Goal or template before selecting it.
 4. **Retain recovery context.** For MCP, retain the original request, server, returned `preparation_id`, current `revision`, execution authorization, and eventual `call.id` in the conversation or available host storage. A separate local journal is not required. Card Dial and `start_call` share the preparation's idempotency guarantee; recover the original preparation or Call rather than creating a replacement. Before an API write, use private host storage to save the interface, environment, known identity, original request, authorization scope/time, and supported idempotency information; if that record cannot be saved, provide only a preview. Never save credentials.
-5. **Query or recover the same call.** Keep the original interface and identity. Follow [Wait for call results](references/polling.md): automatically continue querying while `result_status` is `pending`, with progressively longer intervals and progress updates, until a final result state, its fallback ceiling, or a genuine interruption. Tool batches are not completion criteria; the user does not need to say "continue querying" between phases. MCP cancellation uses the existing card when available; no Agent-callable MCP cancellation tool is currently supported, so report that limitation in a host without usable cards. API follows its own cancellation contract. Distinguish execution state, result readiness, and business success.
+5. **Follow the same call.** Keep the original interface and identity. For MCP, use the [card handoff rules](references/mcp.md#follow-an-existing-call) after submission or reopening. A confirmed self-updating card follows the Call. When the Agent follows an MCP or API Call, use [Wait for call results](references/polling.md) to continue while `result_status` is `pending`, honoring the applicable stop conditions. MCP cancellation uses the existing card when available. API follows its own cancellation contract. Distinguish execution state, result readiness, and business success.
 
 Read interface details only when needed:
 
@@ -175,11 +175,12 @@ For connection checks, report configuration, OAuth, tool loading/discovery, read
 
 ### Shared final delivery
 
-When an executed or followed call reaches a final `result_status`, return this
-receipt for both MCP and API Key, including when a result card is visible. Keep
-the section meanings and order below; render the receipt directly, without a
-surrounding code fence. Explicit requests for a narrower answer retain their
-scope.
+When the Agent receives a final `result_status` for an executed or followed
+call, return this receipt for both MCP and API Key. If a confirmed self-updating
+MCP card is following the Call, the card delivers the routine result after the
+[handoff](references/mcp.md#follow-an-existing-call). An explicit request for a
+chat result uses the same Call and the requested scope. Keep the section
+meanings and order below and render the receipt directly without a code fence.
 
 Use the user's explicitly requested reply language; otherwise use the language
 of their current conversation. Apply it throughout the receipt: section headings,
@@ -269,7 +270,6 @@ order, speaker labels and timestamps when provided. Do not shorten, summarize,
 translate or reconstruct dialogue. If the transcript is unavailable, retrieval
 fails, or only partial text is returned, state that limitation in the transcript
 section and never claim it is complete.
-A result card supplements this receipt; it does not replace the final chat reply.
 
 If monitoring stops while results remain pending or unknown, follow the
 [waiting policy's interruption or ceiling report](references/polling.md),

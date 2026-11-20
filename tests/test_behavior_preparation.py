@@ -203,7 +203,7 @@ class BehaviorPreparationTests(unittest.TestCase):
             self.assertEqual(variants["snapshot-only"]["expected_read_counts"]["session"], 1)
             self.assertEqual(variants["snapshot-only"]["fixture_wait_plan"],
                              [{"query_ordinals": [1, 1], "seconds": 0}])
-            self.assertEqual(len(source["variants"]), 23 if transport == "mcp" else 22)
+            self.assertEqual(len(source["variants"]), 24 if transport == "mcp" else 22)
             resumed = variants["host-hard-interruption-resume"]
             self.assertEqual(len(resumed["turns"]), 2)
             self.assertEqual(resumed["expected_read_counts"], {"session": 11, "cumulative": 11})

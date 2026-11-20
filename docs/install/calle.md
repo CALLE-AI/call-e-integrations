@@ -168,9 +168,9 @@ Planning, preview, setup, and read-only requests do not authorize `start_call`.
 
 The five current tools are `prepare_call`, `start_call`, `open_call`, `get_call`,
 and `get_call_transcript`. Cards are optional for preparation and starting an
-authorized call; missing card UI alone does not justify API fallback. Use the
-Call resource tools for progress, results, and transcripts, polling results only
-while `result_status` is `pending`. Cancellation uses supported card controls;
+authorized call. When a self-updating card for the Call is confirmed rendered,
+the card follows the Call. Otherwise the Agent uses the MCP Call tools while
+`result_status` is `pending`. Cancellation uses supported card controls;
 it is unavailable through this workflow in a host without those controls. Do not
 invent a cancellation tool or switch interfaces to cancel. Legacy tools are not
 a fallback and cannot be used for read-only checks or recovery. Follow the
@@ -192,17 +192,21 @@ use that same context. MCP and
 API identifier, account and idempotency interoperability has not been verified;
 an interface being unavailable does not authorize recreating the call elsewhere.
 
-After acceptance, the Agent follows the same call until its result is final,
-with progress updates while waiting. The [shared polling policy](../../skills/calle/references/polling.md)
-gradually slows queries and honors server delays without requiring a "continue
-querying" message between phases. A 120-read fallback ceiling prevents indefinite
-waiting. Explicit snapshot-only requests and genuine errors, user stops, or host
-interruptions keep their own completion rules.
+When the Agent follows a Call, it provides progress and automatically continues
+until the result is final or monitoring stops. The [polling policy](../../skills/calle/references/polling.md)
+uses `progress.poll_after_seconds` when MCP returns a valid interval. MCP passes
+the returned progress cursor on subsequent queries when the tool supports it.
+Use progressively longer waits for API reads and for MCP responses without a
+valid interval. The 120-read ceiling applies to API sessions and to MCP sessions
+with no valid server interval. A snapshot-only request reads the current state
+once.
 
-Final delivery uses the [full call receipt](../../skills/calle/SKILL.md#shared-final-delivery)
-in chat, including the summary, callee number, duration, time, telephone Call ID and full
-available transcript. Missing fields are identified as unavailable. Result cards
-supplement the receipt; routine service addresses and technical footers are omitted.
+When the Agent follows the Call, it delivers the [full call receipt](../../skills/calle/SKILL.md#shared-final-delivery)
+in chat with the summary, callee number, duration, time, telephone Call ID and
+full available transcript. A confirmed self-updating MCP card delivers the
+routine result after handoff. The user can also request the receipt in chat.
+Missing receipt fields are identified as unavailable. Routine service addresses
+and technical footers are omitted.
 Absolute call times use the user's selected or host-provided timezone when known.
 Receipt headings, detail labels, status explanations, summaries and missing-data
 notices use the user's explicitly requested response language, or the established

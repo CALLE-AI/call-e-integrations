@@ -94,10 +94,30 @@ class StatefulMockTests(unittest.TestCase):
                         self.assertIsNotNone(mock.stopped_reason)
                         self.assertEqual(mock.create_count, 0)
                         executed += 1
-        self.assertEqual(executed, 45)
+        self.assertEqual(executed, 46)
         # Dedicated actual-checkpoint resume tests live in test_polling_interruption_resume.py.
         self.assertEqual(multiturn, [(case_id, "host-hard-interruption-resume")
                                     for case_id in ("api-polling-01", "mcp-polling-01")])
+
+    def test_mcp_service_interval_crosses_fallback_cap_and_keeps_cursor_after_resume(self):
+        case = self.cases["mcp-polling-01"]
+        mock = StatefulMock(case, variant(case, "server-interval-with-unconfirmed-widget"))
+        wait(mock, 20)
+        pending = read(mock)
+        cursor = json.loads(pending["content"][0]["text"])["progress"]["cursor"]
+        mock = StatefulMock.from_state(case, mock.export_state())
+        args = {"call_id": mock.call_id, "progress_cursor": cursor}
+        with self.assertRaises(PermissionError):
+            mock.dispatch("mcp.get_call", args)
+        wait(mock, 2)
+        pending = mock.dispatch("mcp.get_call", args)
+        progress = json.loads(pending["content"][0]["text"])["progress"]
+        self.assertNotIn("poll_after_seconds", progress)
+        mock = StatefulMock.from_state(case, mock.export_state())
+        wait(mock, 20)
+        final = mock.dispatch("mcp.get_call", {**args, "progress_cursor": progress["cursor"]})
+        self.assertEqual(final["structuredContent"]["call"]["result_status"], "available")
+        self.assertEqual(mock.state["session_query_count"], 122)
 
     def test_resumed_counts_determine_phase_and_early_reads_do_not_consume_responses(self):
         case = self.cases["api-polling-01"]
