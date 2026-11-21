@@ -1,0 +1,58 @@
+name: Feature request
+description: Propose a new integration capability or product outcome
+type: Feature
+labels:
+  - status:needs-triage
+body:
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      options:
+        - Core package or SDK
+        - CLI
+        - Claude, Codex, Cursor, or another plugin
+        - MCP or Developer API
+        - Calling, routing, speech, billing, or backend runtime
+        - Documentation or examples
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the user problem before describing the implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: What should users be able to do when this is complete?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Current alternatives or workarounds
+    validations:
+      required: false
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation proposal
+      description: Explain how the capability can be tested end to end.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: testing
+    attributes:
+      label: Community validation
+      options:
+        - label: I can help validate this capability when it reaches a testable state.
+          required: false

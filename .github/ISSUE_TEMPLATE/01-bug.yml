@@ -1,0 +1,87 @@
+name: Bug report
+description: Report reproducible unexpected behavior in a CALL-E integration
+type: Bug
+labels:
+  - status:needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Do not include API keys, OAuth tokens,
+        confirmation tokens, full phone numbers, personal data, or sensitive
+        call transcripts.
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      options:
+        - Core package or SDK
+        - CLI
+        - Claude, Codex, Cursor, or another plugin
+        - MCP or Developer API
+        - Calling, routing, speech, billing, or backend runtime
+        - Documentation or examples
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Include package, CLI, plugin, SDK, or API contract versions.
+      placeholder: "@call-e/core 0.x.x, calle-ai 0.x.x, CLI 0.x.x"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, runtime, integration path, destination region, and locale where relevant.
+    validations:
+      required: true
+
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: What happened? Include redacted error text and safe diagnostic IDs.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened according to the product or developer contract?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Provide the smallest reproducible steps or code sample with secrets removed.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: call_safety
+    attributes:
+      label: Could this cause an unintended, duplicate, or delayed real phone call?
+      options:
+        - "No"
+        - "Possibly"
+        - "Yes"
+        - "Not applicable"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: acknowledgement
+    attributes:
+      label: Sensitive-data acknowledgement
+      options:
+        - label: I removed credentials, tokens, full phone numbers, personal data, and sensitive transcripts.
+          required: true

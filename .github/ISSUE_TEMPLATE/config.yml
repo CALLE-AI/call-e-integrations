@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Usage, account, credits, or routing question
+    url: https://discord.gg/6AbXUzUV8w
+    about: Ask general usage and account-specific questions in the CALL-E Discord community.
+
+  - name: Security vulnerability
+    url: https://github.com/CALLE-AI/call-e-integrations/security/policy
+    about: Do not disclose security vulnerabilities or sensitive data in a public issue.
