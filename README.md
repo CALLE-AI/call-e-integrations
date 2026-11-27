@@ -467,33 +467,31 @@ destination and conversation language independently.
 
 ### Languages and accents
 
-All listed languages are available across all supported calling regions. The
-combinations below have dedicated local-accent voices; a standard voice is also
-available for each language.
+All listed languages are available across all supported calling regions.
 
-| Language | Code | Additional local accents |
-| --- | --- | --- |
-| English | `en` | Australia, UK, Indonesia, India, Malaysia, Philippines, Singapore |
-| Chinese | `zh` | Malaysia |
-| Spanish | `es` | Spain |
-| Indonesian | `id` | — |
-| Malay | `ms` | — |
-| Filipino | `fil` / `tl` | — |
-| Hindi | `hi` | — |
-| Tamil | `ta` | — |
-| Bengali | `bn` | — |
-| Urdu | `ur` | — |
-| Japanese | `ja` | — |
-| Thai | `th` | — |
-| Vietnamese | `vi` | — |
-| Portuguese | `pt` | — |
-| German | `de` | — |
-| Finnish | `fi` | — |
-| Polish | `pl` | — |
-| Turkish | `tr` | — |
-| Arabic | `ar` | — |
+| Language | Accents |
+| --- | --- |
+| English | US, Australia, UK, Indonesia, India, Malaysia, Philippines, Singapore |
+| Chinese | China (Mandarin), Malaysia (Mandarin) |
+| Spanish | Mexico, Spain |
+| Indonesian | Indonesia |
+| Malay | Malaysia |
+| Filipino | Philippines |
+| Hindi | India |
+| Tamil | India |
+| Bengali | Bangladesh |
+| Urdu | Pakistan |
+| Japanese | Japan |
+| Thai | Thailand |
+| Vietnamese | Viet Nam |
+| Portuguese | Brazil |
+| German | Germany |
+| Finnish | Finland |
+| Polish | Poland |
+| Turkish | Turkey |
+| Arabic | Saudi Arabia |
 
-Language codes identify languages, not complete API locale values. Follow the
+Follow the
 [Calls](https://docs.heycall-e.com/calls) or
 [Goal Runs](https://docs.heycall-e.com/goal-runs) guide for interface-specific settings.
 
