@@ -15,5 +15,5 @@ to prepare the bundled launcher and a JSON request before running CLI commands.
 CLI commands run with:
 
 ```json
-{"integration": {"source": "claude", "name": "claude_code_plugin", "version": "0.2.4"}}
+{"integration": {"source": "claude", "name": "claude_code_plugin", "version": "0.2.5"}}
 ```
