@@ -24,13 +24,13 @@ New users receive 100 free credits (US$1) when they sign up. See the [website FA
 
 ## Quick Start
 
-**The fastest path — paste this into any AI agent (Claude Code, Codex, Cursor, and more):**
+Paste this prompt into your agent to find the supported setup path.
 
 ```text
 Install CALL-E for me: https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/docs/install/CALL-E-installation-guide.md
 ```
 
-Your agent handles the rest.
+For ChatGPT, Codex, or Dot, see the [official CALL-E app setup](docs/install/CALL-E-installation-guide.md#official-call-e-app-for-chatgpt-codex-and-dot).
 
 **SDK:** Follow the [TypeScript or Python quickstart](#sdk) with an explicit recipient.
 
@@ -102,7 +102,7 @@ Choose the integration path that fits your use case:
 
 | Use case | Integration | Start here |
 | --- | --- | --- |
-| Use CALL-E inside Claude Code, Codex, Cursor, OpenClaw, Hermes, or any skills.sh agent | Agent install | [Agent Install](#agent-install) |
+| Use CALL-E inside a supported AI agent | Agent install | [Agent Install](#agent-install) |
 | Connect any Streamable HTTP MCP client | MCP | [MCP](#mcp) |
 | Call CALL-E from a TypeScript or Python SDK | SDK | [SDK](#sdk) |
 | Call CALL-E from any backend | Developer API | [API](#api) |
@@ -111,13 +111,13 @@ Choose the integration path that fits your use case:
 
 ### Agent Install
 
-**Paste this single prompt into your agent for automatic setup:**
+Paste this prompt into your agent to start setup.
 ```text
 Install CALL-E for me: https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/docs/install/CALL-E-installation-guide.md
 ```
-The linked guide installs the standalone `calle` 1.0.7 Skill and selects the
-host-supported connection path. The initial live acceptance baseline is Codex
-MCP; API and other clients identify unexecuted live checks separately.
+The guide covers the official CALL-E app and the standalone `calle` 1.0.7
+Skill. Codex MCP is the initial standalone live acceptance baseline. API and
+other clients report unexecuted live checks separately.
 
 For manual setup, expand the table below or see the [full install guide](https://github.com/CALLE-AI/call-e-integrations/blob/main/docs/install/install-guide.md).
 

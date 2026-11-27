@@ -11,14 +11,9 @@ For most users, copy this into your agent:
 Install CALL-E for me: https://raw.githubusercontent.com/CALLE-AI/call-e-integrations/main/docs/install/CALL-E-installation-guide.md
 ```
 
-The receiving agent first identifies its host and checks Skills CLI support.
-It uses the Skills CLI when the host is supported and the required command
-execution and CLI tooling are available; otherwise, it uses the host's own
-Skill installation interface.
-The stable prompt points to the latest
-[CALL-E installation guide](./CALL-E-installation-guide.md), keeping the install
-request client-agnostic while letting the receiving agent complete the setup in
-its own environment.
+For ChatGPT, Codex, or Dot, prefer the
+[official CALL-E app](./CALL-E-installation-guide.md#official-call-e-app-for-chatgpt-codex-and-dot)
+where supported.
 
 ## Manual Install Options
 
@@ -72,7 +67,7 @@ Plugin installation options below are separate from the standalone Skill.
 
 ### Codex
 
-The official Codex plugin install path requires `codex-cli >= 0.122.0`.
+The repository's CLI-backed Codex plugin requires `codex-cli >= 0.122.0`.
 
 ```bash
 codex plugin marketplace add CALLE-AI/call-e-integrations \

@@ -176,7 +176,7 @@ independent of the legacy CLI attribution version in private
 Use [calle installation](install/calle.md) for the default standalone workflow
 and [calle-cli installation](install/skills-sh-skill.md) for CLI compatibility.
 The stable `docs/install/CALL-E-installation-guide.md` remains in place and
-defaults to `calle`. Source and update metadata target
+defaults to `calle` for standalone installs. Source and update metadata target
 `CALLE-AI/call-e-integrations/main/skills/calle`. Public source delivery,
 skills.sh indexing, complete installation and actual loading are separate checks.
 

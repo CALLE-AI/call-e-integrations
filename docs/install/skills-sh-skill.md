@@ -13,9 +13,9 @@ which permits a limited official host-command fallback.
 
 ## Install From GitHub
 
-The [stable installation prompt](./CALL-E-installation-guide.md) defaults to the
-new MCP/API `calle` Skill. To retain the CLI workflow, explicitly select the
-compatibility entry:
+For standalone installs, the
+[stable installation prompt](./CALL-E-installation-guide.md) selects the MCP/API
+`calle` Skill. The following command selects `calle-cli` for the legacy CLI workflow.
 
 ```bash
 npx skills add https://github.com/CALLE-AI/call-e-integrations --skill calle-cli -g -y --agent <agent>

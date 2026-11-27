@@ -127,9 +127,10 @@ commands.
 - The legacy `calle-cli` Skill keeps CLI executable `calle`, private package
   attribution `skills_sh/skills_sh_skill/<version>`, authentication and recovery
   paths. Plugin names and package-scoped `calle` Skills are separate surfaces.
-- The stable `docs/install/CALL-E-installation-guide.md` defaults to `calle`
-  `1.0.7` and must remain at that path. Codex MCP is the initial live acceptance
-  baseline; API and other clients must identify unexecuted live checks.
+- The stable `docs/install/CALL-E-installation-guide.md` must remain at that
+  path and defaults to `calle` `1.0.7` for standalone installations. Codex MCP
+  is the initial standalone live acceptance baseline. API and other clients
+  must identify unexecuted live checks.
 - Repository-local Codex helper skills live in `.agents/skills/`.
 
 ## Update Workflow

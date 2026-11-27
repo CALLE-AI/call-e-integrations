@@ -1,14 +1,25 @@
 # CALL-E Installation Guide
 
-Install the standalone `calle` Skill listed on
-[skills.sh](https://skills.sh/calle-ai/call-e-integrations/calle).
+Identify the current host and honor the user's explicit choice of integration.
+
+## Official CALL-E App for ChatGPT, Codex, and Dot
+
+For ChatGPT, Codex, and Dot, prefer the official
+[CALL-E app](https://chatgpt.com/plugins/plugin_asdk_app_6985b1b1d23081919592a355865b08c2?q=CALL-E)
+when the current chat or task supports it. Open the listing to install or
+connect it if needed.
+
+If the app is unavailable or the user requests the standalone `calle` Skill,
+follow the steps below on hosts that support standalone Skills.
 
 ## Step 1 Install
 
 <!-- sync-with: docs/install/calle.md#install-the-source-or-zip -->
 
-Identify the current host first. Prefer the Skills CLI when it supports that
-host and command execution is available. Confirm the target using the
+Install the standalone `calle` Skill listed on
+[skills.sh](https://skills.sh/calle-ai/call-e-integrations/calle).
+Prefer the Skills CLI when it supports the current host and command execution
+is available. Confirm the target using the
 [supported-agent list](https://github.com/vercel-labs/skills/blob/main/docs/agents.md)
 or available CLI help; shell access alone does not establish host support.
 
