@@ -429,38 +429,73 @@ For authentication, webhooks, and the full reference, see the [API docs](https:/
 
 ## Supported Regions and Languages
 
-Use these country codes with the SDK and API recipient settings.
+CALL-E supports calls to **22 regions in 19 languages**. Choose the calling
+destination and conversation language independently.
 
-| Country | Country Code | Calling Code | Languages | Line Region |
-| --- | --- | --- | --- | --- |
-| United States of America | `US` | +1 | English, Indonesian | Local |
-| Canada | `CA` | +1 | English | Local |
-| Australia | `AU` | +61 | English | International |
-| Bangladesh | `BD` | +880 | English, Bengali | International |
-| Brazil | `BR` | +55 | English, Portuguese | International |
-| Germany | `DE` | +49 | English, German | International |
-| Spain | `ES` | +34 | English, Spanish | International |
-| Finland | `FI` | +358 | English, Finnish | International |
-| United Kingdom of Great Britain and Northern Ireland | `GB` | +44 | English | International |
-| Indonesia | `ID` | +62 | English | International |
-| India | `IN` | +91 | English, Hindi, Tamil | International |
-| Japan | `JP` | +81 | English, Japanese | International |
-| Mexico | `MX` | +52 | English, Spanish | International |
-| Malaysia | `MY` | +60 | English, Malay, Mandarin Chinese | International |
-| Netherlands | `NL` | +31 | English | International |
-| Philippines | `PH` | +63 | English | International |
-| Pakistan | `PK` | +92 | English, Urdu | International |
-| Poland | `PL` | +48 | English, Polish | International |
-| Singapore | `SG` | +65 | English | International |
-| Thailand | `TH` | +66 | English, Thai | International |
-| Turkey | `TR` | +90 | Turkish | International |
-| Viet Nam | `VN` | +84 | English, Vietnamese | International |
+### Calling regions
+
+| Country / Region | Region Code | Calling Code | Number Type |
+| --- | --- | --- | --- |
+| United States | `US` | +1 | Local |
+| Canada | `CA` | +1 | Local |
+| Australia | `AU` | +61 | International |
+| Bangladesh | `BD` | +880 | International |
+| Brazil | `BR` | +55 | International |
+| Germany | `DE` | +49 | International |
+| Spain | `ES` | +34 | International |
+| Finland | `FI` | +358 | International |
+| United Kingdom | `GB` | +44 | International |
+| Indonesia | `ID` | +62 | International |
+| India | `IN` | +91 | International |
+| Japan | `JP` | +81 | International |
+| Mexico | `MX` | +52 | International |
+| Malaysia | `MY` | +60 | International |
+| Netherlands | `NL` | +31 | International |
+| Philippines | `PH` | +63 | International |
+| Pakistan | `PK` | +92 | International |
+| Poland | `PL` | +48 | International |
+| Singapore | `SG` | +65 | International |
+| Thailand | `TH` | +66 | International |
+| Turkey | `TR` | +90 | International |
+| Viet Nam | `VN` | +84 | International |
 
 **Notes**
 
 - **Local** means calls use a local number in the destination country or calling-code region.
 - **International** means calls use an international number. These numbers are intended primarily for development and call testing, and calls through the shared international number pool may cost more.
 - **Region not listed?** Use a SIP integration to call that destination. For risk-control reasons, we enable additional International regions for development and testing only after careful review.
+
+### Languages and accents
+
+All listed languages are available across all supported calling regions. The
+combinations below have dedicated local-accent voices; a standard voice is also
+available for each language.
+
+| Language | Code | Additional local accents |
+| --- | --- | --- |
+| English | `en` | Australia, UK, Indonesia, India, Malaysia, Philippines, Singapore |
+| Chinese | `zh` | Malaysia |
+| Spanish | `es` | Spain |
+| Indonesian | `id` | — |
+| Malay | `ms` | — |
+| Filipino | `fil` / `tl` | — |
+| Hindi | `hi` | — |
+| Tamil | `ta` | — |
+| Bengali | `bn` | — |
+| Urdu | `ur` | — |
+| Japanese | `ja` | — |
+| Thai | `th` | — |
+| Vietnamese | `vi` | — |
+| Portuguese | `pt` | — |
+| German | `de` | — |
+| Finnish | `fi` | — |
+| Polish | `pl` | — |
+| Turkish | `tr` | — |
+| Arabic | `ar` | — |
+
+Language codes identify languages, not complete API locale values. Follow the
+[Calls](https://docs.heycall-e.com/calls) or
+[Goal Runs](https://docs.heycall-e.com/goal-runs) guide for interface-specific settings.
 
 ---
 
